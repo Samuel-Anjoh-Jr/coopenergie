@@ -1,5 +1,9 @@
 const translations = {
   en: {
+    vision_title: "Our Vision",
+    vision_desc: "Enable every community in Africa to access clean and affordable energy through solidarity and financial transparency.",
+    mission_title: "Our Mission",
+    mission_desc: "Enable communities to collectively finance solar equipment through a simple, transparent, and secure platform based on Mobile Money and blockchain.",
     common: {
       submit: "Submit",
       cancel: "Cancel",
@@ -230,6 +234,10 @@ const translations = {
     },
   },
   fr: {
+    vision_title: "Notre Vision",
+    vision_desc: "Permettre à chaque communauté en Afrique d’accéder à une énergie propre et abordable grâce à la solidarité et à la transparence financière.",
+    mission_title: "Notre Mission",
+    mission_desc: "Permettre aux communautés de financer collectivement des équipements solaires grâce à une plateforme simple, transparente et sécurisée basée sur le Mobile Money et la blockchain.",
     common: {
       submit: "Soumettre",
       cancel: "Annuler",
