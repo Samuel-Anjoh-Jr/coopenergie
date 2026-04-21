@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Locale, useTranslations } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { VisionMissionSection } from "@components";
 import { Zap, Shield, Users, ArrowRight, Sparkles, Globe, Vote, Eye, Target } from "lucide-react";
 
 export default function Homepage() {
@@ -72,9 +71,9 @@ export default function Homepage() {
             priority
           />
           {/* Green energy brand overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/10 via-transparent to-primary/5" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/70 dark:from-background dark:via-background/90 dark:to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-emerald-900/10 via-transparent to-primary/5" />
+          <div className="absolute inset-0 bg-linear-to-r from-background via-background/95 to-background/70 dark:from-background dark:via-background/90 dark:to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -98,7 +97,7 @@ export default function Homepage() {
               <Link href={`/${locale}/dashboard`}>
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
+                  className="bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
                 >
                   {t("homepage.hero.cta")}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -119,7 +118,7 @@ export default function Homepage() {
         <div className="absolute bottom-10 right-10 hidden lg:block">
           <div className="glass-dark rounded-2xl p-6 space-y-4 animate-float">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center">
                 <Globe className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -203,7 +202,7 @@ export default function Homepage() {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 to-red-500/20 rounded-3xl blur-2xl" />
+              <div className="absolute -inset-4 bg-linear-to-r from-amber-500/20 to-red-500/20 rounded-3xl blur-2xl" />
               <div className="relative rounded-2xl overflow-hidden shadow-2xl card-hover">
                 <Image
                   src="/images/energy-challenge.jpg"
@@ -214,7 +213,7 @@ export default function Homepage() {
                   loading="lazy"
                 />
                 {/* Green energy overlay for brand cohesion */}
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-emerald-900/30 via-transparent to-transparent" />
               </div>
             </div>
           </div>
@@ -226,7 +225,7 @@ export default function Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative order-last lg:order-first">
-              <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-3xl blur-2xl" />
+              <div className="absolute -inset-4 bg-linear-to-r from-emerald-500/20 to-green-500/20 rounded-3xl blur-2xl" />
               <div className="relative rounded-2xl overflow-hidden shadow-2xl card-hover">
                 <Image
                   src="/images/solar-solution.jpg"
@@ -237,7 +236,7 @@ export default function Homepage() {
                   loading="lazy"
                 />
                 {/* Green energy overlay for brand cohesion */}
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-emerald-900/20 via-transparent to-transparent" />
               </div>
             </div>
             <div className="space-y-6">
@@ -292,7 +291,7 @@ export default function Homepage() {
                   </CardContent>
                 </Card>
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
+                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-linear-to-r from-primary/50 to-transparent" />
                 )}
               </div>
             ))}
@@ -321,7 +320,7 @@ export default function Homepage() {
                   className="border-border/50 bg-card/50 backdrop-blur card-hover-glow group overflow-hidden"
                 >
                   <CardHeader>
-                    <div className={`w-14 h-14 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-14 h-14 bg-linear-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                       <Icon className="w-7 h-7 text-white" />
                     </div>
                     <CardTitle className="text-xl group-hover:text-primary transition-colors">
@@ -357,7 +356,7 @@ export default function Homepage() {
               <Link href={`/${locale}/dashboard`}>
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg group mt-4"
+                  className="bg-linear-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg group mt-4"
                 >
                   {t("homepage.community.getStarted")}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -365,7 +364,7 @@ export default function Homepage() {
               </Link>
             </div>
             <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-emerald-500/20 rounded-3xl blur-2xl" />
+              <div className="absolute -inset-4 bg-linear-to-r from-primary/20 to-emerald-500/20 rounded-3xl blur-2xl" />
               <div className="relative rounded-2xl overflow-hidden shadow-2xl card-hover">
                 <Image
                   src="/images/community-cooperation.jpg"
@@ -376,7 +375,7 @@ export default function Homepage() {
                   loading="lazy"
                 />
                 {/* Green energy overlay for brand cohesion */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-primary/20 via-transparent to-transparent" />
               </div>
             </div>
           </div>
@@ -385,7 +384,7 @@ export default function Homepage() {
 
       {/* CTA Section */}
       <section className="py-20 md:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-amber-500/10 to-emerald-500/10" />
+        <div className="absolute inset-0 bg-linear-to-r from-primary/10 via-amber-500/10 to-emerald-500/10" />
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
           <h2 className="text-3xl md:text-5xl font-bold text-foreground">
             {t("homepage.cta.readyToLight")}
@@ -397,7 +396,7 @@ export default function Homepage() {
             <Link href={`/${locale}/dashboard`}>
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
+                className="bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
               >
                 {t("homepage.hero.cta")}
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -412,7 +411,7 @@ export default function Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-linear-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
               <span className="font-bold text-foreground">CoopEnergie</span>
