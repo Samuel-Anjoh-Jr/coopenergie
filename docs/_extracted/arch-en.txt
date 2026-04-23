@@ -1,0 +1,907 @@
+
+MIABE HACKATHON 2026  ·  CM-02  ·  DAROLLO TECHNOLOGIES CORPORATION
+
+CoopEnergie
+
+System Technical Architecture
+Hackathon MVP · Full Production Blueprint · Celo Blockchain
+
+Version
+2.0
+Date
+April 2026
+Blockchain
+Celo Network (celoscan.io)
+API Strategy
+REST (writes) + GraphQL (reads)
+Monorepo Runtime
+Bun Workspaces
+Backend Hosting
+Railway
+Primary Language
+TypeScript (all layers)
+Default Locale
+Français (FR)
+
+CONFIDENTIAL — Internal Architecture Reference
+
+1. System Overview
+1.1 Platform Summary
+CoopEnergie is a bilingual (FR default / EN) cooperative solar funding platform for the Cameroonian market. Citizens form digital cooperatives, pool contributions, govern decisions via collective voting, and verify every financial event on the public Celo blockchain.
+The architecture is built in two layers that share the same codebase and can be deployed independently:
+Hackathon MVP: Next.js web app with real Celo smart contracts on Alfajores testnet, REST API calls to backend, and a polished bilingual UI.
+Production: Full monorepo — web + NestJS backend + Expo mobile — with CamPay payments, offline-first sync, GraphQL queries, WebSocket subscriptions, and Celo Mainnet smart contracts.
+1.2 Architecture Principles
+Principle
+How It Is Implemented
+Blockchain-native trust
+Every contribution, vote, and proposal is a real Celo transaction — independently verifiable at celoscan.io without trusting the platform.
+Africa-first UX
+Meta-transactions hide gas complexity; Mobile Money (CamPay) for payments; offline-first mobile for 2G environments; FR as default locale.
+Write REST / Read GraphQL
+Mutations use REST for simplicity and reliability. Queries use GraphQL for flexible, efficient data fetching across dashboard, ledger, and report views.
+Clean replacement seams
+Every external dependency (blockchain, payments, email) sits behind a service interface — replaceable without touching UI components.
+Tenant isolation
+Each cooperative maps to one Prisma cooperativeId scope AND one deployed CooperativeVault.sol smart contract — two layers of isolation.
+Type safety everywhere
+Prisma client types shared across web, backend, and mobile via packages/types. GraphQL schema generates client-side types automatically.
+
+2. Technology Stack
+2.1 Web Frontend
+Technology
+Version
+Role
+Why
+Next.js
+15 (App Router)
+Web framework
+SSR, SSG, ISR, API routes. Vercel-native. [locale] routing for i18n.
+React
+19
+UI library
+Concurrent features, server components, streaming
+TailwindCSS
+4.x
+Styling
+Utility-first; NativeWind bridge shares classes with Expo mobile
+shadcn/ui
+Latest
+Component system
+Owned source code, Radix primitives, CSS variable theming
+next-intl
+3.x
+i18n
+App Router-native. FR default at /fr/*; EN at /en/*
+Apollo Client
+3.x
+GraphQL client
+Read queries + subscriptions for dashboard, ledger, reports
+Auth.js
+v5 (NextAuth)
+Authentication
+Credentials provider; JWT bridged to NestJS via shared secret
+viem / wagmi
+Latest
+Celo interaction
+Type-safe contract reads; displays wallet address + celoscan.io links
+
+2.2 Mobile Frontend
+Technology
+Version
+Role
+Why
+Expo
+SDK 52+
+Mobile framework
+File-based routing (Expo Router), EAS builds, OTA updates
+NativeWind
+v4
+Mobile styling
+TailwindCSS in React Native — zero context switching between web and mobile
+Apollo Client
+3.x
+GraphQL + subscriptions
+Same query layer as web — shared hooks via packages/
+MMKV
+Latest
+Fast local storage
+JWT storage, offline action queue, user preferences
+expo-sqlite
+Latest
+Offline cache DB
+Structured cache for contributions, proposals, ledger
+EAS
+Latest
+Build + Deploy
+Cloud builds; OTA updates; App Store + Play Store pipelines
+
+2.3 Backend
+Technology
+Version
+Role
+Why
+NestJS
+11.x
+API framework
+TypeScript-first, modular, native GraphQL + WebSocket support
+Bun
+Latest
+Runtime
+3–5x faster than Node; built-in package manager
+Apollo Server
+4.x
+GraphQL server
+@nestjs/graphql integration; schema-first with code-gen
+Prisma
+6.x
+ORM
+Type-safe queries; auto-migrations; client shared via packages/types
+PostgreSQL
+15
+Primary database
+Complex queries, JSONB ledger payloads, strong constraints
+Redis
+7
+Cache + queues
+Session cache, rate limiting, payment webhook queues
+viem
+Latest
+Blockchain client
+Interact with CooperativeVault.sol; relay transactions; read events
+Hardhat
+Latest
+Contract tooling
+Compile, test, and deploy Solidity contracts to Celo
+class-validator
+Latest
+DTO validation
+Validates all REST request bodies
+
+2.4 Blockchain Stack
+Component
+Technology
+Purpose
+Network
+Celo (Mainnet + Alfajores testnet)
+EVM-compatible L1 chain optimised for mobile and developing markets
+Smart contracts
+Solidity 0.8.x
+CoopFactory.sol, CooperativeVault.sol, GasRelayer.sol
+Contract tooling
+Hardhat + OpenZeppelin
+Compile, test, deploy, audit-ready base contracts
+Block explorer
+CeloScan (celoscan.io)
+Public TX verification — every action linked to a live explorer URL
+Chain client
+viem (backend + web)
+Type-safe contract interactions; event parsing; wallet management
+Gas relayer
+EIP-2771 meta-tx pattern
+Backend pays gas; users never hold CELO — transparent to them
+Wallet management
+Custodial per cooperative
+Platform generates a wallet keypair per cooperative; stored encrypted in DB
+
+2.5 Infrastructure
+Service
+Platform
+Environment
+Web app
+Vercel
+All (preview + staging + prod)
+API backend
+Railway
+Staging + Production
+PostgreSQL
+Railway PostgreSQL
+Staging + Production
+Redis
+Railway Redis
+Staging + Production
+Smart contracts
+Celo Alfajores (test) / Mainnet (prod)
+Per environment
+Mobile builds
+EAS (Expo Application Services)
+Staging + Production
+Local dev DB
+Docker Compose
+Development
+Push notifications
+Firebase + Expo Push
+Production
+File storage
+AWS S3
+Production
+CI/CD
+GitHub Actions
+All environments
+
+3. Monorepo Architecture
+3.1 Repository Structure
+coopenergie/
+├── apps/
+│   ├── web/                         ← Next.js 15 (hackathon MVP + production web)
+│   │   ├── app/
+│   │   │   └── [locale]/
+│   │   │       ├── (marketing)/     ← homepage, landing pages
+│   │   │       └── (dashboard)/     ← authenticated cooperative dashboard
+│   │   ├── components/
+│   │   │   ├── ui/                  ← shadcn/ui primitives
+│   │   │   ├── shared/              ← Navbar, Sidebar, LanguageSwitcher
+│   │   │   └── coop/                ← domain components (LedgerEntry, VoteBar...)
+│   │   ├── lib/
+│   │   │   ├── blockchain/          ← viem client, contract ABIs, celoscan helpers
+│   │   │   ├── graphql/             ← Apollo Client setup + generated hooks
+│   │   │   └── utils/
+│   │   └── messages/               ← fr.json (default) + en.json translations
+│   │
+│   ├── backend/                    ← NestJS + Bun runtime
+│   │   ├── src/
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/
+│   │   │   │   ├── users/
+│   │   │   │   ├── cooperatives/
+│   │   │   │   ├── memberships/
+│   │   │   │   ├── invitations/
+│   │   │   │   ├── contributions/
+│   │   │   │   ├── proposals/
+│   │   │   │   ├── votes/
+│   │   │   │   ├── ledger/
+│   │   │   │   ├── payments/
+│   │   │   │   └── admin/
+│   │   │   ├── blockchain/
+│   │   │   │   ├── relayer.service.ts    ← gas relayer (viem)
+│   │   │   │   ├── vault.service.ts      ← CooperativeVault.sol interactions
+│   │   │   │   └── factory.service.ts    ← CoopFactory.sol deploy calls
+│   │   │   ├── graphql/
+│   │   │   │   ├── schema.gql
+│   │   │   │   └── resolvers/            ← all read-heavy resolvers
+│   │   │   ├── common/              ← guards, decorators, pipes
+│   │   │   └── main.ts
+│   │   └── prisma/
+│   │       ├── schema.prisma
+│   │       ├── migrations/
+│   │       └── seed.ts
+│   │
+│   └── mobile/                     ← Expo + NativeWind
+│       ├── app/
+│       │   ├── (auth)/             ← login, register, join (invitation)
+│       │   └── (dashboard)/        ← dashboard, contributions, proposals, ledger
+│       ├── lib/
+│       │   ├── api.ts              ← REST client for write operations
+│       │   ├── graphql/            ← Apollo Client + shared queries
+│       │   ├── offline/            ← SQLite cache + MMKV action queue
+│       │   └── sync/               ← sync engine with retry + backoff
+│       └── tailwind.config.js
+│
+├── packages/
+│   ├── types/                      ← Shared TS types (Prisma → all apps)
+│   ├── graphql-schema/             ← Shared GraphQL schema types (codegen)
+│   └── config/                     ← ESLint, tsconfig, Tailwind presets
+│
+├── contracts/                      ← Solidity smart contracts
+│   ├── src/
+│   │   ├── CoopFactory.sol
+│   │   ├── CooperativeVault.sol
+│   │   └── GasRelayer.sol
+│   ├── test/
+│   ├── scripts/deploy.ts
+│   └── hardhat.config.ts
+│
+├── infra/
+│   └── docker/
+│       └── docker-compose.yml      ← PostgreSQL 15 + Redis 7 (local dev only)
+│
+├── scripts/
+│   ├── sync-env.mjs               ← Propagates root .env to all apps
+│   ├── dev-with-cleanup.js        ← Orchestrated dev runner
+│   └── clean.js                   ← Removes build artifacts + kills node/bun processes (not node_modules)
+│
+├── .env / .env.example
+├── package.json
+└── bun.lockb
+
+3.2 Root Package Scripts
+Script
+Action
+Notes
+dev
+env:sync + orchestrated startup
+Starts web + backend (+ optional mobile)
+dev:web
+env:sync + bun --cwd apps/web dev
+Web only — hackathon daily driver
+dev:api
+env:sync + bun --cwd apps/backend dev
+Backend only
+dev:mobile
+env:sync + bun --cwd apps/mobile start
+Expo dev server
+db:up
+docker compose up -d postgres redis
+Start local containers
+db:down
+docker compose down
+Stop local containers
+db:migrate
+prisma migrate dev (schema path)
+Create + apply new migration
+db:migrate:deploy
+prisma migrate deploy
+Apply migrations in prod/staging (no new migrations created)
+db:reset
+db:down → db:up → migrate:deploy → generate
+Full local DB reset
+db:seed
+cd apps/backend + bun run prisma:seed
+Seed with realistic Cameroonian data
+db:studio
+prisma studio in backend dir
+Visual DB browser
+env:sync
+node scripts/sync-env.mjs
+Copy root .env → apps/web, apps/backend, apps/mobile
+build
+build:api + build:web + build:mobile
+Build all apps
+lint
+lint across all apps + i18n lint
+Runs linters in each app
+typecheck
+tsc --noEmit across all apps
+Full type safety check
+clean
+Remove dist/ .next/ build/ .expo/ + kill node/bun processes
+Does NOT remove node_modules
+keys
+bun run keygen.cjs
+Generate environment secrets (NEXTAUTH_SECRET etc.)
+clean script: removes only build artifacts (dist/, .next/, .expo/, build/) and terminates running node/bun processes via pkill. node_modules is intentionally preserved to avoid reinstall cost.
+
+4. Blockchain Architecture (Celo)
+4.1 Why Celo for African Cooperative Finance
+Concern
+How Celo Addresses It
+Gas cost
+Transactions cost <$0.001 USD. A cooperative with 500 actions/year spends <$0.50 in gas — fully absorbed by the platform.
+User complexity
+Meta-transactions via EIP-2771: the backend relayer wallet pays all gas. Users never see CELO, never install MetaMask, never manage private keys.
+Mobile constraints
+Celo was designed for feature phones. Its consensus is optimised for mobile validators and mobile clients.
+Verification
+Every action creates a real TX hash. Users click it to see the transaction on celoscan.io — independent of the CoopEnergie platform entirely.
+Stability
+cUSD (Celo Dollar) available for price-stable contributions alongside FCFA-denominated accounting.
+Developer toolchain
+Ethereum-compatible — Solidity, Hardhat, OpenZeppelin, viem, Foundry all work without modification.
+
+4.2 Smart Contract System
+Contract
+Purpose
+Key Functions + Events
+CoopFactory.sol
+Factory that deploys one CooperativeVault per cooperative. Called by the backend on cooperative creation.
+deployCooperative(name, target, admin) → vaultAddress
+Event: CooperativeDeployed(vaultAddress, name)
+CooperativeVault.sol
+Per-cooperative contract. Holds the community wallet. Records all contributions, proposals, and votes on-chain.
+contribute(amountXAF)
+Event: ContributionMade(member, amountXAF, blockNumber)
+createProposal(title, description)
+Event: ProposalCreated(id, creator)
+vote(proposalId, choice)
+Event: VoteCast(proposalId, voter, choice)
+releaseFunds(recipient, amount, proposalId) — admin only
+Event: FundsReleased(recipient, amount, proposalId)
+GasRelayer.sol
+Accepts EIP-2771 meta-transactions from the backend relayer wallet. Verifies the user's signature and forwards calls to the target vault.
+execute(from, to, data, signature)
+Validates: signature authenticity, nonce, expiry
+
+4.3 Meta-Transaction Flow (Gas Relayer)
+User submits an action (contribute / vote / propose) via web or mobile UI.
+Frontend sends a REST POST request to the backend with action parameters.
+Backend constructs the calldata for the relevant CooperativeVault function.
+Backend signs the meta-transaction using the relayer wallet private key (stored in Railway env vars).
+Backend calls GasRelayer.execute() — paying the Celo gas from the relayer wallet.
+GasRelayer verifies the signature and calls CooperativeVault as if from the user's address.
+Celo emits the event (ContributionMade / VoteCast / etc.) with the user's address as the actor.
+Backend reads the TX hash and stores it in the Prisma database alongside the local record.
+TX hash is returned to the frontend and displayed with a celoscan.io link.
+The user's address appears in the on-chain event even though the backend relayer paid the gas. The contribution is permanently and publicly attributed to the correct member.
+
+4.4 Community Wallet Display
+UI Element
+Implementation
+Wallet address display
+Cooperative's CooperativeVault contract address shown on dashboard and ledger page
+CeloScan contract link
+https://celoscan.io/address/{vaultAddress} — opens contract view showing all transactions
+QR code
+Generated client-side using qrcode.react — encodes the vault address for mobile scanning
+TX hash display
+Each ledger event shows truncated hash (0xA3F...9D2) with copy button + celoscan.io/tx/{hash} link
+"Verify" badge
+"Verified on Celo" badge on every ledger entry — clicking opens the TX on celoscan.io
+"How to verify" guide
+Step-by-step UI section explaining how to use celoscan.io independently
+
+5. Hybrid API Architecture
+5.1 REST + GraphQL Division of Responsibility
+REST handles all writes (mutations). GraphQL handles all reads (queries + subscriptions). This is not a preference — it is an enforced architectural boundary. Write endpoints NEVER have GraphQL resolvers; read endpoints NEVER have REST controllers.
+
+Layer
+Protocol
+Endpoints / Operations
+Reason
+Auth
+REST
+POST /auth/login, POST /auth/register, POST /auth/refresh
+Credential flows need clear HTTP status codes
+Cooperative mutations
+REST
+POST /cooperatives, PATCH /cooperatives/:id
+State-changing; needs 201/200/400 semantics
+Invitation mutations
+REST
+POST /invites, POST /invites/link, POST /invites/accept, DELETE /invites/:id
+Token flows with redirect logic
+Contribution submission
+REST
+POST /contributions → triggers on-chain TX via relayer
+Write + async on-chain action
+Vote submission
+REST
+POST /votes → triggers on-chain TX via relayer
+Write + async on-chain action
+Proposal creation
+REST
+POST /proposals → triggers on-chain TX via relayer
+Write + async on-chain action
+Payment operations
+REST
+POST /payments/initiate, POST /payments/webhook
+CamPay webhook requires REST
+Dashboard data
+GraphQL
+query { cooperative { progress, members, recentActivity } }
+Flexible field selection — avoids over-fetching
+Ledger queries
+GraphQL
+query { ledger(type, limit, offset) { hash, blockNumber, payload } }
+Pagination + filtering in one request
+Report data
+GraphQL
+query { report(cooperativeId) { financial, governance, timeline } }
+Complex nested data — GraphQL excels here
+Member lists
+GraphQL
+query { cooperative { members { name, totalContributed, joinedAt } } }
+Relation traversal without N+1
+Real-time updates
+GraphQL Subscription
+subscription { onContribution(cooperativeId) { ... } }
+Replaces socket.io for read events
+
+5.2 GraphQL Schema Structure
+# packages/graphql-schema/schema.gql (shared between backend and frontend)
+
+type Query {
+  cooperative(id: ID!): Cooperative
+  ledger(cooperativeId: ID!, type: LedgerEventType, limit: Int, offset: Int): [LedgerEvent!]!
+  report(cooperativeId: ID!): CooperativeReport
+  proposals(cooperativeId: ID!, status: ProposalStatus): [Proposal!]!
+  members(cooperativeId: ID!): [Member!]!
+  adminMetrics: AdminMetrics    # PLATFORM_ADMIN only
+}
+
+type Subscription {
+  onContribution(cooperativeId: ID!): ContributionEvent
+  onVote(cooperativeId: ID!): VoteEvent
+  onProposal(cooperativeId: ID!): ProposalEvent
+  onPayment(cooperativeId: ID!): PaymentEvent
+}
+
+type Cooperative {
+  id: ID!
+  name: String!
+  targetAmount: Int!
+  totalCollected: Int!
+  progress: Float!
+  walletAddress: String!      # CooperativeVault contract address
+  celoScanUrl: String!        # https://celoscan.io/address/{walletAddress}
+  members: [Member!]!
+  recentActivity: [LedgerEvent!]!
+}
+
+type LedgerEvent {
+  id: ID!
+  type: LedgerEventType!
+  txHash: String!
+  blockNumber: Int!
+  celoScanUrl: String!        # https://celoscan.io/tx/{txHash}
+  payload: JSON!
+  createdAt: String!
+}
+
+enum LedgerEventType { CONTRIBUTION VOTE PROPOSAL PAYMENT MEMBERSHIP }
+enum ProposalStatus  { PENDING APPROVED REJECTED }
+
+6. Backend Architecture (NestJS)
+6.1 Module Overview
+Module
+REST Endpoints
+GraphQL Resolver
+On-Chain Action
+auth
+POST /auth/login, register, refresh
+None
+None
+users
+GET /users/me, PATCH /users/:id
+None
+None
+cooperatives
+POST /cooperatives, GET /cooperatives
+Cooperative query
+CoopFactory.deployCooperative()
+memberships
+POST /memberships, DELETE /memberships/:id
+members query
+None
+invitations
+POST /invites, /invites/link, /invites/accept, DELETE /invites/:id
+None
+None
+contributions
+POST /contributions
+None (subscription only)
+CooperativeVault.contribute() via relayer
+proposals
+POST /proposals
+proposals query
+CooperativeVault.createProposal() via relayer
+votes
+POST /votes
+None (subscription only)
+CooperativeVault.vote() via relayer
+ledger
+None
+ledger query
+Reads on-chain events via viem getLogs()
+payments
+POST /payments/initiate, /payments/webhook
+None
+Triggers contribution on-chain after payment confirmed
+reports
+None
+report query
+Reads CooperativeVault state
+admin
+None
+adminMetrics query
+None
+
+6.2 Blockchain Service Layer
+The blockchain layer is isolated behind service interfaces in src/blockchain/:
+Service
+Responsibility
+relayer.service.ts
+Builds and signs meta-transactions; calls GasRelayer.execute() via viem; handles retry on gas price spike
+vault.service.ts
+Reads CooperativeVault state (balance, members, contribution count); parses emitted events
+factory.service.ts
+Calls CoopFactory.deployCooperative() when a new cooperative is created; stores returned vault address in DB
+event-listener.service.ts
+Polls Celo RPC for new events from all deployed vaults; writes confirmed events to Prisma LedgerEvent table; emits GraphQL subscription events
+
+6.3 Request Lifecycle (Write via REST)
+Client sends POST /contributions with { amount, cooperativeId } + Bearer JWT.
+AuthGuard validates JWT; CooperativeScopeGuard verifies membership.
+ContributionService creates a PENDING Contribution record in PostgreSQL.
+BlockchainService.relayer calls CooperativeVault.contribute() via meta-tx → TX hash returned.
+Contribution record updated: status = CONFIRMED, txHash = {hash}, blockNumber = {n}.
+EventListenerService picks up ContributionMade event → writes to LedgerEvent table.
+GraphQL PubSub emits onContribution subscription event to all subscribed clients.
+REST response returns { contribution, txHash, celoScanUrl }.
+
+6.4 Prisma Schema Key Models
+Model
+Key Fields
+Notes
+User
+id, email, passwordHash, name, celoAddress, createdAt
+celoAddress auto-generated at registration for on-chain attribution
+Cooperative
+id, name, slug, targetAmountXAF, vaultAddress, celoScanUrl, createdAt
+vaultAddress = deployed CooperativeVault.sol address
+Membership
+id, userId, cooperativeId, role (MEMBER|COOP_ADMIN|PLATFORM_ADMIN)
+Unique constraint: (userId, cooperativeId)
+Invitation
+id, email?, token, cooperativeId, type (EMAIL|LINK), status, expiresAt
+email nullable for link-based invitations
+Contribution
+id, amountXAF, userId, cooperativeId, txHash, blockNumber, status, createdAt
+status: PENDING → CONFIRMED (after on-chain)
+Proposal
+id, title, description, status, cooperativeId, txHash, blockNumber, createdAt
+status computed from on-chain vote tally
+Vote
+id, userId, proposalId, choice (bool), txHash, blockNumber
+Unique: (userId, proposalId) enforced at DB AND contract level
+LedgerEvent
+id, type, payload (JSON), txHash, blockNumber, cooperativeId, createdAt
+Populated by EventListenerService from Celo chain
+Payment
+id, amountXAF, userId, cooperativeId, status, provider, reference, createdAt
+status: PENDING → SUCCESS → triggers Contribution
+AuditLog
+id, userId, cooperativeId, action, entity, entityId, metadata (JSON), createdAt
+Immutable — no update/delete
+Plan
+id, name, price, billingCycle, features (JSON)
+Subscription plan definitions
+Subscription
+id, cooperativeId, planId, status, expiresAt
+Current cooperative plan
+DeviceToken
+id, userId, token, platform (web|ios|android)
+Push notification tokens
+
+7. Infrastructure and Deployment
+7.1 Railway Deployment (Backend)
+The NestJS backend is hosted on Railway. Railway provides managed PostgreSQL and Redis on the same platform, simplifying the production stack.
+Service
+Railway Resource
+Configuration
+NestJS API
+Railway Service (Docker)
+Dockerfile in apps/backend; PORT=4000; auto-deploy on main merge
+PostgreSQL
+Railway PostgreSQL plugin
+DATABASE_URL injected by Railway automatically into all services
+Redis
+Railway Redis plugin
+REDIS_URL injected automatically; used for rate limiting, queues, sessions
+Environment vars
+Railway Variables
+All secrets set in Railway dashboard; synced to service containers
+
+7.2 CI/CD Pipeline
+Pipeline
+Trigger
+Jobs
+PR Validation
+Pull Request → any branch
+Lint → Typecheck → Build web → Build API → Contract compile → Vercel Preview
+Staging Deploy
+Push → develop
+PR jobs + Deploy API to Railway staging + Run prisma migrate deploy if schema/migrations changed
+Production Deploy
+Push → main
+All staging jobs + Deploy web to Vercel prod + Railway prod API + prisma migrate deploy (conditional) + Contract deploy to Celo Mainnet if contracts/ changed
+Manual Seed
+workflow_dispatch
+Run prisma seed in Railway production (manual only)
+Mobile Build
+workflow_dispatch or tag
+EAS build iOS + Android → submit to stores
+
+7.3 Conditional Migration Strategy
+# .github/workflows/deploy-prod.yml (excerpt)
+
+- name: Run migrations (only if schema or migrations changed)
+  if: |
+    contains(github.event.commits[*].modified, 'apps/backend/prisma/schema.prisma') ||
+    contains(github.event.commits[*].modified, 'apps/backend/prisma/migrations/')
+  run: bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma
+
+- name: Deploy contracts (only if contracts/ changed)
+  if: |
+    contains(github.event.commits[*].modified, 'contracts/')
+  run: cd contracts && bun hardhat deploy --network celo
+  env:
+    CELO_PRIVATE_KEY: ${{ secrets.CELO_RELAYER_PRIVATE_KEY }}
+
+8. Authentication Architecture
+Step
+Component
+Action
+1. Login (Web)
+Auth.js Credentials Provider
+POST to NestJS /auth/login; receives JWT
+2. Session
+Auth.js
+Stores JWT in secure httpOnly cookie; NEXTAUTH_SECRET shared with NestJS
+3. Web API call
+React Query / Apollo Client
+Attaches JWT in Authorization header to NestJS
+4. Validation
+NestJS AuthGuard
+Verifies JWT signature with shared NEXTAUTH_SECRET; injects User into request context
+5. Login (Mobile)
+REST call from Expo
+POST /auth/login directly; receives JWT; stored in MMKV
+6. Mobile API call
+api.ts / Apollo
+Attaches JWT from MMKV to every request
+7. Celo address
+AuthService (registration)
+Auto-generates a Celo-compatible keypair on user registration; address stored on User model; private key encrypted in DB for relayer use
+
+9. Mobile Offline-First Architecture
+State
+Source
+UX
+Online
+GraphQL queries to backend
+Live data; subscriptions update in real time
+Cached online
+Apollo Client InMemoryCache + sqlite
+Instant load from cache; background refetch
+Offline — browse
+expo-sqlite local tables
+Full browse of contributions, proposals, ledger — read-only
+Offline — action
+MMKV action queue
+Optimistic UI update; item shows "pending sync" badge; queued with idempotency key
+Reconnect
+Sync engine
+Queue replayed FIFO via REST; exponential backoff; server is authoritative on conflict
+
+9.1 Clean Script Behaviour
+The root clean script (scripts/clean.js) removes build artifacts and terminates running processes. It does NOT remove node_modules to preserve install cache.
+// scripts/clean.js
+const { execSync } = require('child_process');
+const { rmSync, existsSync } = require('fs');
+
+const artifacts = [
+  'apps/web/.next',
+  'apps/web/out',
+  'apps/backend/dist',
+  'apps/mobile/.expo',
+  'contracts/artifacts',
+  'contracts/cache',
+];
+
+artifacts.forEach(p => {
+  if (existsSync(p)) { rmSync(p, { recursive: true, force: true }); console.log(`Removed: ${p}`); }
+});
+
+// Kill running processes — NOT node_modules
+try { execSync('pkill -f "bun run"', { stdio: 'ignore' }); } catch {}
+try { execSync('pkill -f "next dev"', { stdio: 'ignore' }); } catch {}
+try { execSync('pkill -f "nest start"', { stdio: 'ignore' }); } catch {}
+console.log('Build artifacts cleared. node_modules preserved.');
+
+10. Security Architecture
+Layer
+Control
+Implementation
+API auth
+JWT Bearer on all protected routes
+NestJS AuthGuard + shared NEXTAUTH_SECRET
+Tenant isolation
+cooperativeId scoping on all queries
+CooperativeScopeGuard validates membership before any cooperative data access
+RBAC
+Role check per cooperative per user
+RolesGuard + Membership.role lookup
+Input validation
+DTO validation on all REST bodies
+class-validator + global ValidationPipe
+Rate limiting
+Per-IP throttle on auth + payment endpoints
+NestJS ThrottlerModule
+HTTP headers
+Security headers on all responses
+Helmet global middleware
+CamPay webhooks
+HMAC-SHA256 signature validation
+Reject any webhook without valid signature
+Blockchain keys
+Relayer private key in Railway env vars
+Never in source; never in logs
+Passwords
+bcrypt salted hash (rounds: 12)
+bcryptjs in AuthService
+Contract calls
+Only relayer wallet can submit meta-txs
+GasRelayer.sol validates signature whitelist
+CORS
+Origin whitelist per environment
+NestJS CorsModule
+GraphQL depth
+Max query depth limit
+Prevents deeply nested query abuse
+
+11. Local Development Setup
+11.1 Prerequisites
+Bun >= 1.1 installed globally
+Docker Desktop running (PostgreSQL 15 + Redis 7 containers)
+Node.js >= 20 (for scripts that require Node)
+Expo Go on a physical device for mobile development
+Hardhat for contract compilation and local Celo testnet interaction
+11.2 Quick Start — Web MVP Only
+cd apps/web && bun install && bun dev
+# Connects to Celo Alfajores testnet
+# Visits: http://localhost:3000/fr (default locale: FR)
+11.3 Full Monorepo Start
+git clone <repo> && cd coopenergie
+bun install
+cp .env.example .env      # fill in all values
+bun run db:up             # start Docker PostgreSQL + Redis
+bun run db:migrate        # apply Prisma migrations
+bun run db:generate       # generate Prisma client
+bun run db:seed           # seed with Cameroonian test data
+cd contracts && bun hardhat deploy --network alfajores  # deploy to testnet
+bun run dev               # start web + backend
+11.4 Environment Variables
+Variable
+Value / Source
+Used By
+DATABASE_URL
+postgresql://postgres:postgres@localhost:5432/coopenergie
+Backend, Prisma
+REDIS_URL
+redis://localhost:6379
+Backend
+NEXTAUTH_SECRET
+Generated via: bun run keys
+Web + Backend (shared)
+NEXTAUTH_URL
+http://localhost:3000
+Web (Auth.js)
+API_PORT
+4000
+Backend
+NEXT_PUBLIC_API_URL
+http://localhost:4000
+Web
+NEXT_PUBLIC_GRAPHQL_URL
+http://localhost:4000/graphql
+Web + Mobile
+CELO_RPC_URL
+https://alfajores-forno.celo-testnet.org
+Backend blockchain services
+CELO_RELAYER_PRIVATE_KEY
+Generated relayer wallet private key
+Backend gas relayer
+COOP_FACTORY_ADDRESS
+Deployed CoopFactory.sol address on Alfajores
+Backend factory service
+GAS_RELAYER_ADDRESS
+Deployed GasRelayer.sol address
+Backend relayer service
+CAMPAY_API_KEY
+From CamPay developer portal
+Backend payments module
+CAMPAY_WEBHOOK_SECRET
+From CamPay dashboard
+Backend webhook validation
+AWS_S3_BUCKET
+S3 bucket name
+Backend file storage
+FIREBASE_SERVER_KEY
+From Firebase console
+Backend push notifications
+
+12. Revision History
+Version
+Date
+Author
+Changes
+1.0
+April 2026
+CoopEnergie Team
+Initial architecture — simulated blockchain, Node runtime
+2.0
+April 2026
+CoopEnergie Team
+Real Celo blockchain + smart contracts; REST/GraphQL hybrid; Railway deployment; FR default; clean script fix; production Part B
+
+— End of Document —

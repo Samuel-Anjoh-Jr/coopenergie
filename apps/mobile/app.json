@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "CoopEnergie",
+    "slug": "coopenergie",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "primaryColor": "#1B5E20",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B5E20"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1B5E20"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1B5E20",
+          "sounds": [
+            "./assets/sounds/contribution.wav",
+            "./assets/sounds/governance.wav",
+            "./assets/sounds/approval.wav",
+            "./assets/sounds/transfer.wav",
+            "./assets/sounds/alert.wav",
+            "./assets/sounds/payment.wav",
+            "./assets/sounds/member.wav"
+          ]
+        }
+      ]
+    ],
+    "scheme": "coopenergie",
+    "extra": {
+      "eas": {
+        "projectId": "7331b52c-6921-4712-a790-700f01072666"
+      },
+      "router": {}
+    },
+    "owner": "samuelanjohjr"
+  }
+}

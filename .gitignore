@@ -1,12 +1,27 @@
+node_modules
+.env
+dist
+.next
+.expo
+build
+coverage
+*.log
+contracts/artifacts
+contracts/cache
+.vscode
+.idea
+
+-------
+
 # Logs
 logs
 *.log
 npm-debug.log*
+bun-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
 node_modules
 dist
 dist-ssr
@@ -23,3 +38,4 @@ dist-ssr
 *.sln
 *.sw?
 .vscode\settings.json
+

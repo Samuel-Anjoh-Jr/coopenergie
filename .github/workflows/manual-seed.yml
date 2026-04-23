@@ -1,0 +1,23 @@
+name: Manual Seed Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type CONFIRM to proceed"
+        required: true
+        type: string
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirmation == 'CONFIRM'
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PRODUCTION_SERVICE: ${{ secrets.RAILWAY_PRODUCTION_SERVICE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute seed command in production container
+        run: bunx @railway/cli@latest run --service "$RAILWAY_PRODUCTION_SERVICE" "bun run db:seed"

@@ -1,0 +1,40 @@
+{
+  "name": "coopenergie",
+  "private": true,
+  "packageManager": "bun@latest",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "prepare": "husky || true",
+    "env:sync": "node scripts/sync-env.mjs",
+    "dev:web": "bun run env:sync && bun run --cwd apps/web dev",
+    "dev:api": "bun run env:sync && bun run --cwd apps/backend dev",
+    "dev:mobile": "bun run env:sync && bun run --cwd apps/mobile start",
+    "mobile:android": "bun run --cwd apps/mobile android",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "dev": "bun run env:sync && node scripts/dev-with-cleanup.js",
+    "dev:nodb": "bun run env:sync && bun run dev:web && bun run dev:api && bun run dev:mobile",
+    "db:generate": "bunx prisma generate --schema apps/backend/prisma/schema.prisma",
+    "db:push": "bunx prisma db push --schema apps/backend/prisma/schema.prisma",
+    "db:studio": "cd apps/backend && bunx prisma studio",
+    "db:migrate": "bunx prisma migrate dev --schema apps/backend/prisma/schema.prisma",
+    "db:migrate:reset": "bunx prisma migrate reset --schema apps/backend/prisma/schema.prisma",
+    "db:migrate:deploy": "bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma",
+    "db:reset": "bun run db:down && bun run db:up && bun run db:migrate:deploy && bun run db:generate",
+    "db:seed": "cd apps/backend && bun run prisma:seed",
+    "build:web": "bun run --cwd apps/web build",
+    "build:api": "bun run --cwd apps/backend build",
+    "build:mobile": "bun run --cwd apps/mobile build",
+    "build": "bun run build:api && bun run build:web && bun run build:mobile",
+    "lint": "bun run --cwd apps/web lint && bun run --cwd apps/backend lint",
+    "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/backend typecheck",
+    "format": "prettier --write .",
+    "clean": "node scripts/clean.js",
+    "keys": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    "test": "echo Run tests from app directories"
+  },
+  "devDependencies": {
+    "@vscode/ripgrep": "^1.17.1",
+    "prettier": "^3.0.0"
+  }
+}

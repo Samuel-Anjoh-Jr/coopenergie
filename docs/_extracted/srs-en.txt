@@ -1,0 +1,889 @@
+
+MIABE HACKATHON 2026  ·  CM-02  ·  DAROLLO TECHNOLOGIES CORPORATION
+
+CoopEnergie
+
+Software Requirements Specification
+Cooperative Solar Funding Platform — Cameroon
+
+Version
+2.0 — Production Implementation
+Date
+April 2026
+Project Code
+CM-02 — CoopEnergie
+Track
+D10 — Énergies renouvelables & Microgrids
+Blockchain
+Celo Network (celoscan.io)
+SDGs
+ODD 7 · ODD 1 · ODD 11
+Status
+Active Production Development
+Default Locale
+Français (FR)
+
+CONFIDENTIAL — Hackathon Submission Document
+
+1. Introduction
+1.1 Purpose
+This Software Requirements Specification (SRS) defines the functional and non-functional requirements for CoopEnergie — a real blockchain-enabled cooperative solar funding platform built for the Cameroonian market and the broader CEMAC zone.
+The document is structured in two parts:
+Part A — Hackathon MVP Requirements: The minimum deliverable set for Phases 1, 2, and 3 of MIABE Hackathon 2026.
+Part B — Production Implementation Requirements: Full production features being actively built beyond the hackathon scope. These are not "future roadmap" items — they are committed implementation work.
+1.2 Project Overview
+CoopEnergie enables citizens to form digital cooperatives, pool solar funding contributions, vote collectively on purchases, and verify every transaction on the public Celo blockchain. The platform addresses a critical trust gap: informal cooperatives dissolve before achieving their goals because members cannot verify that funds are being managed honestly.
+By recording every contribution, vote, and financial decision on the Celo blockchain, CoopEnergie makes fraud immediately visible and provable — not through internal promises, but through public on-chain verification at celoscan.io.
+1.3 Problem Statement
+45% of Cameroon's population lacks electricity access — a significant market for cooperative solar funding.
+A basic solar system costs 60,000–250,000 FCFA — inaccessible for most rural households individually.
+The Cameroonian solar market has grown 35% per year since 2018, showing strong latent demand.
+~80,000 households were individually equipped with solar panels by 2023.
+Cooperative purchasing in Kenya and Ethiopia reduced unit costs by 25–40% — a proven model.
+Without transparent fund management, cooperative funds become conflict sources, dissolving groups before purchase.
+1.4 Why Celo Blockchain for Africa
+The hackathon theme "La Blockchain, levier du développement durable africain" calls for real blockchain leverage — not simulation. CoopEnergie implements smart contracts on the Celo network, which was designed from the ground up for exactly this context.
+
+Factor
+Celo Advantage
+Mobile-first design
+Celo was built specifically for mobile devices and low-bandwidth environments — the exact reality of African users.
+Transaction fees
+Gas fees below $0.001 USD per transaction — negligible for FCFA-denominated cooperatives.
+User abstraction
+Meta-transactions via a gas relayer: the platform pays gas on behalf of users. Users interact normally; blockchain happens invisibly.
+Verification
+Every transaction is publicly verifiable on celoscan.io — the cooperative wallet address is displayed in the app with a direct explorer link.
+African adoption
+Celo's Valora wallet and Moola Market protocol are already in active use across Sub-Saharan Africa.
+Ethereum-compatible
+Solidity smart contracts — auditable, industry-standard tooling (Hardhat, OpenZeppelin).
+Stable currency
+cUSD (Celo Dollar) available for price-stable contributions; FCFA amounts recorded on-chain.
+No wallet required
+Users never need to install MetaMask or hold CELO — the platform acts as a custodial relayer.
+1.5 Scope
+In Scope — Part A (Hackathon MVP)
+Cooperative dashboard with member contributions and progress tracking
+On-chain contribution recording via CooperativeVault.sol smart contract on Celo
+On-chain voting for purchase proposals
+Blockchain ledger UI linked to real CeloScan transactions
+Community wallet address displayed with CeloScan verification link
+Automated financial report generation and CSV export
+Bilingual interface (Français / English) — default locale: FR
+Responsive web application (desktop + mobile)
+In Scope — Part B (Production Implementation)
+Multi-tenant SaaS: multiple cooperatives, each with its own deployed smart contract
+Real Mobile Money payment integration (CamPay — MTN / Orange) → on-chain settlement
+Expo mobile application (iOS + Android) — offline-first
+Role-based access control (Member / Cooperative Admin / Platform Admin)
+Email + shareable link invitation system with token-based onboarding
+Real-time updates via GraphQL Subscriptions and WebSockets
+Hybrid API: REST for write-heavy actions, GraphQL for read-heavy queries
+Subscription billing for SaaS monetisation
+Audit logs for legal and regulatory compliance
+Multi-currency display (XAF, NGN, USD) with XAF as base storage currency
+AI-powered funding success prediction
+Push notifications (web PWA + mobile)
+CI/CD pipelines (GitHub Actions + EAS) with production-safe migration strategy
+Out of Scope
+IoT / hardware sensor integration for physical solar monitoring
+ENEO grid real-time integration
+Financial institution escrow partnerships (future phase)
+Layer 2 scaling beyond Celo (sufficient for current scope)
+1.6 Definitions
+Term
+Definition
+CoopEnergie
+The platform product being built
+Cooperative
+A group pooling contributions toward a shared solar purchase goal
+Contribution
+A financial payment made by a member to the cooperative fund (English term; cotisation in French)
+CooperativeVault.sol
+The Solidity smart contract deployed per cooperative on Celo — holds the community wallet and all on-chain records
+Ledger
+The on-chain event log: every contribution, vote, and proposal recorded as a Celo transaction
+Community Wallet
+The Ethereum-compatible address of the cooperative's smart contract — viewable on celoscan.io
+Gas Relayer
+A backend service that pays Celo gas fees on behalf of users, making blockchain invisible to them
+FCFA
+Franc CFA — the currency of Cameroon and the CEMAC zone
+CeloScan
+The public Celo blockchain explorer at celoscan.io where any transaction can be independently verified
+MVP
+Minimum Viable Product — the minimum feature set for the hackathon
+SRS
+Software Requirements Specification — this document
+RBAC
+Role-Based Access Control
+CamPay
+Cameroonian Mobile Money API supporting MTN and Orange
+EAS
+Expo Application Services — cloud build and deploy platform for React Native
+GraphQL
+Query language for APIs; used for all read-heavy dashboard and reporting operations
+REST
+Representational State Transfer; used for all write-heavy mutation operations
+
+  PART A — HACKATHON MVP REQUIREMENTS  
+All requirements in Part A are mandatory deliverables for MIABE Hackathon 2026 Phases 1–3.
+2. Hackathon Phase Requirements
+2.1 Phase 1 — Présélection
+Documentation, visual design, and problem framing. No functional system required.
+Ref
+Deliverable
+Description
+Status
+P1-01
+Problem Documentation
+Solar access problem + cooperative model potential in Cameroon with supporting data
+Required
+P1-02
+Visual Mockups
+Mockups: cooperative dashboard, contribution flow, voting screen, ledger page
+Required
+P1-03
+Landing Site
+Homepage presenting CoopEnergie — the transparent solar cooperative model
+Required
+P1-04
+Blockchain Description
+How contributions are recorded on Celo, how votes are secured on-chain, how anyone can verify at celoscan.io
+Required
+
+2.2 Phase 2 — Demi-finale
+Functional demo of the core flow from cooperative creation to a voted purchase decision.
+Ref
+Deliverable
+Description
+Priority
+P2-01
+Cooperative Management
+Dashboard: cooperative name, goal, members, target amount, progress bar
+MUST
+P2-02
+Contribution Tracking
+Add contributions → on-chain recording → progress bar update
+MUST
+P2-03
+Voting System
+Vote on purchase proposals with results recorded as Celo transactions
+MUST
+P2-04
+Live Demo Flow
+End-to-end: cooperative → contributions → vote → on-chain verification on CeloScan
+MUST
+
+2.3 Phase 3 — Finale
+Complete MVP with reporting, full documentation, and a polished 10-minute pitch.
+Ref
+Deliverable
+Description
+Priority
+P3-01
+Complete MVP
+Integrated: cooperative management + contributions + voting + on-chain ledger
+MUST
+P3-02
+Automated Report
+Report: funds collected, target, estimated timeline, proposal decisions, wallet address
+MUST
+P3-03
+CSV Export
+Downloadable CSV compatible with Excel and Google Sheets
+MUST
+P3-04
+Documentation
+Technical and functional documentation of the platform
+MUST
+P3-05
+10-Minute Pitch
+Pitch deck + live demo showing neighbourhood electrification via cooperative + CeloScan verification
+MUST
+
+3. Functional Requirements — MVP
+3.1 FR-01: User Authentication
+ID
+Requirement
+Notes
+FR-01-1
+Users can register with email and password
+Password hashed with bcrypt (rounds: 12)
+FR-01-2
+Users can log in with email and password
+Session via Auth.js JWT
+FR-01-3
+Authenticated users are redirected to dashboard
+Unauthenticated: homepage / login
+FR-01-4
+Session persists across browser tabs and refreshes
+JWT in secure httpOnly cookie
+FR-01-5
+Credentials for evaluators displayed on login page
+Hackathon requirement
+
+3.2 FR-02: Cooperative Dashboard
+ID
+Requirement
+Notes
+FR-02-1
+Dashboard displays cooperative name, target amount, community wallet address
+Wallet address links to celoscan.io
+FR-02-2
+Dashboard shows total collected, remaining amount, and percentage progress
+Calculated from on-chain contributions
+FR-02-3
+Progress bar animates on each confirmed on-chain contribution
+Smooth CSS transition
+FR-02-4
+Member count displayed
+Count of registered members
+FR-02-5
+Recent activity feed shows latest contributions, votes, and proposals with TX hashes
+Sorted by timestamp
+FR-02-6
+Community wallet address displayed with QR code and CeloScan link
+Key trust feature — judges can verify live
+
+3.3 FR-03: Contributions (On-Chain)
+ID
+Requirement
+Notes
+FR-03-1
+Authenticated member can submit a contribution amount in FCFA
+Minimum: amount > 0
+FR-03-2
+Contribution triggers a transaction to the cooperative's smart contract on Celo
+Via backend gas relayer — user pays no gas
+FR-03-3
+Contribution is recorded on-chain as a ContributionMade event in CooperativeVault.sol
+Immutable, publicly verifiable
+FR-03-4
+Transaction hash is returned and displayed in the contribution list
+Links to celoscan.io/{tx_hash}
+FR-03-5
+Progress bar animates to reflect new on-chain total
+State synced from contract via backend
+FR-03-6
+Toast notification confirms contribution and displays TX hash
+Localised message (FR default)
+FR-03-7
+Contribution list shows member name, amount (FCFA), TX hash, date
+Mobile: card view; Desktop: table
+
+3.4 FR-04: Proposals
+ID
+Requirement
+Notes
+FR-04-1
+Any authenticated member can create a proposal with title and description
+Recorded on-chain as ProposalCreated event
+FR-04-2
+Proposals display with status: PENDING, APPROVED, or REJECTED
+Status computed from on-chain vote tally
+FR-04-3
+Proposal list shows vote counts and visual vote bar
+Animated vote bar
+FR-04-4
+Each proposal card shows the Celo TX hash of its creation
+Links to celoscan.io
+
+3.5 FR-05: Voting System (On-Chain)
+ID
+Requirement
+Notes
+FR-05-1
+Any authenticated member can vote YES or NO on a PENDING proposal
+Recorded as VoteCast on-chain
+FR-05-2
+Smart contract enforces one vote per address per proposal — not just UI
+Blockchain-level duplicate prevention
+FR-05-3
+Vote TX hash is displayed after voting
+Voter can verify their own vote on celoscan.io
+FR-05-4
+Vote bars animate smoothly after vote confirmation
+After TX confirmed on Celo
+FR-05-5
+Proposal status updates based on on-chain majority rule
+Read from smart contract state
+FR-05-6
+Toast notification confirms vote with TX hash
+Localised (FR default)
+
+3.6 FR-06: Blockchain Ledger
+ID
+Requirement
+Notes
+FR-06-1
+All platform events are recorded as real transactions on the Celo blockchain
+CooperativeVault.sol emits events on every action
+FR-06-2
+Ledger UI displays: event type, timestamp, payload summary, TX hash
+TX hash links to celoscan.io
+FR-06-3
+Ledger entries are grouped into "blocks" mirroring actual Celo block numbers
+Real block numbers from the chain
+FR-06-4
+Each entry shows a "Verified on Celo" badge with a direct celoscan.io link
+Clicking opens the transaction in the browser
+FR-06-5
+Community wallet address displayed at the top of the ledger page
+Full address + CeloScan contract view link
+FR-06-6
+Ledger can be filtered: All / Contributions / Votes / Proposals
+With count per filter
+FR-06-7
+Statistics footer: total transactions, block count, verified count, modifications (always 0)
+Data sourced from on-chain
+FR-06-8
+"How to verify" section with step-by-step instructions to check any TX on celoscan.io
+Builds trust with non-technical evaluators
+
+3.7 FR-07: Report Generation
+ID
+Requirement
+Notes
+FR-07-1
+Dashboard displays an auto-generated cooperative financial report
+Data sourced from on-chain contract state
+FR-07-2
+Report: total collected, target, completion %, estimated time to goal, wallet address
+Time estimation from contribution velocity
+FR-07-3
+Report includes proposal decisions summary (approved / rejected counts)
+Computed from on-chain vote state
+FR-07-4
+Report includes cooperative wallet address and CeloScan link for independent verification
+Key trust element in the report
+FR-07-5
+User can download report as CSV file
+UTF-8 BOM for Excel compatibility
+FR-07-6
+CSV structure: Section, Category, Metric, Value, Unit, Notes
+Excel/Sheets renderable
+FR-07-7
+CSV filename: coopenergie-rapport-YYYY-MM-DD.csv
+Standardised naming
+FR-07-8
+All report labels respect the active language (FR / EN)
+via next-intl
+
+3.8 FR-08: Internationalisation (i18n)
+ID
+Requirement
+Notes
+FR-08-1
+All UI text externalised via next-intl — zero hardcoded strings
+No exceptions anywhere in the codebase
+FR-08-2
+Default locale: Français (FR) — /fr/* is the default route
+English available at /en/*
+FR-08-3
+Language switcher in Navbar on all pages
+Toggle FR / EN
+FR-08-4
+Dates formatted per locale using Intl.DateTimeFormat
+FR: 18 avril 2026 / EN: April 18, 2026
+FR-08-5
+Toast notifications respect active locale
+Translated toast messages
+FR-08-6
+CSV report respects active locale for all headers and labels
+FR and EN outputs differ
+FR-08-7
+Proposal status labels localised
+No hardcoded status strings
+FR-08-8
+Transaction hash labels and celoscan.io link text localised
+FR: "Vérifier sur CeloScan"
+
+4. Non-Functional Requirements — MVP
+4.1 Performance
+ID
+Requirement
+NFR-P-01
+Dashboard initial load under 3 seconds on a standard mobile connection
+NFR-P-02
+Contribution and voting interactions provide feedback within 500ms (pending state shown while TX confirms)
+NFR-P-03
+Progress bar and vote bar animations run at 60fps
+NFR-P-04
+Images use next/image with lazy loading; hero image has priority loading
+NFR-P-05
+On-chain TX confirmation does not block the UI — optimistic updates shown immediately
+
+4.2 Usability
+ID
+Requirement
+NFR-U-01
+All interactive elements: minimum 44px touch target (mobile accessibility)
+NFR-U-02
+Mobile sidebar: slide-in drawer with backdrop overlay, escape-key close, auto-close on navigation
+NFR-U-03
+Contribution list: table on desktop, stacked cards on mobile
+NFR-U-04
+Modals: full-width bottom-sheet on mobile
+NFR-U-05
+Ledger filter buttons: horizontal scroll on mobile
+NFR-U-06
+TX hashes: truncated display (0xA3F...9D2) with copy-to-clipboard button
+NFR-U-07
+CeloScan links open in a new browser tab
+NFR-U-08
+Empty states with guidance text when filtered ledger views have no results
+
+4.3 Reliability
+ID
+Requirement
+NFR-R-01
+Blockchain ledger is immutable by design — smart contract has no update/delete functions
+NFR-R-02
+One-vote-per-address enforced at smart contract level, not only UI
+NFR-R-03
+Gas relayer retries failed transactions with exponential backoff before surfacing error to user
+NFR-R-04
+UI shows pending state while awaiting Celo transaction confirmation
+4.4 Maintainability
+ID
+Requirement
+NFR-M-01
+Blockchain service layer isolated in /lib/blockchain/ — contracts and relayer abstracted behind a service interface
+NFR-M-02
+No hardcoded strings — all text via translation keys
+NFR-M-03
+Components are modular and independently testable
+NFR-M-04
+Smart contract addresses stored in environment variables, not source code
+
+5. User Stories — MVP
+5.1 Visitor
+ID
+As a...
+I want to...
+So that...
+US-V-01
+Visitor
+See the homepage explaining CoopEnergie
+I understand the product before registering
+US-V-02
+Visitor
+Switch language between FR and EN
+I can use the platform in my preferred language
+
+5.2 Cooperative Member
+ID
+As a...
+I want to...
+So that...
+US-M-01
+Member
+See the cooperative dashboard with funding progress
+I know how close we are to our solar goal
+US-M-02
+Member
+Add a contribution in FCFA and have it recorded on Celo
+My payment is publicly verifiable and cannot be denied
+US-M-03
+Member
+See my contribution TX hash immediately after submitting
+I can verify my payment exists on celoscan.io
+US-M-04
+Member
+Read all pending purchase proposals
+I know what decisions need my vote
+US-M-05
+Member
+Vote YES or NO on a proposal — recorded on Celo
+My vote is permanent and cannot be altered
+US-M-06
+Member
+See real-time vote counts after my vote
+I know the current standing of the group decision
+US-M-07
+Member
+View the blockchain ledger with all recorded events
+I can verify no funds or votes have been altered
+US-M-08
+Member
+Click any TX hash to view it on celoscan.io
+I have independent external proof of every event
+US-M-09
+Member
+Filter ledger events by type
+I can quickly find specific events
+US-M-10
+Member
+View the community wallet address
+I can check the contract balance independently
+
+5.3 Cooperative Admin
+ID
+As a...
+I want to...
+So that...
+US-A-01
+Admin
+Create a purchase proposal
+The group can vote on equipment choices
+US-A-02
+Admin
+Download a financial report as a CSV
+I can share verified progress with members, NGOs, or suppliers
+US-A-03
+Admin
+Invite members via email or shareable link
+I can onboard members without requiring individual email invitations
+
+  PART B — PRODUCTION IMPLEMENTATION REQUIREMENTS  
+These are active production implementation requirements — not a future roadmap. They are being built alongside and after the hackathon as the live product.
+6. Smart Contract Architecture
+6.1 Celo Blockchain Rationale
+Celo was selected as the production blockchain for CoopEnergie due to its specific design for mobile-first, low-income, and developing-world contexts — exactly the African cooperative market. See Section 1.4 for the full selection rationale.
+6.2 Smart Contract System
+Contract
+Purpose
+Key Functions
+CoopFactory.sol
+Deploys a new CooperativeVault for each new cooperative
+deployCooperative(name, targetAmount, adminAddress) → vault address
+CooperativeVault.sol
+Holds the cooperative's on-chain state: contributions, votes, proposals, wallet
+contribute(), createProposal(), vote(), getState(), getBalance()
+GasRelayer.sol (minimal)
+Accepts meta-transactions from the backend relayer on behalf of users
+execute(from, data, signature) — EIP-2771 compatible
+
+6.3 On-Chain Events Emitted
+Event
+Emitted By
+Payload
+ContributionMade
+CooperativeVault.contribute()
+memberAddress, amountXAF, timestamp, blockNumber
+ProposalCreated
+CooperativeVault.createProposal()
+proposalId, creatorAddress, title, timestamp
+VoteCast
+CooperativeVault.vote()
+proposalId, voterAddress, choice, timestamp
+ProposalResolved
+CooperativeVault (auto)
+proposalId, result (APPROVED/REJECTED), finalYes, finalNo
+FundsReleased
+CooperativeVault (admin)
+recipientAddress, amountXAF, proposalId, timestamp
+6.4 Gas Relayer Strategy
+The gas relayer ensures users never need to hold CELO or understand gas fees:
+User submits an action (contribution/vote) via the web or mobile app.
+Backend signs the transaction using the platform relayer wallet (which holds CELO for gas).
+CooperativeVault verifies the relay signature and executes the call as if it came from the user's address.
+The Celo transaction appears in the user's address history on celoscan.io — fully attributable to them.
+The relayer wallet is topped up automatically from platform revenue.
+Cost estimate: at <$0.001 per transaction and an average cooperative generating 500 transactions/year, annual gas cost per cooperative is under $0.50 USD. Fully sustainable.
+
+7. Multi-Tenant SaaS Architecture
+ID
+Requirement
+Priority
+EXT-MT-01
+Each cooperative is an independent tenant with its own deployed smart contract (CooperativeVault)
+CRITICAL
+EXT-MT-02
+A user can belong to multiple cooperatives with different roles in each
+HIGH
+EXT-MT-03
+All database queries are scoped by cooperativeId — zero cross-tenant data leakage
+CRITICAL
+EXT-MT-04
+Cooperative admins invite members via email (token-based, single-use, expiring 72h)
+HIGH
+EXT-MT-05
+Cooperative admins invite members via shareable link (token embedded in URL)
+HIGH
+EXT-MT-06
+Invitation links can be set to expire and can be revoked by the admin
+MEDIUM
+EXT-MT-07
+Non-registered invitees are directed to registration and auto-joined on completion
+HIGH
+EXT-MT-08
+Cooperative admins can remove members and revoke pending invitations
+MEDIUM
+EXT-MT-09
+Platform admin can view all cooperatives and system-wide metrics
+HIGH
+
+8. Role-Based Access Control
+Role
+Scope
+Permissions
+PLATFORM_ADMIN
+System-wide
+View all cooperatives, suspend users, view system metrics, manage subscription plans, view audit logs
+COOP_ADMIN
+Per cooperative
+Create proposals, invite/remove members via email or link, manage cooperative settings, release funds (on-chain tx)
+MEMBER
+Per cooperative
+Contribute (on-chain), vote (on-chain), view ledger, view reports, view wallet address
+
+9. Hybrid API Strategy
+REST is used for all write-heavy (mutation) operations. GraphQL is used for all read-heavy (query) operations. This provides the reliability of REST for state changes and the efficiency of GraphQL for complex dashboard data fetching.
+
+Operation Type
+Protocol
+Examples
+Authentication
+REST
+POST /auth/login, POST /auth/register
+Cooperative mutations
+REST
+POST /cooperatives, POST /invites, POST /invites/accept
+Contribution submission
+REST
+POST /contributions (triggers on-chain TX via relayer)
+Vote submission
+REST
+POST /votes (triggers on-chain TX via relayer)
+Proposal creation
+REST
+POST /proposals (triggers on-chain TX via relayer)
+Payment operations
+REST
+POST /payments/initiate, POST /payments/webhook
+Dashboard queries
+GraphQL
+query { cooperative { progress, members, contributions } }
+Ledger queries
+GraphQL
+query { ledger(type: CONTRIBUTION) { hash, blockNumber, payload } }
+Report data
+GraphQL
+query { report(cooperativeId) { totalCollected, proposals { status } } }
+Real-time updates
+GraphQL Subscriptions
+subscription { onContribution(cooperativeId) { amount, hash } }
+
+10. Payment Integration (CamPay)
+ID
+Requirement
+Notes
+PAY-01
+Users initiate contributions via MTN Mobile Money or Orange Money
+Via CamPay API
+PAY-02
+Payment initiation creates a PENDING record; user sees "Confirm on your phone"
+Non-blocking UX
+PAY-03
+CamPay webhook confirms payment success → triggers on-chain contribution recording
+Signature validation required
+PAY-04
+On success: Contribution + on-chain ContributionMade event + DB record all created
+Webhook-triggered chain
+PAY-05
+On failure: Payment marked FAILED, no contribution created, user notified
+Idempotent — no double-charge
+PAY-06
+Real-time dashboard update via GraphQL Subscription after on-chain confirmation
+No page refresh needed
+PAY-07
+Duplicate payments blocked via idempotency key and on-chain state check
+Belt-and-suspenders deduplication
+
+11. Mobile Application (Expo)
+11.1 Core Screens
+Screen
+Functionality
+Login
+Email/password auth; session via MMKV JWT storage
+Dashboard
+Cooperative progress, wallet address, metrics, recent on-chain activity
+Contributions
+List contributions with TX hashes; add contribution via Mobile Money
+Proposals
+List proposals, create, vote YES/NO — all on-chain
+Ledger
+Full blockchain ledger with filter and celoscan.io links
+Report
+Financial summary with wallet address; CSV download
+11.2 Offline-First Requirements
+ID
+Requirement
+Priority
+MOB-O-01
+App caches last-known contributions, proposals, ledger in SQLite/MMKV
+HIGH
+MOB-O-02
+User can browse cached data when offline
+HIGH
+MOB-O-03
+Actions taken offline are queued for sync on reconnection (with idempotency keys)
+HIGH
+MOB-O-04
+Sync engine retries with exponential backoff on network restoration
+MEDIUM
+MOB-O-05
+Offline indicator banner shown when disconnected
+HIGH
+MOB-O-06
+Pending sync actions show a "pending" badge until confirmed on-chain
+MEDIUM
+
+12. Additional Production Features
+12.1 Invitation System (Email + Link)
+ID
+Requirement
+INV-01
+Admin sends email invitation: POST /invites → generates token → sends link to /join/{token}
+INV-02
+Admin generates shareable link: POST /invites/link → returns /join/{token} URL to copy/share
+INV-03
+Invitation tokens expire in 72 hours
+INV-04
+Invitation tokens are single-use — marked ACCEPTED on first redemption
+INV-05
+Unauthenticated visitors at /join/{token} are redirected to register then auto-joined
+INV-06
+Admin dashboard shows all pending, accepted, and revoked invitations
+INV-07
+Admin can revoke any invitation before it is accepted
+
+12.2 Subscription Billing
+ID
+Requirement
+BILL-01
+Platform offers tiered plans: FREE, ONE_TIME, MONTHLY, YEARLY
+BILL-02
+Features gated by plan — enforced via NestJS middleware
+BILL-03
+Billing cycle tracking and invoice records stored in database
+BILL-04
+Platform admin manages plans, views active subscriptions, and revenue metrics
+
+12.3 Audit Logs
+ID
+Requirement
+AUD-01
+All critical actions logged: login, contribution, vote, proposal, payment, role change, invitation
+AUD-02
+Audit logs are immutable — no update or delete operations permitted
+AUD-03
+Platform admin filters audit logs by user, cooperative, action, and date range
+AUD-04
+Audit logs exportable as CSV for compliance
+
+12.4 Multi-Currency Display
+ID
+Requirement
+CUR-01
+All monetary values stored in FCFA (XAF) as the base currency
+CUR-02
+Display conversion to NGN and USD via an exchange rate provider
+CUR-03
+User can set display currency preference in their profile
+CUR-04
+Conversion on read only — storage always in XAF
+
+12.5 AI Funding Insights
+ID
+Requirement
+AI-01
+System generates a funding success probability score per proposal (0–100%)
+AI-02
+Score computed from: contribution velocity, member engagement, similar cooperative history
+AI-03
+Risk factors and recommendations displayed alongside score
+AI-04
+AI service fails gracefully — never blocks core app functionality
+AI-05
+Optional: LLM-generated natural-language explanation of the score
+
+12.6 Push Notifications
+ID
+Requirement
+PUSH-01
+Web (PWA) push notifications via Firebase Web Push
+PUSH-02
+Mobile push via Expo Push Notification Service
+PUSH-03
+Events: new contribution confirmed on-chain, vote update, proposal created, payment success
+PUSH-04
+Device tokens stored per user per platform (web, iOS, Android)
+PUSH-05
+Push notifications degrade gracefully if permission denied or service unavailable
+
+13. CI/CD and Deployment
+Environment
+Trigger
+Actions
+PR Preview
+Pull Request opened
+Lint → Typecheck → Build all apps → Vercel Preview deploy
+Staging
+Merge to develop
+PR actions + Backend deploy to Railway staging + Migrations if schema changed
+Production
+Merge to main
+All staging actions + Production deploy + prisma migrate deploy (conditional) + Smart contract deployment if contracts changed
+Manual Seed
+workflow_dispatch
+Run prisma seed in production (manual trigger only)
+13.1 Deployment Targets
+App
+Platform
+Notes
+apps/web
+Vercel
+Next.js optimised; preview deploys per PR
+apps/backend
+Railway
+Dockerised NestJS/Bun; auto-scaling; Railway PostgreSQL + Redis
+Database
+Railway PostgreSQL
+Managed PostgreSQL on Railway; connection pooling
+Redis
+Railway Redis
+Managed Redis on Railway; rate limiting, session cache, queues
+Smart Contracts
+Celo Mainnet / Alfajores (testnet)
+Hardhat deploy via CI — contract addresses stored in env vars
+apps/mobile iOS
+EAS + App Store
+Expo Application Services cloud build
+apps/mobile Android
+EAS + Play Store
+Expo Application Services cloud build
+
+14. Constraints and Assumptions
+14.1 Technical Constraints
+Stack uses Next.js App Router — no Pages router.
+All UI text internationalised — zero hardcoded strings. Default locale: FR.
+Smart contracts written in Solidity, deployed to Celo via Hardhat.
+Gas relayer wallet must maintain a CELO balance; requires a top-up mechanism.
+CamPay integration requires API access and sandbox credentials from CamPay.
+Offline-first mobile requires Expo SDK >= 52 and stable SQLite/MMKV support.
+14.2 Assumptions
+Target users have smartphones and at least 2G connectivity.
+Cooperative administrators have basic digital literacy.
+FCFA is the primary operating currency; CELO is only used internally for gas.
+Primary market: Cameroon — CEMAC zone expansion planned.
+Users do not need to understand blockchain; they interact with a standard mobile/web UI.
+
+15. Revision History
+Version
+Date
+Author
+Changes
+1.0
+April 2026
+CoopEnergie Team
+Initial SRS — hackathon requirements + roadmap
+2.0
+April 2026
+CoopEnergie Team
+Real Celo blockchain; FR default locale; contribution terminology; production Part B; hybrid API; invite links; no demo mode
+
+— End of Document —

@@ -1,0 +1,956 @@
+
+CoopEnergie — MIABE Hackathon 2026
+
+Implementation Guide
+
+Addendum — Version 2
+Blockchain Mode · Wallet Setup · Fund Custody · Withdrawal Governance · Nodemailer
+
+Document Type
+Addendum to Implementation Guide v1
+Companion Document
+CoopEnergie-Implementation-Guide.docx
+Date
+April 2026
+Applies To
+All Implementation Phases
+New Sections
+Blockchain Mode, Wallet Setup, Fund Flow, Withdrawal, Nodemailer
+
+Use this addendum alongside the original Implementation Guide. Where a task in this document has the same number as one in the original, this version replaces it entirely.
+
+  SECTION 1 — ANSWERS TO TECHNICAL QUESTIONS  
+1. Blockchain Mode — What triggers demo vs. real
+The original guide had an implicit condition: "if vaultAddress exists". This is now replaced with an explicit environment variable to make the intent crystal clear and allow you to run the platform without blockchain access during early development.
+
+1.1 The BLOCKCHAIN_ENABLED flag
+State
+BLOCKCHAIN_ENABLED
+vaultAddress
+Behaviour
+Full production
+true
+Set (deployed contract)
+All actions go on-chain via the Celo relayer. Real TX hashes.
+Blockchain off
+false
+Irrelevant
+Platform runs normally. Contributions are confirmed instantly. TX hashes are deterministic placeholders for UI testing.
+Contract not deployed
+true
+null
+Platform creates the Contribution/Proposal/Vote records but skips the relay call. Logs a warning. Useful during contract deployment phase.
+
+Add this to your .env:
+  ⬤  ENV VARIABLE
+BLOCKCHAIN_ENABLED=true   # set to false to disable on-chain calls during development
+
+The check in contributions.service.ts becomes:
+  ⬤  contributions.service.ts — updated condition
+const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
+const vaultReady = !!cooperative.vaultAddress;
+ 
+if (blockchainEnabled && vaultReady) {
+  // Full on-chain path — calls relayerService.relayContribute()
+} else if (blockchainEnabled && !vaultReady) {
+  // Contract not deployed yet — confirm in DB only, log warning
+  this.logger.warn(`Cooperative ${cooperativeId} has no vault address yet`);
+} else {
+  // Demo/dev mode — instant confirm, placeholder TX hash
+  const fakeTx = `0x${createHash('sha256')`
+    `.update(`${cooperativeId}-${userId}-${amountXAF}-${Date.now()}`)`
+    `.digest('hex').slice(0, 64)}`;`,
+}
+This same pattern applies to proposals, votes, and withdrawal proposals. Always check BLOCKCHAIN_ENABLED && vaultAddress before relaying.
+
+2. Celo Wallet Setup — Step by Step
+2.1 What is the relayer wallet?
+The relayer wallet is a standard Ethereum-compatible wallet owned by your platform. It holds CELO (the native token) to pay gas fees on behalf of your users. Users never see it or interact with it. One wallet serves all cooperatives on the platform.
+
+2.2 Generate the wallet — one-time setup
+Run this command from anywhere in your project (viem is already in apps/backend):
+  ⬤  Generate wallet — run once in terminal
+# From apps/backend directory:
+node -e "
+  const { generatePrivateKey, privateKeyToAccount } = require('viem/accounts');
+  const privateKey = generatePrivateKey();
+  const account = privateKeyToAccount(privateKey);
+  console.log('\nRELAYER WALLET GENERATED');
+  console.log('Address:', account.address);
+  console.log('Private Key:', privateKey);
+  console.log('\nSave these IMMEDIATELY. Never commit the private key.');
+"
+Save both values before closing the terminal. The private key cannot be recovered if lost. Store it in a password manager and as a secret in Railway/GitHub Actions.
+
+2.3 Fund the wallet on Alfajores Testnet
+Alfajores is Celo's test network. Test CELO has no real value — it's free.
+Step
+Action
+Where
+1
+Open your browser
+—
+2
+Go to the faucet
+https://faucet.celo.org
+3
+Make sure "Alfajores" is selected in the network dropdown
+Faucet page
+4
+Paste your relayer wallet address (the 0x... address from step 2.2)
+Faucet page input
+5
+Click "Faucet"
+Faucet page
+6
+Wait 10–30 seconds — you will receive 1 CELO
+Email/page confirmation
+7
+Verify: paste your address at https://alfajores.celoscan.io/address/{your_address}
+CeloScan Alfajores
+8
+Add to root .env: CELO_RELAYER_PRIVATE_KEY=0x... (the private key from step 2.2)
+Your .env file
+9
+Add: CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+Your .env file
+
+2.4 Fund the wallet on Celo Mainnet (real money)
+Mainnet CELO has real monetary value. You need to buy it. The same relayer wallet address works on mainnet.
+Option
+How
+Cost Estimate
+Exchange purchase
+Buy CELO on Binance, Coinbase, or Kraken. Withdraw to your relayer wallet address.
+Market price + exchange fee
+Valora wallet
+Download Valora app (Celo's official mobile wallet). Buy CELO with card or bank. Send to relayer address.
+Market price + small Valora fee
+CamPay revenue funding
+Reserve a small % of platform fees (e.g., 0.5%) to automatically top up the relayer wallet.
+Zero extra cost — self-funded
+How much CELO do you need? At $0.001 per transaction and 10,000 transactions per month: ~$10/month. At 1 CELO ≈ $0.50–$0.80, you need 15–20 CELO per month for a busy platform. Start with $20 worth.
+  ⬤  Update .env for mainnet deployment
+CELO_RPC_URL=https://forno.celo.org           # mainnet RPC
+NEXT_PUBLIC_CELOSCAN_BASE=https://celoscan.io  # mainnet explorer
+NEXT_PUBLIC_CELO_CHAIN=celo                    # mainnet chain
+On mainnet, every action (contribution, vote, proposal, withdrawal) costs ~$0.001. For a cooperative with 20 members doing 5 actions each per month, the gas cost is $0.10/month. Fully sustainable from platform fees.
+
+3. Fund Custody Architecture — Where the real FCFA lives
+3.1 The two-layer architecture
+This is the most important architectural concept. The Celo blockchain tracks ACCOUNTING. CamPay holds the actual FCFA. They are always in sync.
+
+Layer
+System
+What it holds
+Who can access
+Accounting layer
+Celo blockchain (CooperativeVault.sol)
+A number: how much each member contributed, total accumulated, approved withdrawals
+Anyone — fully public at celoscan.io
+Custody layer
+CamPay merchant account
+The actual FCFA — real money
+Only your platform, via CamPay API with your API key
+
+3.2 Complete money flow — from contribution to withdrawal
+Step A — Member contributes
+Step
+System
+What happens
+1
+Member (web/mobile)
+Enters amount and phone number, clicks "Contribute"
+2
+Backend
+Creates Payment record (PENDING). Calls CamPay Collection API with member's phone number and amount.
+3
+CamPay
+Sends USSD push to member's phone. Member approves on their handset.
+4
+CamPay
+Debits member's MoMo account. Credits platform's CamPay merchant account. Fires webhook.
+5
+Backend
+Receives webhook. Validates signature. Updates Payment to SUCCESS. Creates Contribution (CONFIRMED).
+6
+Backend
+Calls relayerService.relayContribute() — records amountXAF on CooperativeVault.sol on Celo.
+7
+Celo
+Emits ContributionMade event. Returns TX hash.
+8
+Backend
+Stores TX hash on Contribution record. Emits GraphQL subscription event.
+9
+Member UI
+Sees TX hash with celoscan.io link. Progress bar updates.
+
+Step B — Cooperative head initiates withdrawal
+Step
+System
+What happens
+1
+COOP_ADMIN
+Creates a Withdrawal Proposal: amount, reason, destination (MoMo number/operator OR bank details).
+2
+Backend
+Creates Proposal (type: WITHDRAWAL) in DB. Calls relayerService.relayCreateProposal() on-chain. Returns TX hash.
+3
+Celo
+Records WithdrawalProposalCreated event. All members can see it at celoscan.io.
+4
+Members
+Vote YES or NO via app. Only eligible voters (members with ≥1 CONFIRMED contribution) can vote.
+5
+Backend
+Tracks vote tally. When YES votes / eligible voters ≥ threshold%: marks proposal APPROVED.
+6
+Celo
+VoteCast events recorded on-chain. ProposalResolved emitted when quorum reached.
+7
+Backend (auto)
+On approval: calls CamPay Transfer API. Reference: withdrawal proposal ID.
+8
+CamPay
+Debits platform's merchant account by the approved amount.
+9
+CamPay
+Credits cooperative head's MoMo account (or initiates bank transfer if bank details provided).
+10
+Backend
+Receives CamPay transfer webhook. Updates WithdrawalRequest to DISBURSED.
+11
+Backend
+Calls relayerService.relayFundsReleased() — records FundsReleased event on Celo.
+12
+Celo
+FundsReleased event recorded. Cooperative balance updated on-chain.
+13
+All Members
+See "Funds Released" in the ledger with TX hash. Total on-chain balance decrements.
+
+3.3 What CamPay supports for withdrawals
+Destination type
+CamPay API
+Who gets the money
+Notes
+MTN Mobile Money
+Transfer API: POST /transfer/ with operator=MTN
+MoMo account of cooperative head
+Instant — usually under 1 minute
+Orange Money
+Transfer API: POST /transfer/ with operator=ORANGE
+OM account of cooperative head
+Instant — usually under 1 minute
+Bank transfer
+Transfer API: POST /transfer/ with bank details
+Bank account of cooperative head
+24–48 hours depending on bank
+The cooperative head's phone number and preferred withdrawal method are stored in their user profile (new fields: withdrawalPhone, withdrawalOperator, withdrawalBankDetails). These are set during onboarding.
+
+4. Withdrawal Governance Design
+4.1 Voting threshold rules
+Rule
+Value
+Rationale
+Eligible voters
+Members who have ≥1 CONFIRMED contribution in this cooperative
+Passive members who never contributed cannot block disbursements
+Default threshold
+60% of eligible voters must vote YES
+Majority-plus — strong enough for trust, flexible enough to function
+Minimum threshold (admin-configurable)
+50%
+Simple majority — lowest acceptable level
+Maximum threshold (admin-configurable)
+90%
+Near-unanimous — highest acceptable level for very conservative cooperatives
+Quorum requirement
+At least 3 eligible voters must have voted (YES or NO combined) before resolution
+Prevents a single member approving with 1/1 = 100%
+Threshold scope
+Platform admin sets global default. COOP_ADMIN can override per-cooperative within the allowed range.
+Flexibility per cooperative without removing platform oversight
+
+4.2 Platform Settings model
+A singleton settings record stores the global platform configuration:
+  ⬤  NEW Prisma models to add to schema.prisma
+model PlatformSettings {
+  id                        String  @id @default("singleton")
+  withdrawalThresholdDefault Int     @default(60)   // percentage
+  withdrawalThresholdMin    Int     @default(50)
+  withdrawalThresholdMax    Int     @default(90)
+  withdrawalQuorumMinVotes  Int     @default(3)
+  maintenanceMode           Boolean @default(false)
+  platformName              String  @default("CoopEnergie")
+  updatedAt                 DateTime @updatedAt
+  updatedById               String?
+}
+ 
+model CooperativeSettings {
+  id                   String      @id @default(cuid())
+  cooperativeId        String      @unique
+  withdrawalThreshold  Int         @default(60)
+  cooperative          Cooperative @relation(fields:[cooperativeId], references:[id], onDelete:Cascade)
+}
+ 
+// Add to Cooperative model:
+//   settings CooperativeSettings?
+//   confirmedBalanceXAF Int @default(0)   // running balance
+//   withdrawalRequests  WithdrawalRequest[]
+ 
+enum WithdrawalStatus { PENDING_VOTE APPROVED REJECTED DISBURSING DISBURSED FAILED }
+enum WithdrawalDestinationType { MTN_MOMO ORANGE_MONEY BANK_TRANSFER }
+ 
+model WithdrawalRequest {
+  id                    String                  @id @default(cuid())
+  cooperativeId         String
+  proposalId            String                  @unique
+  amountXAF             Int
+  destinationType       WithdrawalDestinationType
+  recipientPhone        String?
+  recipientOperator     String?                 // MTN or ORANGE
+  recipientBankName     String?
+  recipientBankAccount  String?
+  recipientName         String
+  campayReference       String?
+  status                WithdrawalStatus        @default(PENDING_VOTE)
+  disbursedAt           DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  cooperative           Cooperative             @relation(fields:[cooperativeId], references:[id])
+  proposal              Proposal                @relation(fields:[proposalId], references:[id])
+}
+ 
+// Add to Proposal model:
+//   type              ProposalType    @default(STANDARD)
+//   withdrawalRequest WithdrawalRequest?
+ 
+enum ProposalType { STANDARD WITHDRAWAL }
+ 
+// Add to User model:
+//   withdrawalPhone    String?
+//   withdrawalOperator String?
+//   withdrawalBankName String?
+//   withdrawalBankAccount String?
+
+  SECTION 2 — UPDATED & NEW COPILOT PROMPTS  
+The following prompts replace or extend specific tasks in the original Implementation Guide. The task number is shown clearly. Queue them in order within their phase.
+
+Updated Task 0.3 — Environment Variables
+This replaces Task 0.3 in the original guide. Adds BLOCKCHAIN_ENABLED and withdrawal/email variables.
+  ⬤  COPILOT PROMPT — Task 0.3 (UPDATED)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the root environment configuration files.
+ 
+1. Create .env.example at the repo root with these variables and placeholder values:
+ 
+# ── BLOCKCHAIN ────────────────────────────────────────────────
+BLOCKCHAIN_ENABLED=true          # set false to skip on-chain calls in dev
+ 
+# ── DATABASE ──────────────────────────────────────────────────
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/coopenergie
+ 
+# ── REDIS ─────────────────────────────────────────────────────
+REDIS_URL=redis://localhost:6379
+ 
+# ── AUTH ──────────────────────────────────────────────────────
+NEXTAUTH_SECRET=REPLACE_WITH_MIN_32_CHAR_SECRET
+NEXTAUTH_URL=http://localhost:3000
+ 
+# ── BACKEND ───────────────────────────────────────────────────
+API_PORT=4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
+NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
+ 
+# ── CELO ──────────────────────────────────────────────────────
+# Testnet: https://alfajores-forno.celo-testnet.org
+# Mainnet: https://forno.celo.org
+CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+CELO_RELAYER_PRIVATE_KEY=REPLACE_WITH_GENERATED_PRIVATE_KEY
+COOP_FACTORY_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
+GAS_RELAYER_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
+ 
+# ── CELOSCAN ──────────────────────────────────────────────────
+# Testnet: https://alfajores.celoscan.io
+# Mainnet: https://celoscan.io
+NEXT_PUBLIC_CELOSCAN_BASE=https://alfajores.celoscan.io
+NEXT_PUBLIC_CELO_CHAIN=alfajores
+ 
+# ── CAMPAY ────────────────────────────────────────────────────
+# Sandbox: https://demo.campay.net/api
+# Production: https://www.campay.net/api
+CAMPAY_API_KEY=REPLACE_WITH_CAMPAY_KEY
+CAMPAY_WEBHOOK_SECRET=REPLACE_WITH_CAMPAY_WEBHOOK_SECRET
+CAMPAY_BASE_URL=https://demo.campay.net/api
+# CamPay disbursement / transfer API key (may be same as collection key)
+CAMPAY_TRANSFER_API_KEY=REPLACE_WITH_CAMPAY_TRANSFER_KEY
+ 
+# ── AWS S3 ────────────────────────────────────────────────────
+AWS_S3_BUCKET=coopenergie-files
+AWS_ACCESS_KEY=REPLACE
+AWS_SECRET_KEY=REPLACE
+AWS_REGION=eu-west-1
+ 
+# ── FIREBASE ──────────────────────────────────────────────────
+FIREBASE_SERVER_KEY=REPLACE_WITH_FIREBASE_KEY
+ 
+# ── EMAIL (Nodemailer / SMTP) ─────────────────────────────────
+# Use Gmail SMTP, Mailgun, SendGrid, or any SMTP provider
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false          # true for port 465, false for 587
+SMTP_USER=REPLACE_WITH_SMTP_EMAIL
+SMTP_PASS=REPLACE_WITH_SMTP_PASSWORD_OR_APP_PASSWORD
+EMAIL_FROM="CoopEnergie <noreply@coopenergie.cm>"
+ 
+# ── PLATFORM ──────────────────────────────────────────────────
+APP_URL=http://localhost:3000
+ 
+2. Copy .env.example to .env
+3. Ensure .env is in .gitignore
+
+Updated Task 1.2 — Prisma Schema
+This replaces Task 1.2. Adds PlatformSettings, CooperativeSettings, WithdrawalRequest, and proposal type updates.
+  ⬤  COPILOT PROMPT — Task 1.2 (UPDATED)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the complete Prisma schema for CoopEnergie with full withdrawal governance.
+ 
+Create file: apps/backend/prisma/schema.prisma
+ 
+--- ALL EXISTING MODELS FROM ORIGINAL TASK 1.2 REMAIN THE SAME ---
+Include all original models: User, Cooperative, Membership, Invitation,
+Contribution, Proposal, Vote, LedgerEvent, Payment, Plan, Subscription,
+AuditLog, DeviceToken.
+ 
+--- CHANGES TO EXISTING MODELS ---
+ 
+// ProposalType enum — ADD THIS:
+enum ProposalType { STANDARD WITHDRAWAL }
+ 
+// Proposal model — ADD these fields:
+//   type              ProposalType    @default(STANDARD)
+//   withdrawalRequest WithdrawalRequest?
+ 
+// User model — ADD these fields:
+//   withdrawalPhone      String?
+//   withdrawalOperator   String?   // "MTN" | "ORANGE"
+//   withdrawalBankName   String?
+//   withdrawalBankAccount String?
+ 
+// Cooperative model — ADD these fields:
+//   confirmedBalanceXAF  Int @default(0)
+//   settings             CooperativeSettings?
+//   withdrawalRequests   WithdrawalRequest[]
+ 
+--- NEW MODELS TO ADD ---
+ 
+enum WithdrawalStatus {
+  PENDING_VOTE APPROVED REJECTED DISBURSING DISBURSED FAILED
+}
+enum WithdrawalDestinationType {
+  MTN_MOMO ORANGE_MONEY BANK_TRANSFER
+}
+ 
+model WithdrawalRequest {
+  id                   String                   @id @default(cuid())
+  cooperativeId        String
+  proposalId           String                   @unique
+  amountXAF            Int
+  destinationType      WithdrawalDestinationType
+  recipientPhone       String?
+  recipientOperator    String?
+  recipientBankName    String?
+  recipientBankAccount String?
+  recipientName        String
+  campayReference      String?                  @unique
+  status               WithdrawalStatus         @default(PENDING_VOTE)
+  failureReason        String?
+  disbursedAt          DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  cooperative          Cooperative              @relation(fields:[cooperativeId], references:[id])
+  proposal             Proposal                 @relation(fields:[proposalId], references:[id])
+}
+ 
+model PlatformSettings {
+  id                        String   @id @default("singleton")
+  withdrawalThresholdDefault Int     @default(60)
+  withdrawalThresholdMin    Int      @default(50)
+  withdrawalThresholdMax    Int      @default(90)
+  withdrawalQuorumMinVotes  Int      @default(3)
+  maintenanceMode           Boolean  @default(false)
+  platformName              String   @default("CoopEnergie")
+  updatedAt                 DateTime @updatedAt
+  updatedById               String?
+}
+ 
+model CooperativeSettings {
+  id                  String      @id @default(cuid())
+  cooperativeId       String      @unique
+  withdrawalThreshold Int         @default(60)
+  cooperative         Cooperative @relation(fields:[cooperativeId], references:[id], onDelete:Cascade)
+}
+ 
+After creating the schema:
+  cd apps/backend
+  bunx prisma generate
+  bunx prisma migrate dev --name add-withdrawal-governance
+
+New Task 4.6 — Withdrawal Governance Service
+Insert this task after Task 4.5 (Votes) in the original guide.
+  ⬤  COPILOT PROMPT — Task 4.6 (NEW)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the withdrawal governance module.
+This handles: withdrawal proposal creation, vote eligibility,
+threshold evaluation, and CamPay disbursement triggering.
+ 
+Create apps/backend/src/modules/withdrawals/withdrawals.module.ts
+Create apps/backend/src/modules/withdrawals/withdrawals.service.ts
+Create apps/backend/src/modules/withdrawals/withdrawals.controller.ts
+Create apps/backend/src/modules/withdrawals/disbursement.service.ts
+ 
+--- withdrawals.service.ts ---
+ 
+Method: createWithdrawalProposal(adminUserId, cooperativeId, dto)
+  dto: { amountXAF, reason, destinationType, recipientPhone?,
+         recipientOperator?, recipientBankName?, recipientBankAccount?,
+         recipientName }
+  a. Validate: user is COOP_ADMIN
+  b. Validate: cooperative.confirmedBalanceXAF >= amountXAF (cannot withdraw more than balance)
+  c. Create Proposal { type: WITHDRAWAL, title: `Retrait: ${amountXAF} FCFA`, description: reason }
+  d. Create WithdrawalRequest linked to the proposal
+  e. Call relayerService.relayCreateProposal() on-chain
+  f. Return { proposal, withdrawalRequest }
+ 
+Method: getEligibleVoters(cooperativeId)
+  Returns members who have at least 1 CONFIRMED contribution in this cooperative.
+  Query: memberships JOIN contributions WHERE cooperativeId AND status=CONFIRMED
+  Returns: array of { userId, amountContributed }
+ 
+Method: evaluateWithdrawalThreshold(proposalId)
+  a. Get the proposal's cooperativeId
+  b. Load CooperativeSettings.withdrawalThreshold (or PlatformSettings.withdrawalThresholdDefault)
+  c. Load quorumMin from PlatformSettings.withdrawalQuorumMinVotes
+  d. Count eligible voters via getEligibleVoters()
+  e. Count YES votes from eligible voters only:
+     SELECT count(*) FROM votes WHERE proposalId AND choice=true
+     AND userId IN (SELECT userId FROM eligible voters)
+  f. Count NO votes from eligible voters
+  g. totalEligibleVoted = yesVotes + noVotes
+  h. If totalEligibleVoted < quorumMin: return { approved: false, reason: "quorum not reached" }
+  i. yesPercent = (yesVotes / eligibleVoterCount) * 100
+  j. If yesPercent >= threshold: return { approved: true, yesPercent }
+  k. Else: check if it is mathematically impossible to reach threshold (remaining voters cannot change outcome)
+     If so: return { approved: false, resolved: true }
+  l. Else: return { approved: false, resolved: false } — still collecting votes
+ 
+Method: processWithdrawalOnVote(proposalId)
+  Called after every vote on a WITHDRAWAL proposal:
+  a. Call evaluateWithdrawalThreshold()
+  b. If approved: update Proposal to APPROVED, WithdrawalRequest to APPROVED
+     Then: call disbursementService.disburse(withdrawalRequestId)
+  c. If resolved but not approved: update to REJECTED
+ 
+--- disbursement.service.ts ---
+ 
+Method: disburse(withdrawalRequestId)
+  a. Load WithdrawalRequest with cooperative
+  b. Update status to DISBURSING
+  c. Generate reference: `COOP-WD-${cooperativeId.slice(0,8)}-${Date.now()}`
+  d. Call CamPay Transfer API:
+     POST ${CAMPAY_BASE_URL}/transfer/
+     Headers: Authorization: Token ${CAMPAY_TRANSFER_API_KEY}
+     Body (for MoMo):
+     {
+       "amount": withdrawalRequest.amountXAF.toString(),
+       "currency": "XAF",
+       "to": withdrawalRequest.recipientPhone,
+       "operator": withdrawalRequest.recipientOperator,  // "MTN" or "ORANGE"
+       "description": `Retrait coopérative ${cooperative.name}`,
+       "external_reference": reference
+     }
+  e. On CamPay success:
+     - Update WithdrawalRequest: status=DISBURSED, campayReference, disbursedAt
+     - Decrement cooperative.confirmedBalanceXAF by amountXAF
+     - Call relayerService.relayFundsReleased() on-chain (if BLOCKCHAIN_ENABLED)
+     - Write AuditLog
+     - Publish GraphQL event: withdrawal.disbursed
+  f. On CamPay failure:
+     - Update status=FAILED, failureReason=campayError
+     - Revert Proposal status to PENDING (allow retry vote)
+     - Notify cooperative admin via email
+ 
+Handle CamPay withdrawal webhook too:
+POST /withdrawals/webhook — same signature validation as payment webhook
+Updates withdrawal status based on CamPay async transfer confirmation.
+ 
+--- withdrawals.controller.ts ---
+POST /withdrawals/propose → @UseGuards(JwtAuthGuard) → createWithdrawalProposal
+GET /withdrawals/cooperative/:cooperativeId → @UseGuards(JwtAuthGuard, CooperativeScopeGuard)
+POST /withdrawals/webhook → CamPay signature validation only
+ 
+IMPORTANT: Update votes.service.ts:
+After processing a vote, check if the proposal type === WITHDRAWAL.
+If yes: also call withdrawalsService.processWithdrawalOnVote(proposalId)
+ 
+Import WithdrawalsModule in app.module.ts
+
+New Task 4.7 — Platform Settings Service
+  ⬤  COPILOT PROMPT — Task 4.7 (NEW)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the platform settings service and admin endpoints for
+managing withdrawal thresholds.
+ 
+Create apps/backend/src/modules/platform-settings/platform-settings.service.ts
+ 
+Methods:
+ 
+getSettings():
+  Return PlatformSettings record (create with defaults if not exists):
+  prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" }
+  })
+ 
+updateSettings(adminUserId, dto):
+  dto: { withdrawalThresholdDefault?, withdrawalThresholdMin?,
+         withdrawalThresholdMax?, withdrawalQuorumMinVotes?, maintenanceMode? }
+  Validate: thresholdMin <= thresholdDefault <= thresholdMax
+  Validate: quorumMinVotes >= 1
+  Update PlatformSettings
+  Write AuditLog: action="UPDATE_PLATFORM_SETTINGS"
+ 
+getCooperativeThreshold(cooperativeId):
+  Load CooperativeSettings.withdrawalThreshold (or create from platform default)
+  Return: { threshold, source: "cooperative" | "platform_default" }
+ 
+setCooperativeThreshold(adminUserId, cooperativeId, threshold):
+  Validate: threshold >= platformSettings.withdrawalThresholdMin
+  Validate: threshold <= platformSettings.withdrawalThresholdMax
+  Upsert CooperativeSettings { cooperativeId, withdrawalThreshold: threshold }
+  Write AuditLog
+ 
+Add to admin.controller.ts (prefix /admin):
+  GET /admin/settings → getSettings() — PLATFORM_ADMIN only
+  PATCH /admin/settings → updateSettings() — PLATFORM_ADMIN only
+ 
+Add to cooperatives.controller.ts:
+  GET /cooperatives/:id/settings → getCooperativeThreshold() — COOP_ADMIN or PLATFORM_ADMIN
+  PATCH /cooperatives/:id/settings → setCooperativeThreshold() — COOP_ADMIN
+ 
+Import PlatformSettingsModule in app.module.ts
+
+Updated Task 5.1 — Invitation System with Nodemailer
+This replaces Task 5.1. Adds real email sending via Nodemailer.
+  ⬤  COPILOT PROMPT — Task 5.1 (UPDATED)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the invitation system with real Nodemailer email sending.
+ 
+1. In apps/backend: bun add nodemailer && bun add -d @types/nodemailer
+ 
+2. Create apps/backend/src/mail/mail.service.ts:
+ 
+   Uses Nodemailer with config from env:
+   const transporter = nodemailer.createTransport({
+     host: process.env.SMTP_HOST,
+     port: parseInt(process.env.SMTP_PORT || "587"),
+     secure: process.env.SMTP_SECURE === "true",
+     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+   })
+ 
+   Method: sendInvitationEmail(to, cooperativeName, joinUrl, locale):
+   Sends a bilingual email (based on locale param) with:
+   - Subject (FR): "Vous êtes invité(e) à rejoindre ${cooperativeName}"
+   - Subject (EN): "You are invited to join ${cooperativeName}"
+   - HTML body (professional, green-themed, mobile-friendly):
+     * CoopEnergie logo text header
+     * Cooperative name highlighted
+     * "Join now" button linking to joinUrl
+     * Expiry notice: "This link expires in 72 hours"
+     * Footer: "CoopEnergie — Transparent Solar Cooperatives"
+   - Text fallback for email clients that block HTML
+   - Returns: { messageId } on success
+ 
+   Method: sendWithdrawalApprovalNotification(adminEmail, cooperativeName, amount, txHash):
+   Sends email to cooperative admin confirming withdrawal was disbursed:
+   - Amount in FCFA
+   - TX hash with celoscan.io link
+ 
+   Method: sendWithdrawalFailureNotification(adminEmail, cooperativeName, amount, reason):
+   Sends email notifying that disbursement failed with the reason.
+ 
+   Method: sendVoteNotification(memberEmails, cooperativeName, proposalTitle):
+   Sends bulk notification to all members when a new vote-able proposal is created.
+ 
+   All methods: wrap in try/catch. Log errors but never throw — email failure should
+   never break the core action flow.
+ 
+3. Create apps/backend/src/mail/mail.module.ts:
+   @Global() module providing and exporting MailService.
+ 
+4. Import MailModule in app.module.ts
+ 
+5. Create apps/backend/src/mail/templates/ with HTML template strings:
+   invitation.template.ts — exports buildInvitationHtml(cooperativeName, joinUrl, locale)
+   withdrawal.template.ts — exports buildWithdrawalHtml(cooperativeName, amount, txHash)
+   The HTML should be inline (no external files) — simple table-based layout,
+   green (#1B5E20) primary color, safe for all email clients.
+ 
+6. Update invitations.service.ts:
+ 
+   sendEmailInvite(adminUserId, cooperativeId, email, locale="fr"):
+   - Validate admin is COOP_ADMIN
+   - Create Invitation { email, cooperativeId, type: EMAIL, status: PENDING, expiresAt: now+72h }
+   - Build joinUrl: `${process.env.APP_URL}/${locale}/join/${invitation.token}`
+   - Call mailService.sendInvitationEmail(email, cooperative.name, joinUrl, locale)
+   - Log result (success or failure) — do not throw on email error
+   - Return { invitation, joinUrl, emailSent: boolean }
+ 
+   createShareableLink(adminUserId, cooperativeId, locale="fr"):
+   - Create Invitation { cooperativeId, type: LINK, status: PENDING, expiresAt: now+72h }
+   - Return { token, joinUrl: `${process.env.APP_URL}/${locale}/join/${invitation.token}` }
+   - Note: no email sent — admin copies and shares the URL themselves
+ 
+   acceptInvitation(token, userId):
+   - Find invitation by token
+   - Validate: exists, PENDING, not expired
+   - Check user not already a member
+   - Create Membership(userId, cooperativeId, MEMBER)
+   - Mark ACCEPTED
+   - Return { cooperative, membership }
+ 
+   revokeInvitation(adminUserId, invitationId):
+   - Validate admin is COOP_ADMIN
+   - Mark REVOKED
+ 
+   getPendingInvitations(cooperativeId): returns PENDING invitations
+ 
+Controller (prefix /invitations):
+  POST /email → body: { cooperativeId, email, locale? }
+  POST /link → body: { cooperativeId, locale? }
+  POST /accept → body: { token }
+  DELETE /:id → revoke
+  GET /cooperative/:cooperativeId → list pending
+
+New Task 8.4 — GraphQL Withdrawal Types & Resolvers
+  ⬤  COPILOT PROMPT — Task 8.4 (NEW)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add GraphQL types and resolvers for withdrawals and platform settings.
+ 
+1. Create apps/backend/src/graphql/types/withdrawal.type.ts:
+   @ObjectType() WithdrawalRequestType:
+   id, amountXAF, destinationType, recipientName, status, disbursedAt,
+   campayReference, createdAt
+   celoTxUrl (computed: celoscan link if txHash exists)
+ 
+   @ObjectType() PlatformSettingsType:
+   withdrawalThresholdDefault, withdrawalThresholdMin, withdrawalThresholdMax,
+   withdrawalQuorumMinVotes, maintenanceMode
+ 
+   @ObjectType() CooperativeSettingsType:
+   cooperativeId, withdrawalThreshold
+ 
+   @ObjectType() WithdrawalEligibilityType:
+   canVote (boolean), reason (string), eligibleVoterCount (int),
+   currentYesVotes (int), currentNoVotes (int), threshold (int),
+   yesPercent (float), quorumReached (boolean)
+ 
+2. Add to proposal.type.ts:
+   type: String (STANDARD | WITHDRAWAL)
+   withdrawalRequest: WithdrawalRequestType (nullable)
+ 
+3. Create apps/backend/src/graphql/resolvers/withdrawal.resolver.ts:
+ 
+   @Query(() => [WithdrawalRequestType])
+   withdrawals(@Args("cooperativeId") cooperativeId, @CurrentUser() user):
+   Returns all withdrawal requests for a cooperative
+ 
+   @Query(() => WithdrawalEligibilityType)
+   withdrawalEligibility(@Args("proposalId") proposalId, @CurrentUser() user):
+   Returns current vote tally for a withdrawal proposal including threshold check
+ 
+   @Query(() => PlatformSettingsType)
+   platformSettings():  # PLATFORM_ADMIN only
+   Returns current platform settings
+ 
+   @Query(() => CooperativeSettingsType)
+   cooperativeSettings(@Args("cooperativeId") cooperativeId, @CurrentUser() user):
+   Returns threshold setting for a specific cooperative
+ 
+4. Add withdrawal subscription:
+   @Subscription(() => WithdrawalRequestType)
+   onWithdrawal(@Args("cooperativeId") cooperativeId):
+   asyncIterator: `withdrawal.disbursed.${cooperativeId}`
+ 
+5. Update disbursement.service.ts to publish:
+   pubSub.publish(`withdrawal.disbursed.${cooperativeId}`, { onWithdrawal: withdrawalRequest })
+
+New Task 9.8 — Web App Withdrawal UI
+  ⬤  COPILOT PROMPT — Task 9.8 (NEW)
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add withdrawal governance UI to the web app.
+ 
+--- 1. Withdrawal Proposal Modal (in proposals page) ---
+ 
+Update apps/web/app/[locale]/(dashboard)/dashboard/proposals/page.tsx:
+ 
+Add a second button for COOP_ADMIN users: "Proposer un retrait / Propose Withdrawal"
+This opens a different modal with these fields:
+  - Amount in FCFA (number input, validated against cooperative balance)
+  - Reason/Description (textarea)
+  - Destination type: select → MTN MoMo | Orange Money | Virement bancaire
+  - If MTN or Orange: phone number input (format: 6XXXXXXXX)
+  - If MTN or Orange: operator is auto-set from selection
+  - If bank: bank name, account number, account holder name
+  - Recipient name (auto-filled from user profile but editable)
+ 
+On submit: POST /withdrawals/propose { amountXAF, reason, destinationType,
+  recipientPhone, recipientOperator, recipientBankName,
+  recipientBankAccount, recipientName, cooperativeId }
+ 
+Show toast: "Withdrawal proposal created. Members can now vote."
+ 
+--- 2. Proposal cards — show withdrawal badge ---
+ 
+For proposals where type === "WITHDRAWAL":
+  - Show an orange badge: "RETRAIT" / "WITHDRAWAL"
+  - Show the amount: "50,000 FCFA"
+  - Show destination type icon (phone or bank icon)
+  - Show withdrawal eligibility widget:
+    useQuery(GET_WITHDRAWAL_ELIGIBILITY, { variables: { proposalId } })
+    Display: X/Y eligible members voted YES, threshold: Z%
+    Show a second progress bar in orange showing withdrawal vote progress
+    When approved: show green "Disbursement initiated" badge
+    When disbursed: show green "Fonds transférés / Funds transferred" badge
+ 
+--- 3. Voting restriction for withdrawal proposals ---
+ 
+Before showing vote buttons on WITHDRAWAL proposals:
+  Check if current user is an eligible voter (has CONFIRMED contribution)
+  If not eligible: show greyed-out buttons with tooltip:
+    "Vous devez avoir effectué au moins une cotisation confirmée pour voter sur les retraits."
+    "You must have at least one confirmed contribution to vote on withdrawals."
+ 
+--- 4. Admin Settings Panel (new page) ---
+ 
+Create apps/web/app/[locale]/(dashboard)/dashboard/settings/page.tsx:
+ 
+Two sections:
+ 
+Section A: Cooperative Settings (visible to COOP_ADMIN)
+  - Current withdrawal threshold for this cooperative
+  - Slider or number input to change it (within platform min/max)
+  - Save button: PATCH /cooperatives/:id/settings { withdrawalThreshold }
+ 
+Section B: Platform Settings (visible only to PLATFORM_ADMIN)
+  - Global threshold default (number input)
+  - Threshold min and max (range)
+  - Quorum minimum votes
+  - Maintenance mode toggle
+  - Save button: PATCH /admin/settings
+ 
+Add "Paramètres / Settings" link to the dashboard sidebar.
+ 
+--- 5. User profile — withdrawal destination ---
+ 
+Create apps/web/app/[locale]/(dashboard)/dashboard/profile/page.tsx:
+ 
+Fields:
+  - Name (editable)
+  - Email (read-only)
+  - Preferred withdrawal method: MTN MoMo | Orange Money | Bank
+  - If MoMo: phone number
+  - If bank: bank name, account number
+ 
+Save: PATCH /users/me with new profile fields
+Add "Profil" link to sidebar.
+
+  SECTION 3 — MONEY FLOW VISUAL SUMMARY  
+Complete Money Flow Reference
+Use this as a quick reference when explaining the platform to judges or partners.
+
+Actor
+Direction
+System
+Amount Type
+Member (contributor)
+→ pays into
+CamPay Collection API
+Real FCFA
+CamPay
+→ credits
+Platform CamPay Merchant Account
+Real FCFA held in escrow
+Platform backend
+→ records on
+Celo blockchain (CooperativeVault.sol)
+Accounting unit (FCFA number, not currency)
+Celo blockchain
+→ emits
+ContributionMade event → TX hash
+Immutable proof
+Platform backend
+→ syncs to
+PostgreSQL LedgerEvent table
+TX hash + payload copy
+UI
+→ shows user
+celoscan.io link + TX hash
+Public proof visible to anyone
+When withdrawal approved:
+
+
+
+Platform backend
+→ calls
+CamPay Transfer API
+Real FCFA from merchant account
+CamPay
+→ credits
+Cooperative head MoMo or bank
+Real FCFA (minus CamPay fee if any)
+Platform backend
+→ records on
+Celo blockchain (FundsReleased event)
+Accounting proof
+Platform backend
+→ decrements
+cooperative.confirmedBalanceXAF in DB
+Keeps balance accurate
+
+The Celo blockchain is the audit layer. CamPay is the money layer. PostgreSQL is the application layer. All three must stay in sync. The backend orchestrates this automatically.
+
+Celo Wallet Quick Reference Card
+Task
+Command / URL
+Generate wallet
+node -e "const {generatePrivateKey,privateKeyToAccount}=require('viem/accounts'); const pk=generatePrivateKey(); console.log(pk, privateKeyToAccount(pk).address)"
+Get testnet CELO
+https://faucet.celo.org → select Alfajores → paste address → click Faucet
+Check testnet balance
+https://alfajores.celoscan.io/address/{YOUR_ADDRESS}
+Testnet RPC URL
+https://alfajores-forno.celo-testnet.org
+Mainnet RPC URL
+https://forno.celo.org
+Testnet explorer
+https://alfajores.celoscan.io
+Mainnet explorer
+https://celoscan.io
+Buy mainnet CELO
+Binance.com, Coinbase.com, or Kraken.com → withdraw to relayer address
+Check gas cost
+~$0.001/tx on mainnet. $10 of CELO ≈ 10,000 transactions
+
+— End of Addendum —
