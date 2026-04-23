@@ -1,10 +1,12 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   encodeAbiParameters,
   encodeFunctionData,
   getAddress,
   Hex,
   keccak256,
+  publicActions,
+  walletActions,
 } from "viem";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
@@ -18,16 +20,10 @@ import {
   CELO_WALLET_CLIENT,
   GAS_RELAYER_ADDRESS,
 } from "./blockchain.module";
+import { createForwardRequestDigest, ForwardRequest } from "./signature-helper";
 
 type BlockchainPublicClient = typeof configuredPublicClient;
 type BlockchainWalletClient = typeof configuredWalletClient;
-type ForwardRequest = {
-  from: `0x${string}`;
-  to: `0x${string}`;
-  nonce: bigint;
-  deadline: bigint;
-  data: Hex;
-};
 
 type RelayResult = {
   txHash: `0x${string}`;
@@ -36,6 +32,8 @@ type RelayResult = {
 
 @Injectable()
 export class RelayerService {
+  private readonly logger = new Logger(RelayerService.name);
+
   constructor(
     @Inject(CELO_PUBLIC_CLIENT)
     private readonly publicClient: BlockchainPublicClient,
@@ -101,6 +99,13 @@ export class RelayerService {
     amountXAF: number,
     proposalId: number,
   ): Promise<RelayResult> {
+    const relayerAddress = this.getConfiguredGasRelayerAddress();
+    if (!relayerAddress) {
+      throw new Error(
+        "GasRelayer not configured. Cannot execute funds release via meta-transaction.",
+      );
+    }
+
     const data = encodeFunctionData({
       abi: cooperativeVaultAbi,
       functionName: "releaseFunds",
@@ -111,25 +116,15 @@ export class RelayerService {
       ],
     });
 
+    // Use relayer wallet as the sender for funds release (backend operation)
     const walletClient = this.getWalletClient();
-    const txHash = await this.withRetry(() =>
-      walletClient.sendTransaction({
-        account: walletClient.account,
-        to: this.parseAddress(vaultAddress, "vaultAddress"),
-        data,
-        chain: walletClient.chain,
-        kzg: undefined,
-      }),
+    const request = await this.buildForwardRequest(
+      vaultAddress,
+      walletClient.account.address,
+      data,
     );
 
-    const receipt = await this.publicClient.waitForTransactionReceipt({
-      hash: txHash,
-    });
-
-    return {
-      txHash,
-      blockNumber: receipt.blockNumber,
-    };
+    return this.signAndSubmit(request);
   }
 
   private async buildForwardRequest(
@@ -161,40 +156,52 @@ export class RelayerService {
     };
   }
 
-  private async signAndSubmit(request: ForwardRequest): Promise<RelayResult> {
-    const walletClient = this.getWalletClient();
+  /**
+   * Generate the message digest that should be signed by the user.
+   * This is used for meta-transaction signature verification.
+   */
+  getMessageForSigning(
+    vaultAddress: string,
+    userAddress: string,
+    functionData: Hex,
+  ): Promise<{ digest: Hex; nonce: bigint; deadline: bigint }> {
+    return this.buildForwardRequest(
+      vaultAddress,
+      userAddress,
+      functionData,
+    ).then((request) => ({
+      digest: this.createDigestForRequest(request),
+      nonce: request.nonce,
+      deadline: request.deadline,
+    }));
+  }
 
-    const requestDigest = keccak256(
-      encodeAbiParameters(
-        [
-          { name: "from", type: "address" },
-          { name: "to", type: "address" },
-          { name: "nonce", type: "uint256" },
-          { name: "deadline", type: "uint256" },
-          { name: "data", type: "bytes" },
-        ],
-        [
-          request.from,
-          request.to,
-          request.nonce,
-          request.deadline,
-          request.data,
-        ],
-      ),
-    );
+  private async signAndSubmit(
+    request: ForwardRequest,
+    userSignature?: Hex,
+  ): Promise<RelayResult> {
+    const relayerAddress = this.getConfiguredGasRelayerAddress();
 
-    await walletClient.signMessage({
-      account: walletClient.account,
-      message: { raw: requestDigest },
-    });
+    if (!relayerAddress) {
+      throw new Error(
+        "GasRelayer not configured. Cannot execute meta-transactions.",
+      );
+    }
+
+    // If no user signature provided, use relayer wallet to sign (for backward compatibility)
+    let signature = userSignature;
+    if (!signature) {
+      signature = await this.signRequestWithRelayerWallet(request);
+    }
 
     const txHash = await this.withRetry(() =>
-      walletClient.sendTransaction({
-        account: walletClient.account,
-        to: request.to,
-        data: request.data,
-        chain: walletClient.chain,
-        kzg: undefined,
+      this.walletClient.writeContract({
+        account: this.walletClient.account,
+        address: relayerAddress,
+        abi: gasRelayerAbi,
+        functionName: "execute",
+        args: [request, signature],
+        chain: this.walletClient.chain,
       }),
     );
 
@@ -202,10 +209,45 @@ export class RelayerService {
       hash: txHash,
     });
 
+    this.logger.log(
+      `Meta-transaction executed: from=${request.from}, to=${request.to}, nonce=${request.nonce}, txHash=${txHash}`,
+    );
+
     return {
       txHash,
       blockNumber: receipt.blockNumber,
     };
+  }
+
+  /**
+   * Sign a ForwardRequest with the relayer wallet (backend signing).
+   * In production, users should sign this on the frontend with their private key.
+   */
+  private async signRequestWithRelayerWallet(
+    request: ForwardRequest,
+  ): Promise<Hex> {
+    const digest = this.createDigestForRequest(request);
+
+    // Sign with relayer wallet
+    const signature = await this.walletClient.signMessage({
+      account: this.walletClient.account,
+      message: { raw: digest },
+    });
+
+    return signature;
+  }
+
+  /**
+   * Create the message digest for a ForwardRequest.
+   * Matches GasRelayer._hash() computation on-chain.
+   */
+  private createDigestForRequest(request: ForwardRequest): Hex {
+    const relayerAddress = this.getConfiguredGasRelayerAddress();
+    if (!relayerAddress) {
+      throw new Error("GasRelayer address not configured.");
+    }
+
+    return createForwardRequestDigest(request, relayerAddress, 42220); // 42220 is Celo mainnet
   }
 
   private async withRetry<T>(

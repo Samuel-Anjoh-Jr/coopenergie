@@ -12,6 +12,7 @@ export const GET_REPORT = gql`
       totalProposals
       approvedProposals
       rejectedProposals
+      pendingProposals
       generatedAt
     }
   }

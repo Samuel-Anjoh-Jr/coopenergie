@@ -4,7 +4,14 @@ import { useState } from "react";
 import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, Download, CheckCircle, XCircle, Clock, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  Download,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Locale, useTranslations } from "@/lib/translations";
@@ -26,6 +33,7 @@ type ReportData = {
   totalProposals: number;
   approvedProposals: number;
   rejectedProposals: number;
+  pendingProposals: number;
   generatedAt: string;
 };
 
@@ -52,15 +60,9 @@ export default function ReportPage() {
 
   const report: ReportData | undefined = reportData?.report;
 
-  const currentDate = new Date().toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   const handleDownloadReport = async () => {
     if (!cooperativeId) {
-      toast.error(locale === "fr" ? "Coopérative non trouvée" : "Cooperative not found");
+      toast.error(t("errors.cooperativeNotFound"));
       return;
     }
 
@@ -68,7 +70,7 @@ export default function ReportPage() {
     try {
       const token = session?.user?.token;
       if (!token) {
-        toast.error(locale === "fr" ? "Non authentifié" : "Not authenticated");
+        toast.error(t("errors.notAuthenticated"));
         return;
       }
 
@@ -95,10 +97,10 @@ export default function ReportPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success(locale === "fr" ? "Rapport téléchargé" : "Report downloaded");
+      toast.success(t("feedback.reportDownloaded"));
     } catch (error) {
       console.error("Download failed:", error);
-      toast.error(locale === "fr" ? "Échec du téléchargement" : "Download failed");
+      toast.error(t("errors.downloadFailed"));
     } finally {
       setIsDownloading(false);
     }
@@ -120,9 +122,7 @@ export default function ReportPage() {
     return (
       <Card className="border-destructive/50 bg-destructive/10">
         <CardContent className="pt-6">
-          <p className="text-destructive">
-            {locale === "fr" ? "Erreur de chargement du rapport" : "Error loading report"}
-          </p>
+          <p className="text-destructive">{t("errors.reportLoadFailed")}</p>
         </CardContent>
       </Card>
     );
@@ -132,11 +132,18 @@ export default function ReportPage() {
     ? `${CELOSCAN_BASE}/address/${report.walletAddress}`
     : "";
 
-  const rejectedProposals = report.totalProposals - report.approvedProposals;
-  const pendingProposals = Math.max(0, report.totalProposals - report.approvedProposals - rejectedProposals);
+  const pendingProposals = report.pendingProposals;
+  const rejectedProposals =
+    report.totalProposals - report.approvedProposals - pendingProposals;
   const generatedAtDate = new Date(report.generatedAt).toLocaleDateString(
     locale === "en" ? "en-US" : "fr-FR",
-    { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }
+    {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
   );
 
   return (
@@ -172,13 +179,17 @@ export default function ReportPage() {
         </div>
         <div className="space-y-2 text-sm text-muted-foreground print:text-gray-600">
           <p className="font-medium">
-            {t("report.cooperative")}: <span className="font-bold text-foreground print:text-black">{report.cooperativeName}</span>
+            {t("report.cooperative")}:{" "}
+            <span className="font-bold text-foreground print:text-black">
+              {report.cooperativeName}
+            </span>
           </p>
           {report.walletAddress && (
             <div className="flex items-center gap-2">
               <span>{t("report.walletAddress")}:</span>
               <code className="font-mono text-xs bg-muted/50 px-2 py-1 rounded">
-                {report.walletAddress.slice(0, 8)}...{report.walletAddress.slice(-8)}
+                {report.walletAddress.slice(0, 8)}...
+                {report.walletAddress.slice(-8)}
               </code>
               <a
                 href={celoScanAddressUrl}
@@ -201,7 +212,9 @@ export default function ReportPage() {
         {/* Funding Status Card */}
         <Card className="border-border/50 bg-card/50 backdrop-blur print:border-gray-300 print:bg-white card-hover-glow overflow-hidden relative">
           <CardHeader className="p-4 md:p-6 print:pb-2">
-            <CardTitle className="text-lg md:text-xl print:text-lg">{t("report.fundingProgress")}</CardTitle>
+            <CardTitle className="text-lg md:text-xl print:text-lg">
+              {t("report.fundingProgress")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0 space-y-4 md:space-y-6 print:space-y-4">
             {/* Total Collected */}
@@ -248,7 +261,8 @@ export default function ReportPage() {
                 {t("report.estimatedTimeToGoal")}
               </p>
               <p className="text-xl md:text-2xl font-bold text-accent print:text-black">
-                {report.estimatedMonthsToGoal !== null && report.estimatedMonthsToGoal !== undefined
+                {report.estimatedMonthsToGoal !== null &&
+                report.estimatedMonthsToGoal !== undefined
                   ? Math.round(report.estimatedMonthsToGoal)
                   : "∞"}{" "}
                 {t("report.monthsRemaining")}
@@ -263,7 +277,9 @@ export default function ReportPage() {
         {/* Proposal Summary Card */}
         <Card className="border-border/50 bg-card/50 backdrop-blur print:border-gray-300 print:bg-white card-hover-glow overflow-hidden relative">
           <CardHeader className="p-4 md:p-6 print:pb-2">
-            <CardTitle className="text-lg md:text-xl print:text-lg">{t("report.proposalSummary")}</CardTitle>
+            <CardTitle className="text-lg md:text-xl print:text-lg">
+              {t("report.proposalSummary")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4 print:space-y-3">
             {/* Total Proposals */}
@@ -297,7 +313,10 @@ export default function ReportPage() {
                   {t("report.pendingProposals")}
                 </span>
               </div>
-              <Badge variant="outline" className="border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400 print:border-gray-600 print:text-gray-700">
+              <Badge
+                variant="outline"
+                className="border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400 print:border-gray-600 print:text-gray-700"
+              >
                 {pendingProposals}
               </Badge>
             </div>
@@ -310,7 +329,10 @@ export default function ReportPage() {
                   {t("report.rejectedProposals")}
                 </span>
               </div>
-              <Badge variant="outline" className="border-destructive text-destructive print:border-gray-600 print:text-gray-700">
+              <Badge
+                variant="outline"
+                className="border-destructive text-destructive print:border-gray-600 print:text-gray-700"
+              >
                 {rejectedProposals}
               </Badge>
             </div>
@@ -335,7 +357,9 @@ export default function ReportPage() {
       {/* Footer */}
       <div className="text-center text-xs text-muted-foreground border-t border-border pt-4 print:pt-3 print:border-gray-300 print:text-gray-600">
         <p>{t("report.generatedBy")}</p>
-        <p>&copy; {new Date().getFullYear()} {report.cooperativeName}</p>
+        <p>
+          &copy; {new Date().getFullYear()} {report.cooperativeName}
+        </p>
       </div>
     </div>
   );

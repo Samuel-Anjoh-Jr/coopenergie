@@ -7,6 +7,7 @@ import { CELOSCAN_BASE } from "@/lib/constants";
 import { useActiveCooperative } from "@/lib/dashboard";
 import { getContributions, getLedger, saveLedger } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
+import { useMobileTranslations } from "@/lib/translations";
 
 type RecentActivity = {
   id: string;
@@ -79,6 +80,7 @@ function truncateHash(hash?: string | null) {
 export default function DashboardScreen() {
   const { activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
+  const { t } = useMobileTranslations();
   const [cachedTotal, setCachedTotal] = useState(0);
   const [cachedActivity, setCachedActivity] = useState<RecentActivity[]>([]);
 
@@ -153,6 +155,7 @@ export default function DashboardScreen() {
   }, [activeCooperativeId, data?.cooperative?.recentActivity]);
 
   const cooperative = useMemo(() => data?.cooperative, [data]);
+  const vaultAddress = cooperative?.vaultAddress;
   const progress = Math.min(100, Math.max(0, cooperative?.progress ?? 0));
   const totalCollected = cooperative?.totalCollected ?? cachedTotal;
   const activity = cooperative?.recentActivity?.length
@@ -167,24 +170,24 @@ export default function DashboardScreen() {
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2">
           <Text className="text-amber-800 font-medium">
-            Mode hors ligne: donnees locales affichees.
+            {t("status.offlineDashboard")}
           </Text>
         </View>
       )}
 
       {loading && !cooperative && cachedActivity.length === 0 ? (
-        <Text className="text-[#1B5E20]">Chargement du dashboard...</Text>
+        <Text className="text-[#1B5E20]">{t("status.loadingDashboard")}</Text>
       ) : (
         <>
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
             <Text className="text-[#1B5E20] text-2xl font-bold">
-              {cooperative?.name || "Cooperative"}
+              {cooperative?.name || t("common.cooperative")}
             </Text>
             <Text className="text-slate-600 mt-2">
-              Cible: {cooperative?.targetAmountXAF || 0} XAF
+              {t("dashboard.target")}: {cooperative?.targetAmountXAF || 0} XAF
             </Text>
             <Text className="text-slate-700 font-semibold mt-1">
-              Collecte: {totalCollected} XAF
+              {t("dashboard.collected")}: {totalCollected} XAF
             </Text>
 
             <View className="mt-3 h-3 rounded-full bg-[#E6EFE6] overflow-hidden">
@@ -199,7 +202,9 @@ export default function DashboardScreen() {
           </View>
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-            <Text className="text-[#1B5E20] font-bold">Adresse du wallet</Text>
+            <Text className="text-[#1B5E20] font-bold">
+              {t("common.walletAddress")}
+            </Text>
             <Text className="text-slate-600 mt-1">
               {cooperative?.vaultAddress || "-"}
             </Text>
@@ -208,34 +213,36 @@ export default function DashboardScreen() {
               <Pressable
                 className="flex-1 rounded-xl border border-[#1B5E20] py-2"
                 onPress={() => {
-                  if (cooperative.vaultAddress) {
-                    void Clipboard.setStringAsync(cooperative.vaultAddress);
+                  if (vaultAddress) {
+                    void Clipboard.setStringAsync(vaultAddress);
                   }
                 }}
               >
                 <Text className="text-center text-[#1B5E20] font-semibold">
-                  Copier
+                  {t("common.copy")}
                 </Text>
               </Pressable>
               <Pressable
                 className="flex-1 rounded-xl bg-[#1B5E20] py-2"
                 onPress={() => {
-                  if (cooperative.vaultAddress) {
+                  if (vaultAddress) {
                     void Linking.openURL(
-                      `${CELOSCAN_BASE}/address/${cooperative.vaultAddress}`,
+                      `${CELOSCAN_BASE}/address/${vaultAddress}`,
                     );
                   }
                 }}
               >
                 <Text className="text-center text-white font-semibold">
-                  Voir sur CeloScan
+                  {t("blockchain.viewOnCeloScan")}
                 </Text>
               </Pressable>
             </View>
           </View>
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-            <Text className="text-[#1B5E20] font-bold">Membres</Text>
+            <Text className="text-[#1B5E20] font-bold">
+              {t("common.members")}
+            </Text>
             <Text className="text-2xl text-[#1B5E20] font-bold mt-1">
               {cooperative?.memberCount || 0}
             </Text>
@@ -243,10 +250,12 @@ export default function DashboardScreen() {
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
             <Text className="text-[#1B5E20] font-bold mb-2">
-              Activite recente
+              {t("common.recentActivity")}
             </Text>
             {activity.length === 0 ? (
-              <Text className="text-slate-500">Aucune activite recente.</Text>
+              <Text className="text-slate-500">
+                {t("dashboard.noRecentActivity")}
+              </Text>
             ) : (
               activity.slice(0, 6).map((item) => (
                 <View key={item.id} className="py-2 border-b border-[#EFF4EF]">
@@ -254,7 +263,7 @@ export default function DashboardScreen() {
                     {item.type}
                   </Text>
                   <Text className="text-slate-600">
-                    TX: {truncateHash(item.txHash)}
+                    {t("blockchain.txPrefix")} {truncateHash(item.txHash)}
                   </Text>
                   <Text className="text-slate-500">
                     {new Date(item.createdAt).toLocaleString()}

@@ -9,6 +9,7 @@ import { gasRelayerAbi } from "./abis/gas-relayer.abi";
 import { FactoryService } from "./factory.service";
 import { RelayerService } from "./relayer.service";
 import { VaultService } from "./vault.service";
+import { WalletService } from "./wallet.service";
 
 export const CELO_CHAIN = "CELO_CHAIN";
 export const CELO_PUBLIC_CLIENT = "CELO_PUBLIC_CLIENT";
@@ -58,6 +59,7 @@ export const GAS_RELAYER_ADDRESS = "GAS_RELAYER_ADDRESS";
     FactoryService,
     RelayerService,
     VaultService,
+    WalletService,
   ],
   exports: [
     CELO_CHAIN,
@@ -72,6 +74,7 @@ export const GAS_RELAYER_ADDRESS = "GAS_RELAYER_ADDRESS";
     FactoryService,
     RelayerService,
     VaultService,
+    WalletService,
   ],
 })
 export class BlockchainModule {}

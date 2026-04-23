@@ -149,7 +149,8 @@ export default function ProposalsPage() {
 
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const cooperativeBalance = myCooperativesData?.myCooperatives?.[0]?.balance || 0;
+  const cooperativeBalance =
+    myCooperativesData?.myCooperatives?.[0]?.balance || 0;
   const userRole =
     (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
     "MEMBER";
@@ -174,7 +175,10 @@ export default function ProposalsPage() {
   const proposals: Proposal[] = proposalsData?.proposals ?? [];
 
   const sortedProposals = useMemo(
-    () => [...proposals].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    () =>
+      [...proposals].sort(
+        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+      ),
     [proposals],
   );
 
@@ -189,20 +193,14 @@ export default function ProposalsPage() {
       const txHash = response?.vote?.txHash;
       toast.success(
         txHash
-          ? `${locale === "fr" ? "Vote enregistré" : "Vote recorded"} (${truncateHash(txHash)})`
-          : locale === "fr"
-            ? "Vote enregistré"
-            : "Vote recorded",
+          ? `${t("toasts.voteRecorded")} (${truncateHash(txHash)})`
+          : t("toasts.voteRecorded"),
       );
 
       void refetchProposals();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : locale === "fr"
-            ? "Échec de vote"
-            : "Failed to cast vote",
+        error instanceof Error ? error.message : t("errors.voteFailed"),
       );
     } finally {
       setVotingProposalId(null);
@@ -210,26 +208,31 @@ export default function ProposalsPage() {
   };
 
   const handleCreateProposal = async () => {
-    if (!cooperativeId || !formData.title.trim() || !formData.description.trim()) {
-      toast.error(locale === "fr" ? "Champs invalides" : "Invalid form values");
+    if (
+      !cooperativeId ||
+      !formData.title.trim() ||
+      !formData.description.trim()
+    ) {
+      toast.error(t("errors.invalidFormValues"));
       return;
     }
 
     setIsSubmittingProposal(true);
     try {
-      const response = await restClient.post<CreateProposalResponse>("/proposals", {
-        cooperativeId,
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-      });
+      const response = await restClient.post<CreateProposalResponse>(
+        "/proposals",
+        {
+          cooperativeId,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+        },
+      );
 
       const txHash = response?.txHash;
       toast.success(
         txHash
-          ? `${locale === "fr" ? "Proposition créée" : "Proposal created"} (${truncateHash(txHash)})`
-          : locale === "fr"
-            ? "Proposition créée"
-            : "Proposal created",
+          ? `${t("toasts.proposalCreated")} (${truncateHash(txHash)})`
+          : t("toasts.proposalCreated"),
       );
 
       setFormData({ title: "", description: "" });
@@ -239,9 +242,7 @@ export default function ProposalsPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : locale === "fr"
-            ? "Impossible de créer la proposition"
-            : "Failed to create proposal",
+          : t("errors.createProposalFailed"),
       );
     } finally {
       setIsSubmittingProposal(false);
@@ -254,17 +255,13 @@ export default function ProposalsPage() {
       !withdrawalForm.amountXAF ||
       !withdrawalForm.reason.trim()
     ) {
-      toast.error(locale === "fr" ? "Champs invalides" : "Invalid form values");
+      toast.error(t("errors.invalidFormValues"));
       return;
     }
 
     const amount = parseInt(withdrawalForm.amountXAF, 10);
     if (amount > cooperativeBalance) {
-      toast.error(
-        locale === "fr"
-          ? "Montant dépasse le solde disponible"
-          : "Amount exceeds available balance",
-      );
+      toast.error(t("errors.amountExceedsBalance"));
       return;
     }
 
@@ -287,11 +284,7 @@ export default function ProposalsPage() {
         recipientName: withdrawalForm.recipientName.trim(),
       });
 
-      toast.success(
-        locale === "fr"
-          ? "Demande de retrait créée. Les membres peuvent voter."
-          : "Withdrawal proposal created. Members can now vote.",
-      );
+      toast.success(t("auth.withdrawalCreatedMessage"));
 
       setWithdrawalForm({
         amountXAF: "",
@@ -309,9 +302,7 @@ export default function ProposalsPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : locale === "fr"
-            ? "Impossible de créer la demande de retrait"
-            : "Failed to create withdrawal request",
+          : t("errors.withdrawalRequestFailed"),
       );
     } finally {
       setIsSubmittingWithdrawal(false);
@@ -338,7 +329,7 @@ export default function ProposalsPage() {
             <Button
               onClick={() => setIsOpen(true)}
               disabled={!cooperativeId}
-              className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-[44px] active:animate-button-press"
+              className="bg-linear-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-11 active:animate-button-press"
             >
               <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
               {t("proposals.createProposal")}
@@ -347,10 +338,10 @@ export default function ProposalsPage() {
               <Button
                 onClick={() => setIsWithdrawalOpen(true)}
                 disabled={!cooperativeId}
-                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-[44px] active:animate-button-press"
+                className="bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-11 active:animate-button-press"
               >
                 <CreditCard className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                {locale === "fr" ? "Proposer un retrait" : "Propose Withdrawal"}
+                {t("proposals.proposeWithdrawal")}
               </Button>
             )}
           </div>
@@ -376,7 +367,6 @@ export default function ProposalsPage() {
               <ProposalCard
                 key={proposal.id}
                 proposal={proposal}
-                locale={locale}
                 t={t}
                 onVote={handleVote}
                 votingProposalId={votingProposalId}
@@ -455,12 +445,12 @@ export default function ProposalsPage() {
                     !cooperativeId ||
                     isSubmittingProposal
                   }
-                  className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
+                  className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-11 active:animate-button-press"
                 >
                   {isSubmittingProposal ? (
                     <>
                       <Spinner className="mr-2" />
-                      {locale === "fr" ? "En cours..." : "Submitting..."}
+                      {t("status.submitting")}
                     </>
                   ) : (
                     t("common.submit")
@@ -476,12 +466,10 @@ export default function ProposalsPage() {
           <DialogContent className="bg-card border-border sm:max-w-2xl w-[calc(100%-2rem)] mx-auto rounded-t-2xl sm:rounded-lg fixed bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 left-1/2 -translate-x-1/2 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg md:text-xl">
-                {locale === "fr" ? "Proposer un retrait" : "Propose Withdrawal"}
+                {t("proposals.proposeWithdrawal")}
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-sm">
-                {locale === "fr"
-                  ? "Créez une demande de retrait pour que les membres votent."
-                  : "Create a withdrawal request for members to vote on."}
+                {t("auth.withdrawalRequestDescription")}
               </DialogDescription>
             </DialogHeader>
 
@@ -491,14 +479,14 @@ export default function ProposalsPage() {
                   htmlFor="amount"
                   className="text-sm font-medium text-foreground"
                 >
-                  {locale === "fr" ? "Montant (FCFA)" : "Amount (FCFA)"}
+                  {t("proposals.amountLabel")}
                 </label>
                 <Input
                   id="amount"
                   type="number"
                   min="1"
                   max={cooperativeBalance}
-                  placeholder={locale === "fr" ? "Ex: 50000" : "e.g., 50000"}
+                  placeholder={t("auth.amountExample")}
                   value={withdrawalForm.amountXAF}
                   onChange={(e) =>
                     setWithdrawalForm((prev) => ({
@@ -509,7 +497,7 @@ export default function ProposalsPage() {
                   className="bg-input border-border text-foreground h-12 text-base"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {locale === "fr" ? "Solde disponible" : "Available balance"}:{" "}
+                  {t("proposals.availableBalance")}:{" "}
                   {cooperativeBalance.toLocaleString()} FCFA
                 </p>
               </div>
@@ -519,17 +507,11 @@ export default function ProposalsPage() {
                   htmlFor="reason"
                   className="text-sm font-medium text-foreground"
                 >
-                  {locale === "fr"
-                    ? "Raison / Description"
-                    : "Reason / Description"}
+                  {t("proposals.reasonLabel")}
                 </label>
                 <Textarea
                   id="reason"
-                  placeholder={
-                    locale === "fr"
-                      ? "Expliquez la raison du retrait..."
-                      : "Explain the reason for withdrawal..."
-                  }
+                  placeholder={t("proposals.reasonPlaceholder")}
                   value={withdrawalForm.reason}
                   onChange={(e) =>
                     setWithdrawalForm((prev) => ({
@@ -546,7 +528,7 @@ export default function ProposalsPage() {
                   htmlFor="destinationType"
                   className="text-sm font-medium text-foreground"
                 >
-                  {locale === "fr" ? "Type de destination" : "Destination Type"}
+                  {t("proposals.destinationType")}
                 </label>
                 <Select
                   value={withdrawalForm.destinationType}
@@ -564,10 +546,14 @@ export default function ProposalsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
-                    <SelectItem value="MTN_MOMO">MTN MoMo</SelectItem>
-                    <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
+                    <SelectItem value="MTN_MOMO">
+                      {t("profile.mtnMomo")}
+                    </SelectItem>
+                    <SelectItem value="ORANGE_MONEY">
+                      {t("profile.orangeMoney")}
+                    </SelectItem>
                     <SelectItem value="BANK_TRANSFER">
-                      {locale === "fr" ? "Virement bancaire" : "Bank Transfer"}
+                      {t("proposals.bankTransfer")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -580,12 +566,11 @@ export default function ProposalsPage() {
                     htmlFor="phone"
                     className="text-sm font-medium text-foreground"
                   >
-                    {locale === "fr" ? "Numéro de téléphone" : "Phone Number"}{" "}
-                    (6XXXXXXXX)
+                    {t("proposals.phoneNumber")} (6XXXXXXXX)
                   </label>
                   <Input
                     id="phone"
-                    placeholder="6XXXXXXXX"
+                    placeholder={t("proposals.phonePlaceholder")}
                     value={withdrawalForm.recipientPhone}
                     onChange={(e) =>
                       setWithdrawalForm((prev) => ({
@@ -605,13 +590,11 @@ export default function ProposalsPage() {
                       htmlFor="bankName"
                       className="text-sm font-medium text-foreground"
                     >
-                      {locale === "fr" ? "Nom de la banque" : "Bank Name"}
+                      {t("profile.bankName")}
                     </label>
                     <Input
                       id="bankName"
-                      placeholder={
-                        locale === "fr" ? "Ex: Ecobank" : "e.g., Ecobank"
-                      }
+                      placeholder={t("proposals.bankPlaceholder")}
                       value={withdrawalForm.recipientBankName}
                       onChange={(e) =>
                         setWithdrawalForm((prev) => ({
@@ -628,13 +611,11 @@ export default function ProposalsPage() {
                       htmlFor="accountNumber"
                       className="text-sm font-medium text-foreground"
                     >
-                      {locale === "fr" ? "Numéro de compte" : "Account Number"}
+                      {t("profile.accountNumber")}
                     </label>
                     <Input
                       id="accountNumber"
-                      placeholder={
-                        locale === "fr" ? "Ex: 123456789" : "e.g., 123456789"
-                      }
+                      placeholder={t("profile.accountNumberExample")}
                       value={withdrawalForm.recipientBankAccount}
                       onChange={(e) =>
                         setWithdrawalForm((prev) => ({
@@ -653,10 +634,11 @@ export default function ProposalsPage() {
                   htmlFor="recipientName"
                   className="text-sm font-medium text-foreground"
                 >
-                  {locale === "fr" ? "Nom du destinataire" : "Recipient Name"}
+                  {t("profile.recipientName")}
                 </label>
                 <Input
                   id="recipientName"
+                  placeholder={t("proposals.recipientPlaceholder")}
                   value={withdrawalForm.recipientName}
                   onChange={(e) =>
                     setWithdrawalForm((prev) => ({
@@ -672,7 +654,7 @@ export default function ProposalsPage() {
                 <Button
                   variant="outline"
                   onClick={() => setIsWithdrawalOpen(false)}
-                  className="flex-1 border-border hover:bg-muted min-h-[44px]"
+                  className="flex-1 border-border hover:bg-muted min-h-11"
                   disabled={isSubmittingWithdrawal}
                 >
                   {t("common.cancel")}
@@ -689,12 +671,12 @@ export default function ProposalsPage() {
                     ) &&
                       !withdrawalForm.recipientPhone)
                   }
-                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white min-h-[44px] active:animate-button-press"
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white min-h-11 active:animate-button-press"
                 >
                   {isSubmittingWithdrawal ? (
                     <>
                       <Spinner className="mr-2" />
-                      {locale === "fr" ? "En cours..." : "Submitting..."}
+                      {t("status.submitting")}
                     </>
                   ) : (
                     t("common.submit")
@@ -711,14 +693,12 @@ export default function ProposalsPage() {
 
 function ProposalCard({
   proposal,
-  locale,
   t,
   onVote,
   votingProposalId,
   refetchProposals,
 }: {
   proposal: Proposal;
-  locale: string;
   t: ReturnType<typeof useTranslations>;
   onVote: (proposalId: string, choice: boolean) => Promise<void>;
   votingProposalId: string | null;
@@ -733,12 +713,16 @@ function ProposalCard({
     eligibilityData?.withdrawalEligibility;
   const isWithdrawal = proposal.type === "WITHDRAWAL";
   const totalVotes = proposal.yesVotes + proposal.noVotes;
-  const yesPercentage = totalVotes > 0 ? (proposal.yesVotes / totalVotes) * 100 : 0;
+  const yesPercentage =
+    totalVotes > 0 ? (proposal.yesVotes / totalVotes) * 100 : 0;
   const disableVoting =
     proposal.status.toLowerCase() !== "pending" || proposal.hasUserVoted;
-  const txUrl = proposal.txHash ? `${CELOSCAN_BASE}/tx/${proposal.txHash}` : null;
+  const txUrl = proposal.txHash
+    ? `${CELOSCAN_BASE}/tx/${proposal.txHash}`
+    : null;
 
-  const cannotVoteWithdrawal = isWithdrawal && eligibility && !eligibility.canVote;
+  const cannotVoteWithdrawal =
+    isWithdrawal && eligibility && !eligibility.canVote;
 
   return (
     <Card
@@ -753,7 +737,7 @@ function ProposalCard({
           <div className="flex items-center gap-2">
             {isWithdrawal && (
               <Badge className="bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30">
-                {locale === "fr" ? "RETRAIT" : "WITHDRAWAL"}
+                {t("proposals.withdrawalTag")}
               </Badge>
             )}
             <Badge
@@ -791,8 +775,7 @@ function ProposalCard({
             )}
             {proposal.withdrawalRequest.destinationType === "BANK_TRANSFER" && (
               <span className="flex items-center gap-1">
-                <Landmark className="w-4 h-4" />{" "}
-                {locale === "fr" ? "Virement bancaire" : "Bank Transfer"}
+                <Landmark className="w-4 h-4" /> {t("proposals.bankTransfer")}
               </span>
             )}
           </div>
@@ -808,16 +791,16 @@ function ProposalCard({
           <div className="space-y-3 bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-foreground">
-                {locale === "fr" ? "Membres éligibles" : "Eligible Members"}
+                {t("proposals.eligibleMembers")}
               </span>
               <span className="text-orange-600 dark:text-orange-400 font-semibold">
                 {eligibility.currentYesVotes}/{eligibility.eligibleVoterCount}{" "}
-                {locale === "fr" ? "OUI" : "YES"}
+                {t("proposals.yesShort")}
               </span>
             </div>
             <div className="w-full h-3 bg-muted rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-orange-400 to-orange-600 shadow-lg transition-all duration-500"
+                className="h-full bg-linear-to-r from-orange-400 to-orange-600 shadow-lg transition-all duration-500"
                 style={{
                   width: `${
                     eligibility.eligibleVoterCount > 0
@@ -830,16 +813,16 @@ function ProposalCard({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {locale === "fr"
-                ? `Seuil requis: ${eligibility.threshold}%`
-                : `Threshold required: ${eligibility.threshold}%`}
+              {t("proposals.thresholdRequired")}: {eligibility.threshold}%
             </p>
           </div>
         )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-foreground">{t("proposals.voteRatio")}</span>
+            <span className="font-medium text-foreground">
+              {t("proposals.voteRatio")}
+            </span>
             <span className="text-muted-foreground text-xs md:text-sm">
               {proposal.yesVotes} {t("proposals.voteYes")} / {proposal.noVotes}{" "}
               {t("proposals.voteNo")}
@@ -847,18 +830,20 @@ function ProposalCard({
           </div>
           <div className="w-full h-3 md:h-4 bg-muted rounded-full overflow-hidden flex shadow-inner">
             <div
-              className="bg-gradient-to-r from-emerald-500 via-green-500 to-green-600 rounded-full shadow-lg transition-all duration-500"
+              className="bg-linear-to-r from-emerald-500 via-green-500 to-green-600 rounded-full shadow-lg transition-all duration-500"
               style={{ width: `${yesPercentage}%` }}
             />
             <div
-              className="bg-gradient-to-r from-red-400 to-red-500 rounded-full transition-all duration-500"
+              className="bg-linear-to-r from-red-400 to-red-500 rounded-full transition-all duration-500"
               style={{ width: `${100 - yesPercentage}%` }}
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-mono text-xs">{truncateHash(proposal.txHash)}</span>
+          <span className="font-mono text-xs">
+            {truncateHash(proposal.txHash)}
+          </span>
           {txUrl ? (
             <a
               href={txUrl}
@@ -866,7 +851,7 @@ function ProposalCard({
               rel="noreferrer"
               className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
             >
-              CeloScan
+              {t("blockchain.viewOnCeloScan")}
               <ExternalLink className="h-3 w-3" />
             </a>
           ) : null}
@@ -878,17 +863,13 @@ function ProposalCard({
               <div className="flex items-center gap-2 text-xs bg-muted/50 p-2 rounded border border-muted-foreground/20">
                 <AlertCircle className="w-4 h-4 text-muted-foreground" />
                 <span className="text-muted-foreground">
-                  {locale === "fr"
-                    ? "Non éligible au vote de retrait"
-                    : "Not eligible to vote on withdrawal"}
+                  {t("proposals.notEligibleWithdrawal")}
                 </span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs">
               <p className="text-sm">
-                {locale === "fr"
-                  ? "Vous devez avoir effectué au moins une cotisation confirmée pour voter sur les retraits."
-                  : "You must have at least one confirmed contribution to vote on withdrawals."}
+                {t("proposals.notEligibleWithdrawalDescription")}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -905,7 +886,7 @@ function ProposalCard({
                   cannotVoteWithdrawal
                 }
                 variant="outline"
-                className="flex-1 min-h-[44px] text-sm active:animate-button-press border-border hover:bg-muted"
+                className="flex-1 min-h-11 text-sm active:animate-button-press border-border hover:bg-muted"
               >
                 {votingProposalId === proposal.id ? (
                   <Spinner className="w-4 h-4" />
@@ -918,9 +899,7 @@ function ProposalCard({
             {cannotVoteWithdrawal && (
               <TooltipContent side="top">
                 <p className="text-sm">
-                  {locale === "fr"
-                    ? "Vous devez avoir effectué au moins une cotisation confirmée pour voter sur les retraits."
-                    : "You must have at least one confirmed contribution to vote on withdrawals."}
+                  {t("proposals.notEligibleWithdrawalDescription")}
                 </p>
               </TooltipContent>
             )}
@@ -936,7 +915,7 @@ function ProposalCard({
                   cannotVoteWithdrawal
                 }
                 variant="outline"
-                className="flex-1 min-h-[44px] text-sm active:animate-button-press border-border hover:bg-muted"
+                className="flex-1 min-h-11 text-sm active:animate-button-press border-border hover:bg-muted"
               >
                 {votingProposalId === proposal.id ? (
                   <Spinner className="w-4 h-4" />
@@ -949,9 +928,7 @@ function ProposalCard({
             {cannotVoteWithdrawal && (
               <TooltipContent side="top">
                 <p className="text-sm">
-                  {locale === "fr"
-                    ? "Vous devez avoir effectué au moins une cotisation confirmée pour voter sur les retraits."
-                    : "You must have at least one confirmed contribution to vote on withdrawals."}
+                  {t("proposals.notEligibleWithdrawalDescription")}
                 </p>
               </TooltipContent>
             )}

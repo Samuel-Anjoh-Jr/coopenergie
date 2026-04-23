@@ -8,7 +8,13 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,12 +40,17 @@ export default function ProfilePage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
   const t = useTranslations(locale as Locale);
+  const nameExampleKey =
+    locale === "fr" ? "profile.nameExampleFr" : "profile.nameExampleEn";
+  const bankExampleKey =
+    locale === "fr" ? "profile.bankExampleFr" : "profile.bankExampleEn";
   const { data: session } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [withdrawalMethod, setWithdrawalMethod] = useState<WithdrawalMethod>("MTN_MOMO");
+  const [withdrawalMethod, setWithdrawalMethod] =
+    useState<WithdrawalMethod>("MTN_MOMO");
   const [phone, setPhone] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -53,15 +64,16 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error(locale === "fr" ? "Le nom est requis" : "Name is required");
+      toast.error(t("errors.nameRequired"));
       return;
     }
 
     if (
-      (withdrawalMethod === "MTN_MOMO" || withdrawalMethod === "ORANGE_MONEY") &&
+      (withdrawalMethod === "MTN_MOMO" ||
+        withdrawalMethod === "ORANGE_MONEY") &&
       !phone.trim()
     ) {
-      toast.error(locale === "fr" ? "Numéro requis" : "Phone number required");
+      toast.error(t("errors.phoneRequired"));
       return;
     }
 
@@ -69,7 +81,7 @@ export default function ProfilePage() {
       withdrawalMethod === "BANK_TRANSFER" &&
       (!bankName.trim() || !bankAccount.trim())
     ) {
-      toast.error(locale === "fr" ? "Détails bancaires requis" : "Bank details required");
+      toast.error(t("errors.bankDetailsRequired"));
       return;
     }
 
@@ -83,18 +95,12 @@ export default function ProfilePage() {
         withdrawalBankAccount: bankAccount || undefined,
       });
 
-      toast.success(
-        locale === "fr"
-          ? "Profil mis à jour avec succès"
-          : "Profile updated successfully",
-      );
+      toast.success(t("feedback.profileUpdated"));
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : locale === "fr"
-            ? "Impossible de mettre à jour le profil"
-            : "Failed to update profile",
+          : t("errors.updateProfileFailed"),
       );
     } finally {
       setIsLoading(false);
@@ -110,24 +116,20 @@ export default function ProfilePage() {
       <div className="space-y-6 md:space-y-8">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            {locale === "fr" ? "Mon Profil" : "My Profile"}
+            {t("profile.title")}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            {locale === "fr"
-              ? "Gérez vos informations personnelles et préférences de retrait"
-              : "Manage your personal information and withdrawal preferences"}
+            {t("profile.description")}
           </p>
         </div>
 
         <Card className="border-border/50 bg-card/50 backdrop-blur">
           <CardHeader>
             <CardTitle className="text-lg md:text-xl">
-              {locale === "fr" ? "Informations personnelles" : "Personal Information"}
+              {t("profile.personalInformation")}
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground mt-1">
-              {locale === "fr"
-                ? "Votre profil de compte CoopEnergie"
-                : "Your CoopEnergie account profile"}
+              {t("profile.accountProfile")}
             </CardDescription>
           </CardHeader>
 
@@ -135,13 +137,16 @@ export default function ProfilePage() {
             <div className="grid gap-6 md:grid-cols-2">
               {/* Name Field */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                  {locale === "fr" ? "Nom complet" : "Full Name"}
+                <Label
+                  htmlFor="name"
+                  className="text-sm font-medium text-foreground"
+                >
+                  {t("profile.fullName")}
                 </Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder={locale === "fr" ? "Ex: Jean Dupont" : "e.g., John Doe"}
+                  placeholder={t(nameExampleKey)}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="bg-input border-border text-foreground h-12 text-base"
@@ -150,10 +155,13 @@ export default function ProfilePage() {
 
               {/* Email Field (Read-only) */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">
-                  {locale === "fr" ? "Email" : "Email"}
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  {t("common.email")}
                   <Badge variant="secondary" className="ml-2 text-xs">
-                    {locale === "fr" ? "Lecture seule" : "Read-only"}
+                    {t("common.readOnly")}
                   </Badge>
                 </Label>
                 <Input
@@ -172,14 +180,10 @@ export default function ProfilePage() {
         <Card className="border-border/50 bg-card/50 backdrop-blur">
           <CardHeader>
             <CardTitle className="text-lg md:text-xl">
-              {locale === "fr"
-                ? "Préférences de retrait"
-                : "Withdrawal Preferences"}
+              {t("profile.withdrawalPreferences")}
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground mt-1">
-              {locale === "fr"
-                ? "Configurez votre méthode de retrait préférée"
-                : "Configure your preferred withdrawal method"}
+              {t("profile.withdrawalPreferencesDescription")}
             </CardDescription>
           </CardHeader>
 
@@ -190,50 +194,53 @@ export default function ProfilePage() {
                 htmlFor="withdrawalMethod"
                 className="text-sm font-medium text-foreground"
               >
-                {locale === "fr"
-                  ? "Méthode de retrait préférée"
-                  : "Preferred Withdrawal Method"}
+                {t("profile.preferredWithdrawalMethod")}
               </Label>
-              <Select value={withdrawalMethod} onValueChange={(v) => setWithdrawalMethod(v as WithdrawalMethod)}>
+              <Select
+                value={withdrawalMethod}
+                onValueChange={(v) =>
+                  setWithdrawalMethod(v as WithdrawalMethod)
+                }
+              >
                 <SelectTrigger className="bg-input border-border text-foreground h-12">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   <SelectItem value="MTN_MOMO">
-                    {locale === "fr" ? "MTN MoMo" : "MTN MoMo"}
+                    {t("profile.mtnMomo")}
                   </SelectItem>
                   <SelectItem value="ORANGE_MONEY">
-                    {locale === "fr" ? "Orange Money" : "Orange Money"}
+                    {t("profile.orangeMoney")}
                   </SelectItem>
                   <SelectItem value="BANK_TRANSFER">
-                    {locale === "fr" ? "Virement bancaire" : "Bank Transfer"}
+                    {t("profile.bankTransfer")}
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Conditional Fields */}
-            {(withdrawalMethod === "MTN_MOMO" || withdrawalMethod === "ORANGE_MONEY") && (
+            {(withdrawalMethod === "MTN_MOMO" ||
+              withdrawalMethod === "ORANGE_MONEY") && (
               <div className="space-y-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Label htmlFor="phone" className="text-sm font-medium text-foreground cursor-help">
-                      {locale === "fr"
-                        ? "Numéro de téléphone"
-                        : "Phone Number"}{" "}
+                    <Label
+                      htmlFor="phone"
+                      className="text-sm font-medium text-foreground cursor-help"
+                    >
+                      {t("profile.phoneNumber")}{" "}
                       {withdrawalMethod === "MTN_MOMO" ? "(MTN)" : "(Orange)"}
                     </Label>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    <p className="text-sm">
-                      {locale === "fr" ? "Format: 6XXXXXXXX" : "Format: 6XXXXXXXX"}
-                    </p>
+                    <p className="text-sm">{t("profile.phoneTooltip")}</p>
                   </TooltipContent>
                 </Tooltip>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="6XXXXXXXX"
+                  placeholder={t("profile.phonePlaceholder")}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="bg-input border-border text-foreground h-12 text-base"
@@ -244,13 +251,16 @@ export default function ProfilePage() {
             {withdrawalMethod === "BANK_TRANSFER" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="bankName" className="text-sm font-medium text-foreground">
-                    {locale === "fr" ? "Nom de la banque" : "Bank Name"}
+                  <Label
+                    htmlFor="bankName"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    {t("profile.bankName")}
                   </Label>
                   <Input
                     id="bankName"
                     type="text"
-                    placeholder={locale === "fr" ? "Ex: Ecobank" : "e.g., Ecobank"}
+                    placeholder={t(bankExampleKey)}
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     className="bg-input border-border text-foreground h-12 text-base"
@@ -258,13 +268,16 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bankAccount" className="text-sm font-medium text-foreground">
-                    {locale === "fr" ? "Numéro de compte" : "Account Number"}
+                  <Label
+                    htmlFor="bankAccount"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    {t("profile.accountNumber")}
                   </Label>
                   <Input
                     id="bankAccount"
                     type="text"
-                    placeholder={locale === "fr" ? "Ex: 123456789" : "e.g., 123456789"}
+                    placeholder={t("profile.accountNumberExample")}
                     value={bankAccount}
                     onChange={(e) => setBankAccount(e.target.value)}
                     className="bg-input border-border text-foreground h-12 text-base"
@@ -280,15 +293,15 @@ export default function ProfilePage() {
           <Button
             onClick={() => void handleSave()}
             disabled={!name.trim() || isLoading}
-            className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
+            className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-11 active:animate-button-press"
           >
             {isLoading ? (
               <>
                 <Spinner className="mr-2" />
-                {locale === "fr" ? "Enregistrement..." : "Saving..."}
+                {t("common.saving")}
               </>
             ) : (
-              locale === "fr" ? "Enregistrer les modifications" : "Save Changes"
+              t("common.saveChanges")
             )}
           </Button>
         </div>

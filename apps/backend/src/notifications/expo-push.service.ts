@@ -1,7 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Expo, ExpoPushMessage } from "expo-server-sdk";
-
-const expo = new Expo();
+type ExpoPushMessage = {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+  sound?: string;
+  channelId?: string;
+};
 
 @Injectable()
 export class ExpoPushService {
@@ -13,6 +18,8 @@ export class ExpoPushService {
     body: string,
     data?: Record<string, string>,
   ) {
+    const { Expo } = await import("expo-server-sdk");
+    const expo = new Expo();
     const validTokens = tokens.filter((token) => Expo.isExpoPushToken(token));
 
     if (validTokens.length === 0) {

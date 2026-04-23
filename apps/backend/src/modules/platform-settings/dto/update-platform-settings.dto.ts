@@ -1,11 +1,5 @@
 import { Type } from "class-transformer";
-import {
-  IsBoolean,
-  IsInt,
-  IsOptional,
-  Max,
-  Min,
-} from "class-validator";
+import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
 
 export class UpdatePlatformSettingsDto {
   @IsOptional()
@@ -33,6 +27,7 @@ export class UpdatePlatformSettingsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10000)
   withdrawalQuorumMinVotes?: number;
 
   @IsOptional()

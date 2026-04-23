@@ -5,9 +5,11 @@ import { ActivityIndicator, Alert, Text, View } from "react-native";
 import { api } from "@/lib/api";
 import { isAuthenticated } from "@/lib/auth";
 import { invitationTokenStorage } from "@/lib/storage";
+import { useMobileTranslations } from "@/lib/translations";
 
 export default function JoinScreen() {
   const router = useRouter();
+  const { t } = useMobileTranslations();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
   const startedRef = useRef(false);
 
@@ -22,26 +24,31 @@ export default function JoinScreen() {
     const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
 
     if (!token) {
-      Alert.alert("Invitation invalide", "Le token d'invitation est manquant.");
+      Alert.alert(
+        t("errors.invalidInvitation"),
+        t("errors.missingInvitationToken"),
+      );
       router.replace("/(auth)/login");
       return;
     }
 
+    const invitationToken = token;
+
     async function handleJoin() {
       try {
         if (isAuthenticated()) {
-          await api.post("/invitations/accept", { token });
+          await api.post("/invitations/accept", { token: invitationToken });
           invitationTokenStorage.clear();
           router.replace("/(dashboard)/dashboard");
           return;
         }
 
-        invitationTokenStorage.set(token);
+        invitationTokenStorage.set(invitationToken);
         router.replace("/(auth)/register");
       } catch (error) {
         Alert.alert(
-          "Invitation impossible",
-          error instanceof Error ? error.message : "Une erreur est survenue.",
+          t("errors.joinFailed"),
+          error instanceof Error ? error.message : t("errors.unknownError"),
         );
         router.replace("/(auth)/login");
       }
@@ -54,7 +61,7 @@ export default function JoinScreen() {
     <View className="flex-1 bg-[#F5F8F5] items-center justify-center px-6">
       <ActivityIndicator size="large" color="#1B5E20" />
       <Text className="mt-4 text-[#1B5E20] font-semibold text-base">
-        Traitement de votre invitation...
+        {t("auth.processingInvitation")}
       </Text>
     </View>
   );

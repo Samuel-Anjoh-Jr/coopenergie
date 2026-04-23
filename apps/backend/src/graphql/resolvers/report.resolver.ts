@@ -1,5 +1,9 @@
 import { Args, Query, Resolver } from "@nestjs/graphql";
-import { ForbiddenException, NotFoundException, UseGuards } from "@nestjs/common";
+import {
+  ForbiddenException,
+  NotFoundException,
+  UseGuards,
+} from "@nestjs/common";
 import { ContributionStatus, ProposalStatus } from "@prisma/client";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
@@ -79,7 +83,9 @@ export class ReportResolver {
     const monthsActive = firstContribution
       ? Math.max(
           1,
-          (new Date().getFullYear() - firstContribution.createdAt.getFullYear()) * 12 +
+          (new Date().getFullYear() -
+            firstContribution.createdAt.getFullYear()) *
+            12 +
             (new Date().getMonth() - firstContribution.createdAt.getMonth()) +
             1,
         )
@@ -97,11 +103,14 @@ export class ReportResolver {
       0,
     );
     const approvedProposals =
-      proposalCounts.find((entry) => entry.status === ProposalStatus.APPROVED)?._count
-        ._all ?? 0;
+      proposalCounts.find((entry) => entry.status === ProposalStatus.APPROVED)
+        ?._count._all ?? 0;
     const rejectedProposals =
-      proposalCounts.find((entry) => entry.status === ProposalStatus.REJECTED)?._count
-        ._all ?? 0;
+      proposalCounts.find((entry) => entry.status === ProposalStatus.REJECTED)
+        ?._count._all ?? 0;
+    const pendingProposals =
+      proposalCounts.find((entry) => entry.status === ProposalStatus.PENDING)
+        ?._count._all ?? 0;
 
     return {
       cooperativeName: cooperative.name,
@@ -113,6 +122,7 @@ export class ReportResolver {
       totalProposals,
       approvedProposals,
       rejectedProposals,
+      pendingProposals,
       generatedAt: new Date(),
     };
   }
@@ -131,7 +141,9 @@ export class ReportResolver {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
   }
 }

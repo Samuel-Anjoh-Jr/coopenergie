@@ -15,6 +15,7 @@ import { useActiveCooperative } from "@/lib/dashboard";
 import { enqueue } from "@/lib/offline/action-queue";
 import { getProposals, saveProposals } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
+import { useMobileTranslations } from "@/lib/translations";
 
 type Proposal = {
   id: string;
@@ -57,6 +58,7 @@ function statusBadgeClass(status: string) {
 export default function ProposalsScreen() {
   const { activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
+  const { t } = useMobileTranslations();
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -116,7 +118,7 @@ export default function ProposalsScreen() {
           attemptCount: 0,
         });
 
-        Alert.alert("Hors ligne", "Vote mis en file d'attente pour sync.");
+        Alert.alert(t("status.offlineProposals"), t("feedback.voteQueued"));
         return;
       }
 
@@ -127,8 +129,8 @@ export default function ProposalsScreen() {
       await refetch();
     } catch (error) {
       Alert.alert(
-        "Vote impossible",
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+        t("errors.voteFailed"),
+        error instanceof Error ? error.message : t("errors.unknownError"),
       );
     }
   }
@@ -139,7 +141,7 @@ export default function ProposalsScreen() {
     }
 
     if (!title.trim() || !description.trim()) {
-      Alert.alert("Champs requis", "Entrez un titre et une description.");
+      Alert.alert(t("errors.error"), t("errors.invalidFormValues"));
       return;
     }
 
@@ -161,10 +163,7 @@ export default function ProposalsScreen() {
         setTitle("");
         setDescription("");
         setModalVisible(false);
-        Alert.alert(
-          "Hors ligne",
-          "Proposition mise en file d'attente pour sync.",
-        );
+        Alert.alert(t("status.offlineProposals"), t("feedback.proposalQueued"));
         return;
       }
 
@@ -179,8 +178,8 @@ export default function ProposalsScreen() {
       await refetch();
     } catch (error) {
       Alert.alert(
-        "Creation impossible",
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+        t("errors.proposalFailed"),
+        error instanceof Error ? error.message : t("errors.unknownError"),
       );
     }
   }
@@ -190,7 +189,7 @@ export default function ProposalsScreen() {
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
-            Hors ligne: votes et propositions seront mis en file d'attente.
+            {t("status.offlineProposals")}
           </Text>
         </View>
       )}
@@ -200,12 +199,12 @@ export default function ProposalsScreen() {
         onPress={() => setModalVisible(true)}
       >
         <Text className="text-white text-center font-semibold">
-          Creer une proposition
+          {t("proposals.createProposal")}
         </Text>
       </Pressable>
 
       {loading ? (
-        <Text className="text-[#1B5E20]">Chargement des propositions...</Text>
+        <Text className="text-[#1B5E20]">{t("status.loadingProposals")}</Text>
       ) : (
         <FlatList
           data={displayItems}
@@ -238,7 +237,7 @@ export default function ProposalsScreen() {
                   onPress={() => submitVote(item.id, true)}
                 >
                   <Text className="text-center text-white font-semibold">
-                    YES
+                    {t("proposals.yes")}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -247,7 +246,7 @@ export default function ProposalsScreen() {
                   onPress={() => submitVote(item.id, false)}
                 >
                   <Text className="text-center text-white font-semibold">
-                    NO
+                    {t("proposals.no")}
                   </Text>
                 </Pressable>
               </View>
@@ -260,18 +259,18 @@ export default function ProposalsScreen() {
         <View className="flex-1 bg-black/30 justify-center px-6">
           <View className="bg-white rounded-2xl p-5 border border-[#DDEBDD]">
             <Text className="text-[#1B5E20] text-lg font-bold mb-3">
-              Nouvelle proposition
+              {t("proposals.newProposal")}
             </Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="Titre"
+              placeholder={t("proposals.titlePlaceholder")}
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
             />
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Description"
+              placeholder={t("proposals.descriptionPlaceholder")}
               multiline
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4 min-h-[96px]"
             />
@@ -281,7 +280,7 @@ export default function ProposalsScreen() {
                 onPress={() => setModalVisible(false)}
               >
                 <Text className="text-center text-[#1B5E20] font-semibold">
-                  Annuler
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
               <Pressable
@@ -289,7 +288,7 @@ export default function ProposalsScreen() {
                 onPress={submitProposal}
               >
                 <Text className="text-center text-white font-semibold">
-                  Publier
+                  {t("common.submit")}
                 </Text>
               </Pressable>
             </View>

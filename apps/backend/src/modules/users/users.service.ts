@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { DevicePlatform } from "@prisma/client";
+import { plainToInstance } from "class-transformer";
 
 import { PrismaService } from "../../prisma/prisma.service";
+import { UserResponseDto } from "./dto/user-response.dto";
 
 type ProfileUpdateInput = {
   name: string;
   celoAddress?: string;
+  preferredWithdrawalMethod?: string;
+  withdrawalPhone?: string;
+  withdrawalBankName?: string;
+  withdrawalBankAccount?: string;
 };
 
 @Injectable()
@@ -20,7 +26,6 @@ export class UsersService {
         email: true,
         name: true,
         celoAddress: true,
-        celoKeyEncrypted: true,
         createdAt: true,
         updatedAt: true,
         withdrawalPhone: true,
@@ -34,7 +39,9 @@ export class UsersService {
       throw new NotFoundException("User not found.");
     }
 
-    return user;
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async findByEmail(email: string) {
@@ -44,18 +51,21 @@ export class UsersService {
   }
 
   async updateProfile(id: string, data: ProfileUpdateInput) {
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id },
       data: {
         name: data.name,
         celoAddress: data.celoAddress,
+        withdrawalOperator: data.preferredWithdrawalMethod,
+        withdrawalPhone: data.withdrawalPhone,
+        withdrawalBankName: data.withdrawalBankName,
+        withdrawalBankAccount: data.withdrawalBankAccount,
       },
       select: {
         id: true,
         email: true,
         name: true,
         celoAddress: true,
-        celoKeyEncrypted: true,
         createdAt: true,
         updatedAt: true,
         withdrawalPhone: true,
@@ -64,10 +74,13 @@ export class UsersService {
         withdrawalBankAccount: true,
       },
     });
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async storeCeloKey(id: string, encryptedKey: string) {
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id },
       data: {
         celoKeyEncrypted: encryptedKey,
@@ -77,7 +90,6 @@ export class UsersService {
         email: true,
         name: true,
         celoAddress: true,
-        celoKeyEncrypted: true,
         createdAt: true,
         updatedAt: true,
         withdrawalPhone: true,
@@ -85,6 +97,9 @@ export class UsersService {
         withdrawalBankName: true,
         withdrawalBankAccount: true,
       },
+    });
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
     });
   }
 

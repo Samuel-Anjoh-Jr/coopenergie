@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useQuery } from "@apollo/client";
 import { useSession } from "next-auth/react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +22,7 @@ import {
   User,
 } from "lucide-react";
 import { useNotifications } from "@/lib/firebase/use-notifications";
+import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 
 const navItems = [
   { key: "overview", icon: BarChart3, href: "/dashboard" },
@@ -46,6 +48,10 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationBannerDismissed, setNotificationBannerDismissed] = useState(false);
   const { notificationsEnabled, requestPermission } = useNotifications();
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    skip: status !== "authenticated",
+  });
+  const cooperativeName = myCooperativesData?.myCooperatives?.[0]?.name ?? "-";
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -120,9 +126,9 @@ export default function DashboardLayout({
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-[4.5rem] left-4 z-50 lg:hidden bg-card/90 backdrop-blur-md shadow-lg border border-border/50 w-11 h-11 rounded-xl hover:bg-card"
+        className="fixed top-18 left-4 z-50 lg:hidden bg-card/90 backdrop-blur-md shadow-lg border border-border/50 w-11 h-11 rounded-xl hover:bg-card"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+        aria-label={sidebarOpen ? t("navigation.closeMenu") : t("navigation.openMenu")}
         aria-expanded={sidebarOpen}
       >
         {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -138,19 +144,19 @@ export default function DashboardLayout({
           shadow-2xl lg:shadow-none
         `}
         role="navigation"
-        aria-label="Dashboard navigation"
+        aria-label={t("navigation.dashboardNavigation")}
       >
         {/* Mobile close button inside sidebar */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-border/50">
           <span className="font-semibold text-foreground">
-            {locale === "en" ? "Menu" : "Menu"}
+            {t("navigation.menu")}
           </span>
           <Button
             variant="ghost"
             size="icon"
             className="w-10 h-10"
             onClick={() => setSidebarOpen(false)}
-            aria-label="Close menu"
+            aria-label={t("navigation.closeMenu")}
           >
             <X className="w-5 h-5" />
           </Button>
@@ -167,9 +173,9 @@ export default function DashboardLayout({
                 key={item.key}
                 href={`/${locale}${item.href}`}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group min-h-[44px] ${
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group min-h-11 ${
                   isActive
-                    ? "bg-gradient-to-r from-primary/20 to-primary/10 text-primary font-medium shadow-sm border border-primary/20"
+                    ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium shadow-sm border border-primary/20"
                     : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:bg-muted"
                 }`}
               >
@@ -188,14 +194,14 @@ export default function DashboardLayout({
 
         {/* Bottom Card */}
         <div className="absolute bottom-4 left-3 right-3">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-amber-500/10 border border-primary/20">
+          <div className="p-4 rounded-xl bg-linear-to-br from-primary/10 to-amber-500/10 border border-primary/20">
             <p className="text-xs text-muted-foreground mb-2">
-              {locale === "en" ? "Current Cooperative" : "Cooperative Actuelle"}
+              {t("dashboard.currentCooperative")}
             </p>
-            <p className="text-sm font-semibold text-foreground">Solar Communities Douala</p>
+            <p className="text-sm font-semibold text-foreground">{cooperativeName}</p>
             {session?.user && (
               <p className="text-xs text-muted-foreground mt-2 truncate">
-                {locale === "en" ? "Logged in as" : "Connecte en tant que"}: {session.user.name}
+                {t("dashboard.loggedInAs")}: {session.user.name}
               </p>
             )}
           </div>
@@ -203,36 +209,30 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-muted/20">
+      <main className="flex-1 overflow-auto bg-linear-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pt-20 lg:pt-8 space-y-4">
           {!notificationsEnabled && !notificationBannerDismissed ? (
             <Alert className="border-primary/20 bg-primary/5 text-foreground">
               <Bell className="h-4 w-4 text-primary" />
               <AlertDescription className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-sm">
-                <span>
-                  {locale === "fr"
-                    ? "Activez les notifications pour être informé des cotisations et votes en temps réel"
-                    : "Enable notifications to stay informed about contributions and votes in real time"}
-                </span>
+                <span>{t("status.notificationsPrompt")}</span>
                 <span className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={() => void requestPermission()}
-                    className="min-h-[36px]"
+                    className="min-h-9"
                   >
                     <Bell className="h-4 w-4" />
-                    {locale === "fr"
-                      ? "Activer les notifications"
-                      : "Enable notifications"}
+                    {t("status.notificationsEnable")}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={dismissNotificationBanner}
-                    className="min-h-[36px]"
+                    className="min-h-9"
                   >
                     <BellOff className="h-4 w-4" />
-                    {locale === "fr" ? "Ignorer" : "Dismiss"}
+                    {t("status.dismissPrompt")}
                   </Button>
                 </span>
               </AlertDescription>

@@ -2,9 +2,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 import { usePushNotifications } from "@/lib/notifications/use-push-notifications";
+import { useMobileTranslations } from "@/lib/translations";
 
 export default function DashboardLayout() {
   usePushNotifications();
+  const { t } = useMobileTranslations();
 
   return (
     <Tabs
@@ -26,7 +28,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Dashboard",
+          title: t("tabs.dashboard"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="dashboard" size={size} color={color} />
           ),
@@ -35,7 +37,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="contributions"
         options={{
-          title: "Contributions",
+          title: t("tabs.contributions"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="payments" size={size} color={color} />
           ),
@@ -44,7 +46,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="proposals"
         options={{
-          title: "Proposals",
+          title: t("tabs.proposals"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="how-to-vote" size={size} color={color} />
           ),
@@ -53,7 +55,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="ledger"
         options={{
-          title: "Ledger",
+          title: t("tabs.ledger"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="receipt-long" size={size} color={color} />
           ),
@@ -62,7 +64,7 @@ export default function DashboardLayout() {
       <Tabs.Screen
         name="report"
         options={{
-          title: "Report",
+          title: t("tabs.report"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="assessment" size={size} color={color} />
           ),

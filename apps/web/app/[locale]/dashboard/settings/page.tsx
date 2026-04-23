@@ -11,7 +11,13 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -46,7 +52,8 @@ export default function SettingsPage() {
   const [coopThreshold, setCoopThreshold] = useState<string>("");
 
   // Platform settings state
-  const [platformThresholdDefault, setPlatformThresholdDefault] = useState<string>("");
+  const [platformThresholdDefault, setPlatformThresholdDefault] =
+    useState<string>("");
   const [platformThresholdMin, setPlatformThresholdMin] = useState<string>("");
   const [platformThresholdMax, setPlatformThresholdMax] = useState<string>("");
   const [quorumMinVotes, setQuorumMinVotes] = useState<string>("");
@@ -63,19 +70,32 @@ export default function SettingsPage() {
     {
       variables: { cooperativeId },
       skip: !cooperativeId || userRole !== "COOP_ADMIN",
-      onCompleted: (data: { cooperativeSettings: { withdrawalThreshold: { toString: () => SetStateAction<string>; }; }; }) => {
+      onCompleted: (data: {
+        cooperativeSettings: {
+          withdrawalThreshold: { toString: () => SetStateAction<string> };
+        };
+      }) => {
         if (data?.cooperativeSettings?.withdrawalThreshold) {
-          setCoopThreshold(data.cooperativeSettings.withdrawalThreshold.toString());
+          setCoopThreshold(
+            data.cooperativeSettings.withdrawalThreshold.toString(),
+          );
         }
       },
     },
   );
 
-  const { data: platformSettingsData, loading: loadingPlatformSettings } = useQuery(
-    GET_PLATFORM_SETTINGS,
-    {
+  const { data: platformSettingsData, loading: loadingPlatformSettings } =
+    useQuery(GET_PLATFORM_SETTINGS, {
       skip: userRole !== "PLATFORM_ADMIN",
-      onCompleted: (data: { platformSettings: { withdrawalThresholdDefault: { toString: () => any; }; withdrawalThresholdMin: { toString: () => any; }; withdrawalThresholdMax: { toString: () => any; }; quorumMinVotes: { toString: () => any; }; maintenanceMode: any; }; }) => {
+      onCompleted: (data: {
+        platformSettings: {
+          withdrawalThresholdDefault: { toString: () => any };
+          withdrawalThresholdMin: { toString: () => any };
+          withdrawalThresholdMax: { toString: () => any };
+          withdrawalQuorumMinVotes: { toString: () => any };
+          maintenanceMode: any;
+        };
+      }) => {
         if (data?.platformSettings) {
           setPlatformThresholdDefault(
             data.platformSettings.withdrawalThresholdDefault?.toString() || "",
@@ -86,30 +106,27 @@ export default function SettingsPage() {
           setPlatformThresholdMax(
             data.platformSettings.withdrawalThresholdMax?.toString() || "",
           );
-          setQuorumMinVotes(data.platformSettings.quorumMinVotes?.toString() || "");
+          setQuorumMinVotes(
+            data.platformSettings.withdrawalQuorumMinVotes?.toString() || "",
+          );
           setMaintenanceMode(data.platformSettings.maintenanceMode || false);
         }
       },
-    },
-  );
+    });
 
   const handleSaveCoopSettings = async () => {
     if (!cooperativeId || !coopThreshold) {
-      toast.error(locale === "fr" ? "Champs invalides" : "Invalid form values");
+      toast.error(t("errors.invalidFormValues"));
       return;
     }
 
     setIsSubmittingCoop(true);
     try {
       await restClient.patch(`/cooperatives/${cooperativeId}/settings`, {
-        withdrawalThreshold: parseInt(coopThreshold, 10),
+        threshold: parseInt(coopThreshold, 10),
       });
 
-      toast.success(
-        locale === "fr"
-          ? "Paramètres de coopérative enregistrés"
-          : "Cooperative settings saved",
-      );
+      toast.success(t("feedback.cooperativeSettingsSaved"));
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -130,7 +147,7 @@ export default function SettingsPage() {
       !platformThresholdMax ||
       !quorumMinVotes
     ) {
-      toast.error(locale === "fr" ? "Champs invalides" : "Invalid form values");
+      toast.error(t("errors.invalidFormValues"));
       return;
     }
 
@@ -140,15 +157,11 @@ export default function SettingsPage() {
         withdrawalThresholdDefault: parseInt(platformThresholdDefault, 10),
         withdrawalThresholdMin: parseInt(platformThresholdMin, 10),
         withdrawalThresholdMax: parseInt(platformThresholdMax, 10),
-        quorumMinVotes: parseInt(quorumMinVotes, 10),
+        withdrawalQuorumMinVotes: parseInt(quorumMinVotes, 10),
         maintenanceMode,
       });
 
-      toast.success(
-        locale === "fr"
-          ? "Paramètres de plateforme enregistrés"
-          : "Platform settings saved",
-      );
+      toast.success(t("feedback.platformSettingsSaved"));
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -171,12 +184,10 @@ export default function SettingsPage() {
       <div className="space-y-6 md:space-y-8">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            {locale === "fr" ? "Paramètres" : "Settings"}
+            {t("settings.title")}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            {locale === "fr"
-              ? "Gérez les paramètres de retrait et de gouvernance"
-              : "Manage withdrawal and governance settings"}
+            {t("settings.description")}
           </p>
         </div>
 
@@ -197,7 +208,10 @@ export default function SettingsPage() {
                       : "Configure withdrawal thresholds for your cooperative"}
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
                   {locale === "fr" ? "Admin" : "Admin"}
                 </Badge>
               </div>
@@ -211,8 +225,13 @@ export default function SettingsPage() {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="coopThreshold" className="text-sm font-medium text-foreground">
-                      {locale === "fr" ? "Seuil de retrait (%)" : "Withdrawal Threshold (%)"}
+                    <Label
+                      htmlFor="coopThreshold"
+                      className="text-sm font-medium text-foreground"
+                    >
+                      {locale === "fr"
+                        ? "Seuil de retrait (%)"
+                        : "Withdrawal Threshold (%)"}
                     </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -229,9 +248,9 @@ export default function SettingsPage() {
                       </TooltipTrigger>
                       <TooltipContent side="right" className="max-w-xs">
                         <p className="text-sm">
-                            {locale === "fr"
-                              ? "Le pourcentage de votes 'OUI' requis pour approuver un retrait"
-                              : "The percentage of 'YES' votes required to approve a withdrawal"}
+                          {locale === "fr"
+                            ? "Le pourcentage de votes 'OUI' requis pour approuver un retrait"
+                            : "The percentage of 'YES' votes required to approve a withdrawal"}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -239,7 +258,9 @@ export default function SettingsPage() {
                       {locale === "fr"
                         ? "Valeur actuelle: "
                         : "Current value: "}
-                      {coopSettingsData?.cooperativeSettings?.withdrawalThreshold || "-"}%
+                      {coopSettingsData?.cooperativeSettings
+                        ?.withdrawalThreshold || "-"}
+                      %
                     </p>
                   </div>
 
@@ -247,17 +268,17 @@ export default function SettingsPage() {
                     <Button
                       onClick={() => void handleSaveCoopSettings()}
                       disabled={!coopThreshold || isSubmittingCoop}
-                      className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
+                      className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-11 active:animate-button-press"
                     >
                       {isSubmittingCoop ? (
                         <>
                           <Spinner className="mr-2" />
-                          {locale === "fr" ? "Enregistrement..." : "Saving..."}
+                          {t("common.saving")}
                         </>
                       ) : (
                         <>
                           <Save className="w-4 h-4 mr-2" />
-                          {locale === "fr" ? "Enregistrer" : "Save"}
+                          {t("common.save")}
                         </>
                       )}
                     </Button>
@@ -275,7 +296,9 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <CardTitle className="text-lg md:text-xl">
-                    {locale === "fr" ? "Paramètres de plateforme" : "Platform Settings"}
+                    {locale === "fr"
+                      ? "Paramètres de plateforme"
+                      : "Platform Settings"}
                   </CardTitle>
                   <CardDescription className="text-sm text-muted-foreground mt-1">
                     {locale === "fr"
@@ -328,7 +351,9 @@ export default function SettingsPage() {
                         max="100"
                         placeholder={locale === "fr" ? "Ex: 75" : "e.g., 75"}
                         value={platformThresholdDefault}
-                        onChange={(e) => setPlatformThresholdDefault(e.target.value)}
+                        onChange={(e) =>
+                          setPlatformThresholdDefault(e.target.value)
+                        }
                         className="bg-input border-border text-foreground h-12 text-base"
                       />
                     </div>
@@ -338,7 +363,9 @@ export default function SettingsPage() {
                         htmlFor="thresholdMin"
                         className="text-sm font-medium text-foreground"
                       >
-                        {locale === "fr" ? "Seuil min (%)" : "Min Threshold (%)"}
+                        {locale === "fr"
+                          ? "Seuil min (%)"
+                          : "Min Threshold (%)"}
                       </Label>
                       <Input
                         id="thresholdMin"
@@ -347,7 +374,9 @@ export default function SettingsPage() {
                         max="100"
                         placeholder={locale === "fr" ? "Ex: 50" : "e.g., 50"}
                         value={platformThresholdMin}
-                        onChange={(e) => setPlatformThresholdMin(e.target.value)}
+                        onChange={(e) =>
+                          setPlatformThresholdMin(e.target.value)
+                        }
                         className="bg-input border-border text-foreground h-12 text-base"
                       />
                     </div>
@@ -357,7 +386,9 @@ export default function SettingsPage() {
                         htmlFor="thresholdMax"
                         className="text-sm font-medium text-foreground"
                       >
-                        {locale === "fr" ? "Seuil max (%)" : "Max Threshold (%)"}
+                        {locale === "fr"
+                          ? "Seuil max (%)"
+                          : "Max Threshold (%)"}
                       </Label>
                       <Input
                         id="thresholdMax"
@@ -366,7 +397,9 @@ export default function SettingsPage() {
                         max="100"
                         placeholder={locale === "fr" ? "Ex: 90" : "e.g., 90"}
                         value={platformThresholdMax}
-                        onChange={(e) => setPlatformThresholdMax(e.target.value)}
+                        onChange={(e) =>
+                          setPlatformThresholdMax(e.target.value)
+                        }
                         className="bg-input border-border text-foreground h-12 text-base"
                       />
                     </div>
@@ -396,7 +429,9 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-sm font-medium text-foreground">
-                          {locale === "fr" ? "Mode maintenance" : "Maintenance Mode"}
+                          {locale === "fr"
+                            ? "Mode maintenance"
+                            : "Maintenance Mode"}
                         </Label>
                         <p className="text-xs text-muted-foreground mt-1">
                           {locale === "fr"
@@ -404,7 +439,10 @@ export default function SettingsPage() {
                             : "Disable withdrawals during maintenance"}
                         </p>
                       </div>
-                      <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
+                      <Switch
+                        checked={maintenanceMode}
+                        onCheckedChange={setMaintenanceMode}
+                      />
                     </div>
                   </div>
 
@@ -418,17 +456,17 @@ export default function SettingsPage() {
                         !quorumMinVotes ||
                         isSubmittingPlatform
                       }
-                      className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground min-h-[44px] active:animate-button-press"
+                      className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground min-h-11 active:animate-button-press"
                     >
                       {isSubmittingPlatform ? (
                         <>
                           <Spinner className="mr-2" />
-                          {locale === "fr" ? "Enregistrement..." : "Saving..."}
+                          {t("common.saving")}
                         </>
                       ) : (
                         <>
                           <Save className="w-4 h-4 mr-2" />
-                          {locale === "fr" ? "Enregistrer" : "Save"}
+                          {t("common.save")}
                         </>
                       )}
                     </Button>

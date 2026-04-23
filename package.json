@@ -2,7 +2,10 @@
   "name": "coopenergie",
   "private": true,
   "packageManager": "bun@latest",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "prepare": "husky || true",
     "env:sync": "node scripts/sync-env.mjs",
@@ -34,7 +37,9 @@
     "test": "echo Run tests from app directories"
   },
   "devDependencies": {
+    "@typescript-eslint/parser": "^8.46.2",
     "@vscode/ripgrep": "^1.17.1",
-    "prettier": "^3.0.0"
+    "eslint": "^9.39.1",
+    "prettier": "^3.8.3"
   }
 }

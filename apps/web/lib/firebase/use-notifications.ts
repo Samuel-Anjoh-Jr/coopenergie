@@ -12,6 +12,28 @@ import { restClient } from "@/lib/rest-client";
 
 const SERVICE_WORKER_PATH = "/api/firebase-messaging-sw";
 const SOUND_FILENAME_PATTERN = /^[a-z0-9_-]+\.wav$/i;
+const NOTIFICATION_TOKEN_STORAGE_KEY = "coopenergie.notification-token";
+
+function getStoredNotificationToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(NOTIFICATION_TOKEN_STORAGE_KEY);
+}
+
+function storeNotificationToken(token: string | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (token) {
+    window.localStorage.setItem(NOTIFICATION_TOKEN_STORAGE_KEY, token);
+    return;
+  }
+
+  window.localStorage.removeItem(NOTIFICATION_TOKEN_STORAGE_KEY);
+}
 
 function getSoundFromPayload(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
@@ -51,6 +73,17 @@ async function registerNotificationServiceWorker() {
   return navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope: "/" });
 }
 
+export async function unregisterNotificationToken() {
+  const token = getStoredNotificationToken();
+
+  if (!token) {
+    return;
+  }
+
+  await restClient.delete("/users/device-token", { token });
+  storeNotificationToken(null);
+}
+
 export function useNotifications() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const tokenRef = useRef<string | null>(null);
@@ -67,6 +100,7 @@ export function useNotifications() {
     });
 
     tokenRef.current = token;
+    storeNotificationToken(token);
     setNotificationsEnabled(true);
     return token;
   }, []);
@@ -95,6 +129,11 @@ export function useNotifications() {
   }, [syncToken]);
 
   useEffect(() => {
+    const storedToken = getStoredNotificationToken();
+
+    tokenRef.current = storedToken;
+    setNotificationsEnabled(Boolean(storedToken));
+
     let unsubscribe = () => {};
 
     void (async () => {
@@ -121,14 +160,6 @@ export function useNotifications() {
 
     return () => {
       unsubscribe();
-
-      const token = tokenRef.current;
-      tokenRef.current = null;
-      setNotificationsEnabled(false);
-
-      if (token) {
-        void restClient.delete("/users/device-token", { token });
-      }
     };
   }, [syncToken]);
 

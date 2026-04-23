@@ -72,7 +72,9 @@ async function processAction(action: OfflineAction) {
   while (true) {
     try {
       await api.post(endpoint, action.payload, {
-        "Idempotency-Key": action.idempotencyKey,
+        headers: {
+          "Idempotency-Key": action.idempotencyKey,
+        },
       });
 
       dequeue(action.idempotencyKey);

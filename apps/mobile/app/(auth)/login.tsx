@@ -10,9 +10,11 @@ import {
 } from "react-native";
 
 import { login } from "@/lib/auth";
+import { useMobileTranslations } from "@/lib/translations";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useMobileTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,8 +26,8 @@ export default function LoginScreen() {
       router.replace("/(dashboard)/dashboard");
     } catch (error) {
       Alert.alert(
-        "Connexion impossible",
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+        t("errors.loginFailed"),
+        error instanceof Error ? error.message : t("errors.unknownError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -39,26 +41,30 @@ export default function LoginScreen() {
           CoopEnergie
         </Text>
         <Text className="text-base text-slate-600 mb-6">
-          Connectez-vous a votre cooperative.
+          {t("auth.loginSubtitle")}
         </Text>
 
-        <Text className="text-[#1B5E20] font-semibold mb-2">Email</Text>
+        <Text className="text-[#1B5E20] font-semibold mb-2">
+          {t("common.email")}
+        </Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="vous@exemple.com"
+          placeholder={t("auth.emailPlaceholder")}
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4"
         />
 
-        <Text className="text-[#1B5E20] font-semibold mb-2">Mot de passe</Text>
+        <Text className="text-[#1B5E20] font-semibold mb-2">
+          {t("common.password")}
+        </Text>
         <TextInput
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="********"
+          placeholder={t("auth.passwordPlaceholder")}
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-6"
         />
 
@@ -70,13 +76,17 @@ export default function LoginScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text className="text-white font-semibold">Connexion</Text>
+            <Text className="text-white font-semibold">
+              {t("common.login")}
+            </Text>
           )}
         </Pressable>
 
         <Link href="/(auth)/register" asChild>
           <Pressable className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
-            <Text className="text-[#1B5E20] font-medium">Creer un compte</Text>
+            <Text className="text-[#1B5E20] font-medium">
+              {t("auth.createAccount")}
+            </Text>
           </Pressable>
         </Link>
       </View>

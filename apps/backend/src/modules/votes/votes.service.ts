@@ -86,7 +86,9 @@ export class VotesService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     const cooperative = await this.prisma.cooperative.findUnique({
@@ -175,7 +177,9 @@ export class VotesService {
           },
         });
       } else if (blockchainEnabled && !vaultReady) {
-        this.logger.warn(`Cooperative ${proposal.cooperativeId} has no vault address yet`);
+        this.logger.warn(
+          `Cooperative ${proposal.cooperativeId} has no vault address yet`,
+        );
 
         updatedVote = await this.prisma.vote.update({
           where: {
@@ -243,7 +247,10 @@ export class VotesService {
         },
       });
 
-      const updatedProposal = await this.proposalsService.findById(proposalId, userId);
+      const updatedProposal = await this.proposalsService.findById(
+        proposalId,
+        userId,
+      );
 
       let proposalForSubscription = updatedProposal;
 
@@ -315,18 +322,37 @@ export class VotesService {
     }
   }
 
-  async getByProposal(proposalId: string) {
+  async getByProposal(proposalId: string, userId: string) {
     const proposal = await this.prisma.proposal.findUnique({
       where: {
         id: proposalId,
       },
       select: {
         id: true,
+        cooperativeId: true,
       },
     });
 
     if (!proposal) {
       throw new NotFoundException("Proposal not found.");
+    }
+
+    const membership = await this.prisma.membership.findUnique({
+      where: {
+        userId_cooperativeId: {
+          userId,
+          cooperativeId: proposal.cooperativeId,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     return this.prisma.vote.findMany({

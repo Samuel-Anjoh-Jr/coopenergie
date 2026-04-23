@@ -8,6 +8,7 @@ import { AuthService } from "./auth.service";
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { JwtStrategy } from "./jwt.strategy";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { JwtStrategy } from "./jwt.strategy";
         signOptions: { expiresIn: "7d" },
       }),
     }),
+    UsersModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard, GqlJwtAuthGuard],

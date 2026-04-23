@@ -44,7 +44,9 @@ function formatXaf(value: number): string {
   }).format(value);
 }
 
-function parsePayload(payload: string | null | undefined): Record<string, unknown> {
+function parsePayload(
+  payload: string | null | undefined,
+): Record<string, unknown> {
   if (!payload) {
     return {};
   }
@@ -58,7 +60,9 @@ function parsePayload(payload: string | null | undefined): Record<string, unknow
 
 export default function DashboardPage({ params }: DashboardPageProps) {
   const [locale, setLocale] = useState<Locale>("en");
-  const [activeCooperativeId, setActiveCooperativeId] = useState<string | null>(null);
+  const [activeCooperativeId, setActiveCooperativeId] = useState<string | null>(
+    null,
+  );
   const [recentSubscriptionTick, setRecentSubscriptionTick] = useState(0);
   const { data: session } = useSession();
 
@@ -68,12 +72,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const t = getTranslations(locale);
 
-  const { data: myCooperativesData, loading: loadingMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
+  const { data: myCooperativesData, loading: loadingMyCooperatives } =
+    useQuery(GET_MY_COOPERATIVES);
 
   useEffect(() => {
-    if (!activeCooperativeId && myCooperativesData?.myCooperatives?.length > 0) {
+    if (
+      !activeCooperativeId &&
+      myCooperativesData?.myCooperatives?.length > 0
+    ) {
       setActiveCooperativeId(myCooperativesData.myCooperatives[0].id);
     }
   }, [activeCooperativeId, myCooperativesData]);
@@ -87,10 +93,13 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     skip: !activeCooperativeId,
   });
 
-  const { data: reportData, refetch: refetchReport } = useQuery(GET_COOPERATIVE_REPORT, {
-    variables: { cooperativeId: activeCooperativeId },
-    skip: !activeCooperativeId,
-  });
+  const { data: reportData, refetch: refetchReport } = useQuery(
+    GET_COOPERATIVE_REPORT,
+    {
+      variables: { cooperativeId: activeCooperativeId },
+      skip: !activeCooperativeId,
+    },
+  );
 
   const onRealtimeEvent = () => {
     setRecentSubscriptionTick((tick) => tick + 1);
@@ -155,7 +164,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         id: event.id,
         icon: "vote",
         action: `${t.dashboard.vote} (${choice})`,
-        description: payload.proposalId ? String(payload.proposalId) : undefined,
+        description: payload.proposalId
+          ? String(payload.proposalId)
+          : undefined,
         user: voter,
         timestamp: new Date(event.createdAt).toLocaleString(),
       };
@@ -171,18 +182,25 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     };
   };
 
-  const recentActivity = useMemo(() => {
+  const recentActivity: ActivityItem[] = useMemo(() => {
     if (!cooperative?.recentActivity?.length) {
       return [] as ActivityItem[];
     }
 
     return cooperative.recentActivity.slice(0, 5).map(formatActivity);
-  }, [cooperative, t.dashboard.contribution, t.dashboard.proposalCreated, t.dashboard.vote]);
+  }, [
+    cooperative,
+    t.dashboard.contribution,
+    t.dashboard.proposalCreated,
+    t.dashboard.vote,
+  ]);
 
   const activeProposals = report?.totalProposals ?? 0;
   const cooperativeName = cooperative?.name ?? "-";
   const vaultAddress = cooperative?.vaultAddress ?? "";
-  const celoScanUrl = cooperative?.celoScanUrl ?? (vaultAddress ? `${CELOSCAN_BASE}/address/${vaultAddress}` : "");
+  const celoScanUrl =
+    cooperative?.celoScanUrl ??
+    (vaultAddress ? `${CELOSCAN_BASE}/address/${vaultAddress}` : "");
 
   const loadingOverview = loadingMyCooperatives || loadingDetail;
 
@@ -272,23 +290,33 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <CardContent className="space-y-4 md:space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 text-sm md:text-base">
             <div>
-              <p className="text-muted-foreground mb-1">{t.dashboard.cooperativeName}</p>
-              <p className="font-semibold text-base md:text-lg break-words">{cooperativeName}</p>
+              <p className="text-muted-foreground mb-1">
+                {t.dashboard.cooperativeName}
+              </p>
+              <p className="font-semibold text-base md:text-lg break-words">
+                {cooperativeName}
+              </p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-1">{t.dashboard.targetAmount}</p>
+              <p className="text-muted-foreground mb-1">
+                {t.dashboard.targetAmount}
+              </p>
               <p className="font-semibold text-base md:text-lg text-gradient-green">
                 {formatXaf(targetAmount)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-1">{t.dashboard.totalCollected}</p>
+              <p className="text-muted-foreground mb-1">
+                {t.dashboard.totalCollected}
+              </p>
               <p className="font-semibold text-base md:text-lg text-gradient-green">
                 {formatXaf(totalCollected)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-1">{t.dashboard.remainingAmount}</p>
+              <p className="text-muted-foreground mb-1">
+                {t.dashboard.remainingAmount}
+              </p>
               <p className="font-semibold text-base md:text-lg">
                 {formatXaf(remainingAmount)}
               </p>
@@ -297,7 +325,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <span className="text-sm md:text-base font-medium">{t.dashboard.progress}</span>
+              <span className="text-sm md:text-base font-medium">
+                {t.dashboard.progress}
+              </span>
               <span className="text-lg md:text-xl font-bold text-gradient-green">
                 {progress.toFixed(1)}%
               </span>
@@ -308,7 +338,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
           <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
             <div className="space-y-2">
               <p className="text-muted-foreground text-sm">Vault Address</p>
-              <p className="font-mono text-xs sm:text-sm break-all">{vaultAddress || "-"}</p>
+              <p className="font-mono text-xs sm:text-sm break-all">
+                {vaultAddress || "-"}
+              </p>
               {celoScanUrl ? (
                 <a
                   href={celoScanUrl}
@@ -339,10 +371,12 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <CardContent>
           <div className="space-y-4 md:space-y-6">
             {recentActivity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No recent activity yet.
+              </p>
             ) : null}
 
-            {recentActivity.map((activity) => (
+            {recentActivity.map((activity: ActivityItem) => (
               <div
                 key={`${activity.id}-${recentSubscriptionTick}`}
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
@@ -373,7 +407,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                       {activity.amount}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activity.timestamp}
+                  </p>
                 </div>
               </div>
             ))}

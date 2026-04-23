@@ -25,6 +25,7 @@ export class PaymentsController {
     return this.paymentsService.initiate(
       user.userId,
       body.cooperativeId,
+      body.idempotencyKey,
       body.amountXAF,
       body.phoneNumber,
     );
@@ -55,6 +56,10 @@ export class PaymentsWebhookController {
       request.headers?.["x-signature"] ||
       "";
 
-    return this.paymentsService.handleWebhook(payload, String(signature), rawBody);
+    return this.paymentsService.handleWebhook(
+      payload,
+      String(signature),
+      rawBody,
+    );
   }
 }

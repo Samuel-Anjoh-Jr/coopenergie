@@ -1,8 +1,15 @@
-import { Inject, UseGuards } from "@nestjs/common";
+import {
+  Inject,
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { Args, Resolver, Subscription } from "@nestjs/graphql";
 import { PubSub } from "graphql-subscriptions";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
+import { CurrentUser } from "../../modules/auth/decorators/current-user.decorator";
+import { PrismaService } from "../../prisma/prisma.service";
 import { PUBSUB } from "../pubsub.module";
 import { ContributionType } from "../types/contribution.type";
 import { PaymentEventType } from "../types/payment-event.type";
@@ -13,14 +20,41 @@ import { WithdrawalRequestType } from "../types/withdrawal.type";
 @UseGuards(GqlJwtAuthGuard)
 @Resolver()
 export class SubscriptionResolver {
-  constructor(@Inject(PUBSUB) private readonly pubSub: PubSub) {}
+  constructor(
+    @Inject(PUBSUB) private readonly pubSub: PubSub,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private async assertMembership(userId: string, cooperativeId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: {
+        userId_cooperativeId: {
+          userId,
+          cooperativeId,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
+    }
+  }
 
   @Subscription(() => ContributionType, {
     filter: (payload, variables) =>
       payload.onContribution?.cooperativeId === variables.cooperativeId,
     resolve: (payload) => payload.onContribution,
   })
-  onContribution(@Args("cooperativeId") cooperativeId: string) {
+  async onContribution(
+    @Args("cooperativeId") cooperativeId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    await this.assertMembership(user.userId, cooperativeId);
     return this.pubSub.asyncIterableIterator(
       `contribution.created.${cooperativeId}`,
     );
@@ -31,7 +65,11 @@ export class SubscriptionResolver {
       payload.onVote?.proposal?.cooperativeId === variables.cooperativeId,
     resolve: (payload) => payload.onVote,
   })
-  onVote(@Args("cooperativeId") cooperativeId: string) {
+  async onVote(
+    @Args("cooperativeId") cooperativeId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    await this.assertMembership(user.userId, cooperativeId);
     return this.pubSub.asyncIterableIterator(`vote.cast.${cooperativeId}`);
   }
 
@@ -40,8 +78,14 @@ export class SubscriptionResolver {
       payload.onProposal?.cooperativeId === variables.cooperativeId,
     resolve: (payload) => payload.onProposal,
   })
-  onProposal(@Args("cooperativeId") cooperativeId: string) {
-    return this.pubSub.asyncIterableIterator(`proposal.created.${cooperativeId}`);
+  async onProposal(
+    @Args("cooperativeId") cooperativeId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    await this.assertMembership(user.userId, cooperativeId);
+    return this.pubSub.asyncIterableIterator(
+      `proposal.created.${cooperativeId}`,
+    );
   }
 
   @Subscription(() => PaymentEventType, {
@@ -49,8 +93,14 @@ export class SubscriptionResolver {
       payload.onPayment?.cooperativeId === variables.cooperativeId,
     resolve: (payload) => payload.onPayment,
   })
-  onPayment(@Args("cooperativeId") cooperativeId: string) {
-    return this.pubSub.asyncIterableIterator(`payment.updated.${cooperativeId}`);
+  async onPayment(
+    @Args("cooperativeId") cooperativeId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    await this.assertMembership(user.userId, cooperativeId);
+    return this.pubSub.asyncIterableIterator(
+      `payment.updated.${cooperativeId}`,
+    );
   }
 
   @Subscription(() => WithdrawalRequestType, {
@@ -58,7 +108,13 @@ export class SubscriptionResolver {
       payload.onWithdrawal?.cooperativeId === variables.cooperativeId,
     resolve: (payload) => payload.onWithdrawal,
   })
-  onWithdrawal(@Args("cooperativeId") cooperativeId: string) {
-    return this.pubSub.asyncIterableIterator(`withdrawal.disbursed.${cooperativeId}`);
+  async onWithdrawal(
+    @Args("cooperativeId") cooperativeId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    await this.assertMembership(user.userId, cooperativeId);
+    return this.pubSub.asyncIterableIterator(
+      `withdrawal.disbursed.${cooperativeId}`,
+    );
   }
 }

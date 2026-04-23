@@ -17,6 +17,7 @@ import { useActiveCooperative } from "@/lib/dashboard";
 import { enqueue } from "@/lib/offline/action-queue";
 import { getContributions, saveContributions } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
+import { useMobileTranslations } from "@/lib/translations";
 
 type Contribution = {
   id: string;
@@ -51,6 +52,7 @@ function truncateHash(hash?: string | null) {
 export default function ContributionsScreen() {
   const { activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
+  const { t } = useMobileTranslations();
   const [modalVisible, setModalVisible] = useState(false);
   const [amount, setAmount] = useState("");
   const [localItems, setLocalItems] = useState<Contribution[]>([]);
@@ -103,7 +105,7 @@ export default function ContributionsScreen() {
     const amountXAF = Number(amount);
 
     if (!Number.isFinite(amountXAF) || amountXAF <= 0) {
-      Alert.alert("Montant invalide", "Entrez un montant valide.");
+      Alert.alert(t("errors.invalidAmount"), t("errors.enterValidAmount"));
       return;
     }
 
@@ -130,7 +132,7 @@ export default function ContributionsScreen() {
           status: "PENDING",
           txHash: null,
           createdAt: new Date().toISOString(),
-          userName: "Vous",
+          userName: t("common.cooperative"),
         };
 
         const updated = [optimistic, ...localItems];
@@ -140,8 +142,8 @@ export default function ContributionsScreen() {
         setAmount("");
         setModalVisible(false);
         Alert.alert(
-          "Hors ligne",
-          "Contribution mise en file d'attente pour sync.",
+          t("status.offlineContributions"),
+          t("feedback.contributionQueued"),
         );
         return;
       }
@@ -157,24 +159,28 @@ export default function ContributionsScreen() {
 
       const txHash = result.txHash;
       if (txHash) {
-        Alert.alert("Contribution confirmee", `TX: ${truncateHash(txHash)}`, [
-          { text: "Fermer" },
-          {
-            text: "Voir sur CeloScan",
-            onPress: () => Linking.openURL(`${CELOSCAN_BASE}/tx/${txHash}`),
-          },
-        ]);
+        Alert.alert(
+          t("feedback.contributionConfirmed"),
+          `${t("blockchain.txPrefix")} ${truncateHash(txHash)}`,
+          [
+            { text: t("common.close") },
+            {
+              text: t("blockchain.viewOnCeloScan"),
+              onPress: () => Linking.openURL(`${CELOSCAN_BASE}/tx/${txHash}`),
+            },
+          ],
+        );
         return;
       }
 
       Alert.alert(
-        "Contribution envoyee",
-        "Votre contribution a ete enregistree.",
+        t("feedback.contributionSent"),
+        t("feedback.contributionRecorded"),
       );
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        error instanceof Error ? error.message : "Impossible de cotiser.",
+        t("errors.error"),
+        error instanceof Error ? error.message : t("errors.contributionFailed"),
       );
     }
   }
@@ -184,7 +190,7 @@ export default function ContributionsScreen() {
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
-            Hors ligne: les contributions seront mises en file d'attente.
+            {t("status.offlineContributions")}
           </Text>
         </View>
       )}
@@ -193,11 +199,15 @@ export default function ContributionsScreen() {
         className="rounded-xl px-4 py-3 mb-4 bg-[#1B5E20]"
         onPress={() => setModalVisible(true)}
       >
-        <Text className="text-white text-center font-semibold">Cotiser</Text>
+        <Text className="text-white text-center font-semibold">
+          {t("common.contribute")}
+        </Text>
       </Pressable>
 
       {loading ? (
-        <Text className="text-[#1B5E20]">Chargement des contributions...</Text>
+        <Text className="text-[#1B5E20]">
+          {t("status.loadingContributions")}
+        </Text>
       ) : (
         <FlatList
           data={displayItems}
@@ -206,11 +216,11 @@ export default function ContributionsScreen() {
           renderItem={({ item }) => (
             <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
               <Text className="text-[#1B5E20] font-bold text-base">
-                {item.userName || "Membre"}
+                {item.userName || t("common.members")}
               </Text>
               <Text className="text-slate-700 mt-1">{item.amountXAF} XAF</Text>
               <Text className="text-slate-500 mt-1">
-                TX: {truncateHash(item.txHash)}
+                {t("blockchain.txPrefix")} {truncateHash(item.txHash)}
               </Text>
               <Text className="text-slate-500 mt-1">
                 {new Date(item.createdAt).toLocaleString()}
@@ -224,13 +234,13 @@ export default function ContributionsScreen() {
         <View className="flex-1 bg-black/30 justify-center px-6">
           <View className="bg-white rounded-2xl p-5 border border-[#DDEBDD]">
             <Text className="text-[#1B5E20] text-lg font-bold mb-3">
-              Nouvelle contribution
+              {t("contributions.newContribution")}
             </Text>
             <TextInput
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder="Montant XAF"
+              placeholder={t("contributions.amountPlaceholder")}
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4"
             />
             <View className="flex-row gap-3">
@@ -239,7 +249,7 @@ export default function ContributionsScreen() {
                 onPress={() => setModalVisible(false)}
               >
                 <Text className="text-center text-[#1B5E20] font-semibold">
-                  Annuler
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
               <Pressable
@@ -247,7 +257,7 @@ export default function ContributionsScreen() {
                 onPress={submitContribution}
               >
                 <Text className="text-center text-white font-semibold">
-                  Valider
+                  {t("common.submit")}
                 </Text>
               </Pressable>
             </View>

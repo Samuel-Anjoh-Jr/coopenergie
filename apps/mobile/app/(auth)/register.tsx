@@ -12,9 +12,11 @@ import {
 import { api } from "@/lib/api";
 import { login } from "@/lib/auth";
 import { invitationTokenStorage } from "@/lib/storage";
+import { useMobileTranslations } from "@/lib/translations";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { t } = useMobileTranslations();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,8 +45,8 @@ export default function RegisterScreen() {
       router.replace("/(dashboard)/dashboard");
     } catch (error) {
       Alert.alert(
-        "Inscription impossible",
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+        t("errors.registrationFailed"),
+        error instanceof Error ? error.message : t("errors.unknownError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -55,38 +57,44 @@ export default function RegisterScreen() {
     <View className="flex-1 bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
         <Text className="text-3xl font-bold text-[#1B5E20] mb-2">
-          Inscription
+          {t("auth.registerTitle")}
         </Text>
         <Text className="text-base text-slate-600 mb-6">
-          Creez votre compte CoopEnergie.
+          {t("auth.registerSubtitle")}
         </Text>
 
-        <Text className="text-[#1B5E20] font-semibold mb-2">Nom</Text>
+        <Text className="text-[#1B5E20] font-semibold mb-2">
+          {t("common.name")}
+        </Text>
         <TextInput
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
-          placeholder="Votre nom"
+          placeholder={t("auth.namePlaceholder")}
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4"
         />
 
-        <Text className="text-[#1B5E20] font-semibold mb-2">Email</Text>
+        <Text className="text-[#1B5E20] font-semibold mb-2">
+          {t("common.email")}
+        </Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="vous@exemple.com"
+          placeholder={t("auth.emailPlaceholder")}
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4"
         />
 
-        <Text className="text-[#1B5E20] font-semibold mb-2">Mot de passe</Text>
+        <Text className="text-[#1B5E20] font-semibold mb-2">
+          {t("common.password")}
+        </Text>
         <TextInput
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="********"
+          placeholder={t("auth.passwordPlaceholder")}
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-6"
         />
 
@@ -98,14 +106,16 @@ export default function RegisterScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text className="text-white font-semibold">S&apos;inscrire</Text>
+            <Text className="text-white font-semibold">
+              {t("common.register")}
+            </Text>
           )}
         </Pressable>
 
         <Link href="/(auth)/login" asChild>
           <Pressable className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
-              Retour a la connexion
+              {t("auth.backToLogin")}
             </Text>
           </Pressable>
         </Link>

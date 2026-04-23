@@ -6,6 +6,7 @@ import { CooperativeScopeGuard } from "./guards/cooperative-scope.guard";
 import { CoopAdminGuard } from "./guards/coop-admin.guard";
 import { PlatformAdminGuard } from "./guards/platform-admin.guard";
 import { RolesGuard } from "./guards/roles.guard";
+import { EncryptionService } from "./encryption/encryption.service";
 
 @Module({
   imports: [AuthModule],
@@ -15,6 +16,7 @@ import { RolesGuard } from "./guards/roles.guard";
     CoopAdminGuard,
     PlatformAdminGuard,
     AuditInterceptor,
+    EncryptionService,
   ],
   exports: [
     RolesGuard,
@@ -22,6 +24,7 @@ import { RolesGuard } from "./guards/roles.guard";
     CoopAdminGuard,
     PlatformAdminGuard,
     AuditInterceptor,
+    EncryptionService,
   ],
 })
 export class CommonModule {}

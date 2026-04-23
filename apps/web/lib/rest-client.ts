@@ -8,7 +8,7 @@ type RequestOptions = {
 
 async function getToken() {
   if (typeof window === "undefined") {
-    const { auth } = await import("@/lib/auth");
+    const { auth } = await import("./auth");
     const session = await auth();
     return session?.user?.token;
   }

@@ -36,7 +36,7 @@ export async function logout() {
       // Ignore backend failures during local logout.
     }
 
-    storage.delete("push_token");
+    storage.remove("push_token");
   }
 
   storage.clearAll();

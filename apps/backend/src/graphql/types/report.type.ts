@@ -29,6 +29,9 @@ export class ReportType {
   @Field(() => Int)
   rejectedProposals!: number;
 
+  @Field(() => Int)
+  pendingProposals!: number;
+
   @Field(() => Date)
   generatedAt!: Date;
 }

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CooperativeScopeGuard } from "../../common/guards/cooperative-scope.guard";
 import { CastVoteDto } from "./dto/cast-vote.dto";
 import { VotesService } from "./votes.service";
 
@@ -24,7 +25,10 @@ export class VotesController {
 
   @UseGuards(JwtAuthGuard)
   @Get("proposal/:proposalId")
-  getByProposal(@Param("proposalId") proposalId: string) {
-    return this.votesService.getByProposal(proposalId);
+  getByProposal(
+    @Param("proposalId") proposalId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.votesService.getByProposal(proposalId, user.userId);
   }
 }

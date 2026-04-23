@@ -6,6 +6,7 @@ import { CELOSCAN_BASE } from "@/lib/constants";
 import { useActiveCooperative } from "@/lib/dashboard";
 import { getLedger, saveLedger } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
+import { useMobileTranslations } from "@/lib/translations";
 
 type LedgerEvent = {
   id: string;
@@ -30,10 +31,10 @@ const LEDGER_QUERY = gql`
 `;
 
 const FILTERS = [
-  { label: "All", value: null },
-  { label: "Contributions", value: "CONTRIBUTION" },
-  { label: "Votes", value: "VOTE" },
-  { label: "Proposals", value: "PROPOSAL" },
+  { key: "all", value: null },
+  { key: "contributions", value: "CONTRIBUTION" },
+  { key: "votes", value: "VOTE" },
+  { key: "proposals", value: "PROPOSAL" },
 ] as const;
 
 function truncateHash(hash: string) {
@@ -43,6 +44,7 @@ function truncateHash(hash: string) {
 export default function LedgerScreen() {
   const { activeCooperativeId, activeCooperative } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
+  const { t } = useMobileTranslations();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>(FILTERS[0]);
   const [localItems, setLocalItems] = useState<LedgerEvent[]>([]);
 
@@ -91,13 +93,13 @@ export default function LedgerScreen() {
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
-            Hors ligne: affichage du cache local.
+            {t("status.offlineLedger")}
           </Text>
         </View>
       )}
 
       <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4 mb-4">
-        <Text className="text-[#1B5E20] font-bold">Wallet</Text>
+        <Text className="text-[#1B5E20] font-bold">{t("ledger.wallet")}</Text>
         <Text className="text-slate-600 mt-1">
           {activeCooperative?.vaultAddress || "-"}
         </Text>
@@ -111,7 +113,7 @@ export default function LedgerScreen() {
             }
           >
             <Text className="text-[#1B5E20] font-semibold">
-              Voir sur CeloScan
+              {t("blockchain.viewOnCeloScan")}
             </Text>
           </Pressable>
         )}
@@ -120,9 +122,9 @@ export default function LedgerScreen() {
       <View className="flex-row gap-2 mb-4">
         {FILTERS.map((item) => (
           <Pressable
-            key={item.label}
+            key={item.key}
             className={`px-3 py-2 rounded-full ${
-              filter.label === item.label
+              filter.key === item.key
                 ? "bg-[#1B5E20]"
                 : "bg-white border border-[#DDEBDD]"
             }`}
@@ -130,19 +132,19 @@ export default function LedgerScreen() {
           >
             <Text
               className={
-                filter.label === item.label
+                filter.key === item.key
                   ? "text-white font-semibold"
                   : "text-[#1B5E20] font-semibold"
               }
             >
-              {item.label}
+              {t(`ledger.${item.key}`)}
             </Text>
           </Pressable>
         ))}
       </View>
 
       {loading ? (
-        <Text className="text-[#1B5E20]">Chargement du ledger...</Text>
+        <Text className="text-[#1B5E20]">{t("status.loadingLedger")}</Text>
       ) : (
         <FlatList
           data={displayItems}
@@ -154,10 +156,12 @@ export default function LedgerScreen() {
                 <Text className="text-xs px-2 py-1 rounded-full bg-[#E8F5E8] text-[#1B5E20] font-semibold">
                   {item.type}
                 </Text>
-                <Text className="text-slate-500">Block {item.blockNumber}</Text>
+                <Text className="text-slate-500">
+                  {t("blockchain.blockPrefix")} {item.blockNumber}
+                </Text>
               </View>
               <Text className="text-slate-700 mt-2">
-                TX: {truncateHash(item.txHash)}
+                {t("blockchain.txPrefix")} {truncateHash(item.txHash)}
               </Text>
               <Text className="text-slate-500 mt-1">
                 {new Date(item.createdAt).toLocaleString()}
@@ -171,7 +175,7 @@ export default function LedgerScreen() {
                 }
               >
                 <Text className="text-[#1B5E20] font-semibold">
-                  Verifier sur CeloScan
+                  {t("blockchain.verifyOnCeloScan")}
                 </Text>
               </Pressable>
             </View>

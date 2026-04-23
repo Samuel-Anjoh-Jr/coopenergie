@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import {
   BadRequestException,
   ForbiddenException,
@@ -8,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { PaymentProvider, PaymentStatus } from "@prisma/client";
+import { PaymentProvider, PaymentStatus, Prisma } from "@prisma/client";
 import { PubSub } from "graphql-subscriptions";
 
 import { PUBSUB } from "../../graphql/pubsub.module";
@@ -32,6 +30,7 @@ export class PaymentsService {
   async initiate(
     userId: string,
     cooperativeId: string,
+    idempotencyKey: string,
     amountXAF: number,
     phoneNumber: string,
   ) {
@@ -75,24 +74,76 @@ export class PaymentsService {
     }
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
-    const idempotencyKey = randomUUID();
-    const reference = `COOP-${cooperativeId.slice(0, 8)}-${Date.now()}`;
-
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId,
-        cooperativeId,
-        amountXAF,
-        status: PaymentStatus.PENDING,
-        provider: PaymentProvider.CAMPAY,
-        reference,
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: {
         idempotencyKey,
-        phoneNumber,
       },
     });
+
+    if (existingPayment) {
+      if (
+        existingPayment.userId !== userId ||
+        existingPayment.cooperativeId !== cooperativeId
+      ) {
+        throw new ForbiddenException(
+          "This idempotency key is already assigned to another payment.",
+        );
+      }
+
+      return this.buildInitiateResponse(existingPayment);
+    }
+
+    const reference = `COOP-${cooperativeId.slice(0, 8)}-${Date.now()}`;
+
+    let payment;
+
+    try {
+      payment = await this.prisma.payment.create({
+        data: {
+          userId,
+          cooperativeId,
+          amountXAF,
+          status: PaymentStatus.PENDING,
+          provider: PaymentProvider.CAMPAY,
+          reference,
+          idempotencyKey,
+          phoneNumber,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const duplicatePayment = await this.prisma.payment.findUnique({
+          where: {
+            idempotencyKey,
+          },
+        });
+
+        if (!duplicatePayment) {
+          throw error;
+        }
+
+        if (
+          duplicatePayment.userId !== userId ||
+          duplicatePayment.cooperativeId !== cooperativeId
+        ) {
+          throw new ForbiddenException(
+            "This idempotency key is already assigned to another payment.",
+          );
+        }
+
+        return this.buildInitiateResponse(duplicatePayment);
+      }
+
+      throw error;
+    }
 
     try {
       await this.campayService.initiatePayment(
@@ -114,12 +165,7 @@ export class PaymentsService {
       throw error;
     }
 
-    return {
-      paymentId: payment.id,
-      reference: payment.reference,
-      status: PaymentStatus.PENDING,
-      message: "Confirm on your phone",
-    };
+    return this.buildInitiateResponse(payment);
   }
 
   async handleWebhook(
@@ -189,9 +235,12 @@ export class PaymentsService {
         updatedPayment.userId,
         updatedPayment.amountXAF,
       );
-      await this.pubSub.publish(`payment.updated.${updatedPayment.cooperativeId}`, {
-        onPayment: updatedPayment,
-      });
+      await this.pubSub.publish(
+        `payment.updated.${updatedPayment.cooperativeId}`,
+        {
+          onPayment: updatedPayment,
+        },
+      );
 
       return {
         acknowledged: true,
@@ -213,9 +262,12 @@ export class PaymentsService {
         updatedPayment.userId,
         updatedPayment.amountXAF,
       );
-      await this.pubSub.publish(`payment.updated.${updatedPayment.cooperativeId}`, {
-        onPayment: updatedPayment,
-      });
+      await this.pubSub.publish(
+        `payment.updated.${updatedPayment.cooperativeId}`,
+        {
+          onPayment: updatedPayment,
+        },
+      );
 
       return {
         acknowledged: true,
@@ -258,6 +310,19 @@ export class PaymentsService {
       );
       throw error;
     }
+  }
+
+  private buildInitiateResponse(payment: {
+    id: string;
+    reference: string;
+    status: PaymentStatus;
+  }) {
+    return {
+      paymentId: payment.id,
+      reference: payment.reference,
+      status: payment.status,
+      message: "Confirm on your phone",
+    };
   }
 
   private readString(value: unknown) {

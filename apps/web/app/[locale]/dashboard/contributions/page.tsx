@@ -20,7 +20,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CELOSCAN_BASE } from "@/lib/config";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_CONTRIBUTIONS } from "@/lib/graphql/queries/contributions";
@@ -99,16 +106,17 @@ export default function ContributionsPage() {
   );
 
   const targetAmount = 5000000;
-  const progressPercent = targetAmount > 0 ? Math.min((totalCollected / targetAmount) * 100, 100) : 0;
+  const progressPercent =
+    targetAmount > 0 ? Math.min((totalCollected / targetAmount) * 100, 100) : 0;
 
   const copyToClipboard = async (hash: string) => {
     try {
       await navigator.clipboard.writeText(hash);
       setCopiedHash(hash);
       setTimeout(() => setCopiedHash(null), 1500);
-      toast.success(locale === "fr" ? "Hash copie" : "Hash copied");
+      toast.success(t("feedback.hashCopied"));
     } catch {
-      toast.error(locale === "fr" ? "Echec de copie" : "Copy failed");
+      toast.error(t("errors.copyFailed"));
     }
   };
 
@@ -116,7 +124,7 @@ export default function ContributionsPage() {
     const amountNumber = Number(amount);
 
     if (!cooperativeId || !amountNumber || amountNumber <= 0) {
-      toast.error(locale === "fr" ? "Montant invalide" : "Invalid amount");
+      toast.error(t("errors.invalidAmount"));
       return;
     }
 
@@ -136,10 +144,8 @@ export default function ContributionsPage() {
       const txHash = response?.txHash;
       toast.success(
         txHash
-          ? `${locale === "fr" ? "Contribution ajoutee" : "Contribution added"} (${truncateHash(txHash)})`
-          : locale === "fr"
-            ? "Contribution ajoutee"
-            : "Contribution added",
+          ? `${t("feedback.contributionConfirmed")} (${truncateHash(txHash)})`
+          : t("contributions.contributionAdded"),
       );
 
       void refetchContributions();
@@ -147,9 +153,7 @@ export default function ContributionsPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : locale === "fr"
-            ? "Impossible d'ajouter la contribution"
-            : "Failed to add contribution",
+          : t("errors.addContributionFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -164,8 +168,12 @@ export default function ContributionsPage() {
     <div className="space-y-6 md:space-y-8">
       <div className="flex flex-col gap-4">
         <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t("contributions.title")}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t("contributions.description")}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {t("contributions.title")}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            {t("contributions.description")}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <Button
@@ -185,9 +193,11 @@ export default function ContributionsPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-muted-foreground">
-                {locale === "en" ? "Total Collected" : "Total collecte"}
+                {t("contributions.totalCollected")}
               </span>
-              <span className="text-lg font-bold text-gradient-green">{formatXaf(totalCollected)}</span>
+              <span className="text-lg font-bold text-gradient-green">
+                {formatXaf(totalCollected)}
+              </span>
             </div>
             <div className="w-full h-3 md:h-4 bg-muted rounded-full overflow-hidden shadow-inner">
               <div
@@ -196,8 +206,13 @@ export default function ContributionsPage() {
               />
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{Math.round(progressPercent)}% {locale === "en" ? "complete" : "complete"}</span>
-              <span>{locale === "en" ? "Goal" : "Objectif"}: {formatXaf(targetAmount)}</span>
+              <span>
+                {Math.round(progressPercent)}%{" "}
+                {t("contributions.completeLabel")}
+              </span>
+              <span>
+                {t("contributions.goalLabel")}: {formatXaf(targetAmount)}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -206,7 +221,9 @@ export default function ContributionsPage() {
       <Card className="border-border/50 bg-card/50 backdrop-blur overflow-hidden relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
         <CardHeader className="relative p-4 md:p-6">
-          <CardTitle className="text-lg md:text-xl">{t("contributions.title")}</CardTitle>
+          <CardTitle className="text-lg md:text-xl">
+            {t("contributions.title")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="relative p-4 md:p-6 pt-0">
           {contributionsLoading ? (
@@ -214,7 +231,9 @@ export default function ContributionsPage() {
               <Spinner className="h-6 w-6" />
             </div>
           ) : contributions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">{t("contributions.noContributions")}</p>
+            <p className="text-muted-foreground text-center py-8">
+              {t("contributions.noContributions")}
+            </p>
           ) : (
             <>
               <div className="hidden md:block overflow-x-auto">
@@ -223,19 +242,25 @@ export default function ContributionsPage() {
                     <TableRow className="border-border/50 hover:bg-transparent">
                       <TableHead>{t("contributions.user")}</TableHead>
                       <TableHead>{t("contributions.amount")}</TableHead>
-                      <TableHead>TX Hash</TableHead>
+                      <TableHead>{t("contributions.txHashHeader")}</TableHead>
                       <TableHead>{t("contributions.date")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {contributions.map((contribution) => {
                       const txHash = contribution.txHash ?? null;
-                      const txUrl = txHash ? `${CELOSCAN_BASE}/tx/${txHash}` : null;
+                      const txUrl = txHash
+                        ? `${CELOSCAN_BASE}/tx/${txHash}`
+                        : null;
 
                       return (
-                        <TableRow key={contribution.id} className="border-border/50 transition-all duration-300 hover:bg-primary/5 hover:translate-x-1 group">
+                        <TableRow
+                          key={contribution.id}
+                          className="border-border/50 transition-all duration-300 hover:bg-primary/5 hover:translate-x-1 group"
+                        >
                           <TableCell className="font-medium group-hover:text-primary transition-colors">
-                            {contribution.userName || "Member"}
+                            {contribution.userName ||
+                              t("common.defaultMemberLabel")}
                           </TableCell>
                           <TableCell className="font-semibold text-gradient-green">
                             {formatXaf(contribution.amountXAF)}
@@ -243,13 +268,19 @@ export default function ContributionsPage() {
                           <TableCell>
                             {txHash ? (
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs">{truncateHash(txHash)}</span>
+                                <span className="font-mono text-xs">
+                                  {truncateHash(txHash)}
+                                </span>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
                                   onClick={() => void copyToClipboard(txHash)}
-                                  title={copiedHash === txHash ? "Copied" : "Copy hash"}
+                                  title={
+                                    copiedHash === txHash
+                                      ? t("feedback.hashCopied")
+                                      : t("common.copy")
+                                  }
                                 >
                                   <Copy className="h-3.5 w-3.5" />
                                 </Button>
@@ -259,7 +290,7 @@ export default function ContributionsPage() {
                                   rel="noreferrer"
                                   className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
                                 >
-                                  CeloScan
+                                  {t("blockchain.viewOnCeloScan")}
                                   <ExternalLink className="h-3 w-3" />
                                 </a>
                               </div>
@@ -267,7 +298,9 @@ export default function ContributionsPage() {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{formatDate(contribution.createdAt)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(contribution.createdAt)}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -281,9 +314,15 @@ export default function ContributionsPage() {
                   const txUrl = txHash ? `${CELOSCAN_BASE}/tx/${txHash}` : null;
 
                   return (
-                    <div key={contribution.id} className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3 transition-all duration-300 active:scale-[0.98]">
+                    <div
+                      key={contribution.id}
+                      className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3 transition-all duration-300 active:scale-[0.98]"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">{contribution.userName || "Member"}</span>
+                        <span className="font-medium text-foreground">
+                          {contribution.userName ||
+                            t("common.defaultMemberLabel")}
+                        </span>
                         <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0">
                           {formatXaf(contribution.amountXAF)}
                         </Badge>
@@ -295,7 +334,9 @@ export default function ContributionsPage() {
                       </div>
 
                       <div className="text-sm flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs">{truncateHash(txHash)}</span>
+                        <span className="font-mono text-xs">
+                          {truncateHash(txHash)}
+                        </span>
                         {txHash ? (
                           <>
                             <Button
@@ -338,14 +379,19 @@ export default function ContributionsPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">{t("contributions.user")}</label>
+              <label className="text-sm font-medium text-foreground">
+                {t("contributions.user")}
+              </label>
               <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 text-foreground font-medium">
                 {session.user.name || session.user.email || "Member"}
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium text-foreground">
+              <label
+                htmlFor="amount"
+                className="text-sm font-medium text-foreground"
+              >
                 {t("contributions.amount")}
               </label>
               <div className="relative">

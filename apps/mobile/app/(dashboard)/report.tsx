@@ -11,6 +11,7 @@ import {
   saveProposals,
 } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
+import { useMobileTranslations } from "@/lib/translations";
 
 type ReportData = {
   cooperativeName: string;
@@ -81,6 +82,7 @@ export default function ReportScreen() {
   const { token } = useDashboardAuth();
   const { activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
+  const { t } = useMobileTranslations();
   const [cachedContributions, setCachedContributions] = useState<
     CachedContribution[]
   >([]);
@@ -177,7 +179,7 @@ export default function ReportScreen() {
     ).length;
 
     return {
-      cooperativeName: "Rapport local",
+      cooperativeName: t("report.localTitle"),
       walletAddress: null,
       totalCollected,
       targetAmount: 0,
@@ -205,18 +207,18 @@ export default function ReportScreen() {
       );
 
       if (!response.ok) {
-        throw new Error("Impossible de telecharger le CSV.");
+        throw new Error(t("errors.csvFailed"));
       }
 
       const csvText = await response.text();
       await Share.share({
-        title: "Rapport CSV CoopEnergie",
+        title: t("report.csvTitle"),
         message: csvText,
       });
     } catch (error) {
       Alert.alert(
-        "Erreur CSV",
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+        t("errors.error"),
+        error instanceof Error ? error.message : t("errors.unknownError"),
       );
     }
   }
@@ -228,13 +230,13 @@ export default function ReportScreen() {
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
-            Hors ligne: rapport construit depuis le cache local.
+            {t("status.offlineReport")}
           </Text>
         </View>
       )}
 
       {loading && !data?.report && cachedContributions.length === 0 ? (
-        <Text className="text-[#1B5E20]">Chargement du rapport...</Text>
+        <Text className="text-[#1B5E20]">{t("status.loadingReport")}</Text>
       ) : (
         <View className="gap-3">
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
@@ -242,31 +244,37 @@ export default function ReportScreen() {
               {report.cooperativeName}
             </Text>
             <Text className="text-slate-600 mt-1">
-              Collecte: {report.totalCollected} XAF
+              {t("report.totalCollected")}: {report.totalCollected} XAF
             </Text>
             <Text className="text-slate-600">
-              Objectif: {report.targetAmount} XAF
+              {t("report.targetAmount")}: {report.targetAmount} XAF
             </Text>
             <Text className="text-slate-600">
-              Completion: {report.completionPercent}%
+              {t("report.completion")}: {report.completionPercent}%
             </Text>
           </View>
 
           <View className="flex-row gap-3">
             <View className="flex-1 bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-slate-500 text-xs">Proposals</Text>
+              <Text className="text-slate-500 text-xs">
+                {t("report.proposals")}
+              </Text>
               <Text className="text-[#1B5E20] text-2xl font-bold">
                 {report.totalProposals}
               </Text>
             </View>
             <View className="flex-1 bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-slate-500 text-xs">Approved</Text>
+              <Text className="text-slate-500 text-xs">
+                {t("report.approved")}
+              </Text>
               <Text className="text-emerald-600 text-2xl font-bold">
                 {report.approvedProposals}
               </Text>
             </View>
             <View className="flex-1 bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-slate-500 text-xs">Rejected</Text>
+              <Text className="text-slate-500 text-xs">
+                {t("report.rejected")}
+              </Text>
               <Text className="text-red-600 text-2xl font-bold">
                 {report.rejectedProposals}
               </Text>
@@ -274,7 +282,9 @@ export default function ReportScreen() {
           </View>
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-            <Text className="text-slate-500 text-xs">Estimation (mois)</Text>
+            <Text className="text-slate-500 text-xs">
+              {t("report.estimationMonths")}
+            </Text>
             <Text className="text-[#1B5E20] text-xl font-bold">
               {report.estimatedMonthsToGoal ?? "-"}
             </Text>
@@ -286,7 +296,7 @@ export default function ReportScreen() {
             disabled={!isOnline}
           >
             <Text className="text-white text-center font-semibold">
-              Telecharger CSV
+              {t("report.downloadCsv")}
             </Text>
           </Pressable>
         </View>

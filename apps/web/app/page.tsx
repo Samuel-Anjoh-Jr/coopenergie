@@ -7,8 +7,8 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Always redirect to homepage, not login
-    router.push("/en");
+    // Redirect to French (default locale)
+    router.push("/fr");
   }, [router]);
 
   return null;

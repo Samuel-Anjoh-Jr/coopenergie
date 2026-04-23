@@ -2,8 +2,8 @@ import "reflect-metadata";
 
 import type { IncomingMessage } from "node:http";
 
-import { ValidationPipe } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
+import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common";
+import { NestFactory, Reflector } from "@nestjs/core";
 import helmet from "helmet";
 import cors from "cors";
 
@@ -17,7 +17,11 @@ type RawBodyRequest = IncomingMessage & {
 const express = {
   raw:
     ({ type }: { type: string }) =>
-    (request: RawBodyRequest, _response: unknown, next: (error?: unknown) => void) => {
+    (
+      request: RawBodyRequest,
+      _response: unknown,
+      next: (error?: unknown) => void,
+    ) => {
       const contentType = request.headers["content-type"];
       const normalizedContentType = Array.isArray(contentType)
         ? contentType[0]
@@ -51,15 +55,15 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix("api/v1", {
-    exclude: [
-      "/graphql",
-      "graphql",
-      "/payments/webhook",
-      "payments/webhook",
-    ],
+    exclude: ["/graphql", "graphql", "/payments/webhook", "payments/webhook"],
   });
   app.use("/payments/webhook", express.raw({ type: "application/json" }));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector), {
+      excludeExtraneousValues: true,
+    }),
+  );
   app.use(helmet());
   app.use(
     cors({

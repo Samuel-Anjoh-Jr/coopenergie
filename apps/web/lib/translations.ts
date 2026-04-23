@@ -1,9 +1,133 @@
 const translations = {
   en: {
-    vision_title: "Our Vision",
-    vision_desc: "Enable every community in Africa to access clean and affordable energy through solidarity and financial transparency.",
-    mission_title: "Our Mission",
-    mission_desc: "Enable communities to collectively finance solar equipment through a simple, transparent, and secure platform based on Mobile Money and blockchain.",
+    branding: {
+      appName: "CoopEnergie",
+      heroTagline1: "The power of the sun,",
+      heroTagline2: "the strength of the collective.",
+    },
+    theme: {
+      switchToLight: "Switch to light mode",
+      switchToDark: "Switch to dark mode",
+    },
+    language: {
+      switchToFrench: "Switch to French",
+      switchToEnglish: "Switch to English",
+    },
+    navigation: {
+      userMenu: "User menu",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+      dashboardNavigation: "Dashboard navigation",
+      menu: "Menu",
+    },
+    errors: {
+      invalidAmount: "Invalid amount",
+      copyFailed: "Copy failed",
+      addContributionFailed: "Failed to add contribution",
+      invalidInvitation: "Invalid invitation",
+      missingInvitationToken: "The invitation token is missing.",
+      joinFailed: "Failed to join",
+      unknownError: "An error occurred.",
+      loginFailed: "Login failed",
+      registrationFailed: "Registration failed",
+      enterValidAmount: "Please enter a valid amount.",
+      contributionFailed: "Failed to contribute.",
+      invalidCredentials: "Invalid credentials",
+      invalidFormValues: "Invalid form values",
+      cooperativeNotFound: "Cooperative not found",
+      notAuthenticated: "Not authenticated",
+      reportLoadFailed: "Error loading report",
+      downloadFailed: "Download failed",
+      nameRequired: "Name is required",
+      phoneRequired: "Phone number required",
+      bankDetailsRequired: "Bank details required",
+      updateProfileFailed: "Failed to update profile",
+      voteFailed: "Failed to cast vote",
+      createProposalFailed: "Failed to create proposal",
+      withdrawalRequestFailed: "Failed to create withdrawal request",
+      amountExceedsBalance: "Amount exceeds available balance",
+      error: "Error",
+    },
+    feedback: {
+      hashCopied: "Hash copied",
+      contributionQueued: "Contribution queued for sync.",
+      contributionConfirmed: "Contribution confirmed",
+      transactionHash: "TX: ",
+      contributionSent: "Contribution sent",
+      contributionRecorded: "Your contribution has been recorded.",
+      profileUpdated: "Profile updated successfully",
+      cooperativeSettingsSaved: "Cooperative settings saved",
+      platformSettingsSaved: "Platform settings saved",
+      reportDownloaded: "Report downloaded",
+    },
+    status: {
+      offline: "Offline",
+      offlineContributionsWarning: "Offline: contributions will be queued.",
+      loadingContributions: "Loading contributions...",
+      loadingDashboard: "Loading dashboard...",
+      offlineModeDataMessage: "Offline mode: local data displayed.",
+      loadingProposals: "Loading proposals...",
+      loadingReport: "Loading report...",
+      notificationsPrompt:
+        "Enable notifications to stay informed about contributions and votes in real time",
+      notificationsEnable: "Enable notifications",
+      dismissPrompt: "Dismiss",
+      submitting: "Submitting...",
+    },
+    blockchain: {
+      viewOnCeloScan: "View on CeloScan",
+      viewOnExplorer: "View on Explorer",
+    },
+    profile: {
+      title: "My Profile",
+      description:
+        "Manage your personal information and withdrawal preferences",
+      personalInformation: "Personal Information",
+      accountProfile: "Your CoopEnergie account profile",
+      fullName: "Full Name",
+      withdrawalPreferences: "Withdrawal Preferences",
+      withdrawalPreferencesDescription:
+        "Configure your preferred withdrawal method",
+      preferredWithdrawalMethod: "Preferred Withdrawal Method",
+      phoneNumber: "Phone Number",
+      bankName: "Bank Name",
+      accountNumber: "Account Number",
+      mtnMomo: "MTN MoMo",
+      orangeMoney: "Orange Money",
+      bankTransfer: "Bank Transfer",
+      phoneTooltip: "Format: 6XXXXXXXX",
+      recipientName: "Recipient Name",
+      nameExampleEn: "e.g., John Doe",
+      bankExampleEn: "e.g., Ecobank",
+      accountNumberExample: "e.g., 123456789",
+      phonePlaceholder: "6XXXXXXXX",
+    },
+    settings: {
+      title: "Settings",
+      description: "Manage withdrawal and governance settings",
+      cooperativeSettings: "Cooperative Settings",
+      cooperativeSettingsDescription:
+        "Configure withdrawal thresholds for your cooperative",
+      platformSettings: "Platform Settings",
+      platformSettingsDescription: "Configure global governance settings",
+      withdrawalThreshold: "Withdrawal Threshold (%)",
+      defaultThreshold: "Default Threshold (%)",
+      minThreshold: "Min Threshold (%)",
+      maxThreshold: "Max Threshold (%)",
+      minimumQuorumVotes: "Minimum Quorum Votes",
+      thresholdHelp:
+        "The percentage of 'YES' votes required to approve a withdrawal",
+      currentValue: "Current value",
+      maintenanceMode: "Maintenance Mode",
+      maintenanceDescription: "Disable withdrawals during maintenance",
+      accessDenied: "Access Denied",
+      accessDeniedDescription: "Only administrators can access settings",
+      warningDescription: "Changes affect all cooperatives",
+      percentageExample: "e.g., 75",
+      amountExample: "e.g., 50",
+      maxPercentageExample: "e.g., 90",
+      minVotesExample: "e.g., 10",
+    },
     common: {
       submit: "Submit",
       cancel: "Cancel",
@@ -14,11 +138,33 @@ const translations = {
       logout: "Logout",
       language: "Language",
       login: "Login",
+      register: "Register",
       all: "All",
       permanentRecord: "Permanent record",
       atCurrentRate: "At current contribution rate",
       reportGenerated: "This report was generated by CoopEnergie",
+      close: "Close",
+      contribute: "Contribute",
+      copy: "Copy",
+      email: "Email",
+      password: "Password",
+      name: "Name",
+      save: "Save",
+      saving: "Saving...",
+      saveChanges: "Save Changes",
+      readOnly: "Read-only",
+      admin: "Admin",
+      platform: "Platform",
+      warning: "Warning",
+      defaultMemberLabel: "Member",
+      defaultCooperativeName: "Cooperative",
     },
+    vision_title: "Our Vision",
+    vision_desc:
+      "Enable every community in Africa to access clean and affordable energy through solidarity and financial transparency.",
+    mission_title: "Our Mission",
+    mission_desc:
+      "Enable communities to collectively finance solar equipment through a simple, transparent, and secure platform based on Mobile Money and blockchain.",
     toasts: {
       contributionAdded: "Contribution added successfully",
       voteRecorded: "Vote recorded",
@@ -30,8 +176,10 @@ const translations = {
     },
     demo: {
       scenarioBanner: "Demo Scenario",
-      scenarioDescription: "This cooperative is raising funds to install solar panels for 50 households in Douala, Cameroon.",
-      hintContribution: "Try adding a contribution to see the progress bar update",
+      scenarioDescription:
+        "This cooperative is raising funds to install solar panels for 50 households in Douala, Cameroon.",
+      hintContribution:
+        "Try adding a contribution to see the progress bar update",
       hintVote: "Cast your vote on pending proposals",
       hintLedger: "Every action is recorded transparently",
       tryIt: "Try it",
@@ -47,6 +195,25 @@ const translations = {
       email: "Email",
       password: "Password",
       demoAccounts: "Demo accounts for testing:",
+      emailPlaceholder: "name@example.com",
+      passwordPlaceholder: "Enter your password",
+      loginSubtitle: "Sign in to your cooperative.",
+      registerTitle: "Register",
+      registerSubtitle: "Create your CoopEnergie account.",
+      nameExamplePlaceholder: "Your name",
+      createAccount: "Create an account",
+      backToLogin: "Back to login",
+      heroTextLine1: "The power of the sun,",
+      heroTextLine2: "the strength of the collective.",
+      heroDescription:
+        "Join a transparent solar cooperative and light up your future today.",
+      processingInvitation: "Processing your invitation...",
+      withdrawalCreatedMessage:
+        "Withdrawal proposal created. Members can now vote.",
+      withdrawalRequestDescription:
+        "Create a withdrawal request for members to vote on.",
+      eligibleMembers: "Eligible Members",
+      amountExample: "e.g., 50000",
     },
     navbar: {
       logo: "CoopEnergie",
@@ -58,7 +225,8 @@ const translations = {
     homepage: {
       hero: {
         title: "Fund Solar Energy Cooperatively",
-        subtitle: "Join Cameroon's renewable energy revolution. Invest in solar projects, earn returns, and build a sustainable future together.",
+        subtitle:
+          "Join Cameroon's renewable energy revolution. Invest in solar projects, earn returns, and build a sustainable future together.",
         cta: "Create Cooperative",
         powerOfSun: "The power of the sun,",
         strengthOfCollective: "the strength of the collective.",
@@ -67,21 +235,26 @@ const translations = {
       },
       problem: {
         title: "The Problem",
-        description: "Energy poverty affects millions in Cameroon. High electricity costs, unreliable grids, and limited access to renewable energy solutions hold back communities and businesses.",
+        description:
+          "Energy poverty affects millions in Cameroon. High electricity costs, unreliable grids, and limited access to renewable energy solutions hold back communities and businesses.",
         withoutElectricity: "Without Electricity",
         forSolarKit: "FCFA for Solar Kit",
         theChallenge: "The Challenge",
+        imageAlt: "Energy challenges in Cameroon - power lines at sunset",
       },
       solution: {
         title: "Our Solution",
-        description: "CoopEnergie enables communities to fund and manage solar projects collaboratively. Transparent funding, fair returns, and collective ownership empower everyone.",
+        description:
+          "CoopEnergie enables communities to fund and manage solar projects collaboratively. Transparent funding, fair returns, and collective ownership empower everyone.",
         costSavings: "Cost Savings",
         transparent: "Transparent",
         ourSolution: "Our Solution",
+        imageAlt: "Solar panel installation - renewable energy for communities",
       },
       transparency: {
         title: "Built on Transparency",
-        description: "Blockchain-verified transactions ensure every contribution is tracked, every return is verified, and every decision is documented. Complete visibility, complete trust.",
+        description:
+          "Blockchain-verified transactions ensure every contribution is tracked, every return is verified, and every decision is documented. Complete visibility, complete trust.",
       },
       howItWorks: {
         title: "How It Works",
@@ -99,23 +272,30 @@ const translations = {
         whyChooseUs: "Why Choose Us",
         builtForTrust: "Built for Trust",
         collectivePower: "Collective Power",
-        collectivePowerDesc: "Pool resources with your community. Together, achieve what's impossible alone.",
+        collectivePowerDesc:
+          "Pool resources with your community. Together, achieve what's impossible alone.",
         democraticVoting: "Democratic Voting",
-        democraticVotingDesc: "Every member has a voice. Decisions are made collectively through transparent voting.",
+        democraticVotingDesc:
+          "Every member has a voice. Decisions are made collectively through transparent voting.",
       },
       community: {
         joinTheMovement: "Join The Movement",
         powerYourCommunity: "Power Your Community Together",
-        description: "Join hundreds of families across Cameroon who are already benefiting from cooperative solar energy. Together, we're building a brighter, more sustainable future.",
+        description:
+          "Join hundreds of families across Cameroon who are already benefiting from cooperative solar energy. Together, we're building a brighter, more sustainable future.",
         getStarted: "Get Started Now",
+        imageAlt:
+          "Community cooperation - Cameroonian village with solar panels",
       },
       cta: {
         readyToLight: "Ready to Light Up Your Future?",
-        joinToday: "Join CoopEnergie today and become part of the solar revolution in Cameroon.",
+        joinToday:
+          "Join CoopEnergie today and become part of the solar revolution in Cameroon.",
       },
       stats: {
         activeMembers: "Active Members",
       },
+      footerRightsReserved: "All rights reserved.",
     },
     dashboard: {
       overview: "Overview",
@@ -146,6 +326,8 @@ const translations = {
       currentCooperative: "Current Cooperative",
       loggedInAs: "Logged in as",
       votedOn: "Voted on",
+      walletAddress: "Wallet Address",
+      noRecentActivity: "No recent activity.",
     },
     contributions: {
       title: "My Contributions",
@@ -165,6 +347,10 @@ const translations = {
       user: "User",
       active: "Active",
       pending: "Pending",
+      txHashHeader: "TX Hash",
+      totalCollected: "Total Collected",
+      goalLabel: "Goal",
+      completeLabel: "complete",
     },
     proposals: {
       title: "Active Proposals",
@@ -190,6 +376,24 @@ const translations = {
       approved: "Approved",
       rejected: "Rejected",
       voteRatio: "Vote Ratio",
+      proposeWithdrawal: "Propose Withdrawal",
+      amountLabel: "Amount (FCFA)",
+      availableBalance: "Available balance",
+      reasonLabel: "Reason / Description",
+      reasonPlaceholder: "Explain the reason for withdrawal...",
+      destinationType: "Destination Type",
+      phoneNumber: "Phone Number",
+      bankTransfer: "Bank Transfer",
+      withdrawalTag: "WITHDRAWAL",
+      eligibleMembers: "Eligible Members",
+      yesShort: "YES",
+      thresholdRequired: "Threshold required",
+      notEligibleWithdrawal: "Not eligible to vote on withdrawal",
+      notEligibleWithdrawalDescription:
+        "You must have at least one confirmed contribution to vote on withdrawals.",
+      phonePlaceholder: "6XXXXXXXX",
+      bankPlaceholder: "Bank name",
+      recipientPlaceholder: "Recipient name",
     },
     ledger: {
       title: "Transparency Ledger",
@@ -203,11 +407,15 @@ const translations = {
       eventVote: "Vote Recorded",
       summary: "Summary",
       everything: "Everything is transparent and cannot be hidden",
-      description: "Every action in the cooperative is recorded and permanently stored. This ensures complete transparency and accountability.",
+      description:
+        "Every action in the cooperative is recorded and permanently stored. This ensures complete transparency and accountability.",
       filterAll: "All",
       filterContributions: "Contributions",
       filterVotes: "Votes",
       filterProposals: "Proposals",
+      allFilter: "All",
+      contributionsFilter: "Contributions",
+      votesFilter: "Votes",
       permanentRecord: "Permanent record",
     },
     report: {
@@ -227,18 +435,147 @@ const translations = {
       cooperative: "Cooperative",
       fundingProgress: "Funding Progress",
       transparency: "Complete Transparency & Accountability",
-      transparencyDesc: "Every transaction is recorded on an immutable ledger, ensuring complete transparency and accountability for all cooperative activities.",
+      transparencyDesc:
+        "Every transaction is recorded on an immutable ledger, ensuring complete transparency and accountability for all cooperative activities.",
       monthsRemaining: "months remaining",
       completion: "Completion",
+      walletAddress: "Wallet Address",
       atCurrentRate: "At current contribution rate",
       generatedBy: "This report was generated by CoopEnergie",
     },
   },
   fr: {
-    vision_title: "Notre Vision",
-    vision_desc: "Permettre à chaque communauté en Afrique d’accéder à une énergie propre et abordable grâce à la solidarité et à la transparence financière.",
-    mission_title: "Notre Mission",
-    mission_desc: "Permettre aux communautés de financer collectivement des équipements solaires grâce à une plateforme simple, transparente et sécurisée basée sur le Mobile Money et la blockchain.",
+    branding: {
+      appName: "CoopEnergie",
+      heroTagline1: "La puissance du soleil,",
+      heroTagline2: "la force du collectif.",
+    },
+    theme: {
+      switchToLight: "Basculer vers le mode clair",
+      switchToDark: "Basculer vers le mode sombre",
+    },
+    language: {
+      switchToFrench: "Basculer vers le francais",
+      switchToEnglish: "Basculer vers l'anglais",
+    },
+    navigation: {
+      userMenu: "Menu utilisateur",
+      openMenu: "Ouvrir le menu",
+      closeMenu: "Fermer le menu",
+      dashboardNavigation: "Navigation du tableau de bord",
+      menu: "Menu",
+    },
+    errors: {
+      invalidAmount: "Montant invalide",
+      copyFailed: "Echec de copie",
+      addContributionFailed: "Impossible d'ajouter la contribution",
+      invalidInvitation: "Invitation invalide",
+      missingInvitationToken: "Le token d'invitation est manquant.",
+      joinFailed: "Impossible de rejoindre",
+      unknownError: "Une erreur est survenue.",
+      loginFailed: "Connexion impossible",
+      registrationFailed: "Inscription impossible",
+      enterValidAmount: "Veuillez entrer un montant valide.",
+      contributionFailed: "Impossible de cotiser.",
+      invalidCredentials: "Identifiants invalides",
+      invalidFormValues: "Champs invalides",
+      cooperativeNotFound: "Cooperative non trouvee",
+      notAuthenticated: "Non authentifie",
+      reportLoadFailed: "Erreur de chargement du rapport",
+      downloadFailed: "Echec du telechargement",
+      nameRequired: "Le nom est requis",
+      phoneRequired: "Numero requis",
+      bankDetailsRequired: "Details bancaires requis",
+      updateProfileFailed: "Impossible de mettre a jour le profil",
+      voteFailed: "Echec de vote",
+      createProposalFailed: "Impossible de creer la proposition",
+      withdrawalRequestFailed: "Impossible de creer la demande de retrait",
+      amountExceedsBalance: "Le montant depasse le solde disponible",
+      error: "Erreur",
+    },
+    feedback: {
+      hashCopied: "Hash copie",
+      contributionQueued: "Contribution mise en file d'attente pour sync.",
+      contributionConfirmed: "Contribution confirmee",
+      transactionHash: "TX: ",
+      contributionSent: "Contribution envoyee",
+      contributionRecorded: "Votre contribution a ete enregistree.",
+      profileUpdated: "Profil mis a jour avec succes",
+      cooperativeSettingsSaved: "Parametres de cooperative enregistres",
+      platformSettingsSaved: "Parametres de plateforme enregistres",
+      reportDownloaded: "Rapport telecharge",
+    },
+    status: {
+      offline: "Hors ligne",
+      offlineContributionsWarning:
+        "Hors ligne: les contributions seront mises en file d'attente.",
+      loadingContributions: "Chargement des contributions...",
+      loadingDashboard: "Chargement du dashboard...",
+      offlineModeDataMessage: "Mode hors ligne: donnees locales affichees.",
+      loadingProposals: "Chargement des propositions...",
+      loadingReport: "Chargement du rapport...",
+      notificationsPrompt:
+        "Activez les notifications pour etre informe des cotisations et votes en temps reel",
+      notificationsEnable: "Activer les notifications",
+      dismissPrompt: "Ignorer",
+      submitting: "En cours...",
+    },
+    blockchain: {
+      viewOnCeloScan: "Voir sur CeloScan",
+      viewOnExplorer: "Voir sur l'explorateur",
+    },
+    profile: {
+      title: "Mon Profil",
+      description:
+        "Gerez vos informations personnelles et preferences de retrait",
+      personalInformation: "Informations personnelles",
+      accountProfile: "Votre profil de compte CoopEnergie",
+      fullName: "Nom complet",
+      withdrawalPreferences: "Preferences de retrait",
+      withdrawalPreferencesDescription:
+        "Configurez votre methode de retrait preferee",
+      preferredWithdrawalMethod: "Methode de retrait preferee",
+      phoneNumber: "Numero de telephone",
+      bankName: "Nom de la banque",
+      accountNumber: "Numero de compte",
+      mtnMomo: "MTN MoMo",
+      orangeMoney: "Orange Money",
+      bankTransfer: "Virement bancaire",
+      phoneTooltip: "Format: 6XXXXXXXX",
+      recipientName: "Nom du destinataire",
+      nameExampleFr: "Ex: Jean Dupont",
+      bankExampleFr: "Ex: Ecobank",
+      accountNumberExample: "Ex: 123456789",
+      phonePlaceholder: "6XXXXXXXX",
+    },
+    settings: {
+      title: "Parametres",
+      description: "Gerez les parametres de retrait et de gouvernance",
+      cooperativeSettings: "Parametres de cooperative",
+      cooperativeSettingsDescription:
+        "Configurez les seuils de retrait pour votre cooperative",
+      platformSettings: "Parametres de plateforme",
+      platformSettingsDescription:
+        "Configurez les parametres globaux de gouvernance",
+      withdrawalThreshold: "Seuil de retrait (%)",
+      defaultThreshold: "Seuil par defaut (%)",
+      minThreshold: "Seuil min (%)",
+      maxThreshold: "Seuil max (%)",
+      minimumQuorumVotes: "Min votes quorum",
+      thresholdHelp:
+        "Le pourcentage de votes 'OUI' requis pour approuver un retrait",
+      currentValue: "Valeur actuelle",
+      maintenanceMode: "Mode maintenance",
+      maintenanceDescription: "Desactiver les retraits pendant la maintenance",
+      accessDenied: "Acces refuse",
+      accessDeniedDescription:
+        "Seuls les administrateurs peuvent acceder aux parametres",
+      warningDescription: "Les modifications affectent toutes les cooperatives",
+      percentageExample: "Ex: 75",
+      amountExample: "Ex: 50",
+      maxPercentageExample: "Ex: 90",
+      minVotesExample: "Ex: 10",
+    },
     common: {
       submit: "Soumettre",
       cancel: "Annuler",
@@ -249,11 +586,33 @@ const translations = {
       logout: "Deconnexion",
       language: "Langue",
       login: "Connexion",
+      register: "Inscription",
       all: "Tout",
       permanentRecord: "Enregistrement permanent",
       atCurrentRate: "Au taux de contribution actuel",
       reportGenerated: "Ce rapport a ete genere par CoopEnergie",
+      close: "Fermer",
+      contribute: "Cotiser",
+      copy: "Copier",
+      email: "Email",
+      password: "Mot de passe",
+      name: "Nom",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      saveChanges: "Enregistrer les modifications",
+      readOnly: "Lecture seule",
+      admin: "Admin",
+      platform: "Plateforme",
+      warning: "Attention",
+      defaultMemberLabel: "Membre",
+      defaultCooperativeName: "Cooperative",
     },
+    vision_title: "Notre Vision",
+    vision_desc:
+      "Permettre à chaque communauté en Afrique d’accéder à une énergie propre et abordable grâce à la solidarité et à la transparence financière.",
+    mission_title: "Notre Mission",
+    mission_desc:
+      "Permettre aux communautés de financer collectivement des équipements solaires grâce à une plateforme simple, transparente et sécurisée basée sur le Mobile Money et la blockchain.",
     toasts: {
       contributionAdded: "Contribution ajoutee avec succes",
       voteRecorded: "Vote enregistre",
@@ -265,8 +624,10 @@ const translations = {
     },
     demo: {
       scenarioBanner: "Scenario de demonstration",
-      scenarioDescription: "Cette cooperative collecte des fonds pour installer des panneaux solaires pour 50 foyers a Douala, Cameroun.",
-      hintContribution: "Essayez d'ajouter une contribution pour voir la barre de progression",
+      scenarioDescription:
+        "Cette cooperative collecte des fonds pour installer des panneaux solaires pour 50 foyers a Douala, Cameroun.",
+      hintContribution:
+        "Essayez d'ajouter une contribution pour voir la barre de progression",
       hintVote: "Votez sur les propositions en attente",
       hintLedger: "Chaque action est enregistree de maniere transparente",
       tryIt: "Essayez",
@@ -278,10 +639,30 @@ const translations = {
       subtitle: "Selectionnez votre compte pour continuer",
       loginAs: "Se connecter en tant que",
       user: "Utilisateur",
-      enterCredentials: "Entrez vos identifiants pour acceder a votre tableau de bord",
+      enterCredentials:
+        "Entrez vos identifiants pour acceder a votre tableau de bord",
       email: "Email",
       password: "Mot de passe",
       demoAccounts: "Comptes de demonstration pour les tests:",
+      emailPlaceholder: "vous@exemple.com",
+      passwordPlaceholder: "********",
+      loginSubtitle: "Connectez-vous a votre cooperative.",
+      registerTitle: "Inscription",
+      registerSubtitle: "Creez votre compte CoopEnergie.",
+      nameExamplePlaceholder: "Votre nom",
+      createAccount: "Creer un compte",
+      backToLogin: "Retour a la connexion",
+      heroTextLine1: "La puissance du soleil,",
+      heroTextLine2: "la force du collectif.",
+      heroDescription:
+        "Rejoignez une cooperative solaire transparente et illuminez votre avenir des aujourd'hui.",
+      processingInvitation: "Traitement de votre invitation...",
+      withdrawalCreatedMessage:
+        "Proposition de retrait creee. Les membres peuvent maintenant voter.",
+      withdrawalRequestDescription:
+        "Creez une demande de retrait pour que les membres votent.",
+      eligibleMembers: "Membres eligibles",
+      amountExample: "Ex: 50000",
     },
     navbar: {
       logo: "CoopEnergie",
@@ -293,30 +674,40 @@ const translations = {
     homepage: {
       hero: {
         title: "Financer l'energie solaire collectivement",
-        subtitle: "Rejoignez la revolution des energies renouvelables au Cameroun. Investissez dans des projets solaires, generez des rendements et construisez ensemble un avenir durable.",
+        subtitle:
+          "Rejoignez la revolution des energies renouvelables au Cameroun. Investissez dans des projets solaires, generez des rendements et construisez ensemble un avenir durable.",
         cta: "Creer une cooperative",
         powerOfSun: "La puissance du soleil,",
         strengthOfCollective: "la force du collectif.",
         blockchainPowered: "Transparence par la Blockchain",
         learnMore: "En savoir plus",
+        heroAlt:
+          "Communaute cooperative solaire - panneaux solaires sur les toits d'un village camerounais",
       },
       problem: {
         title: "Le probleme",
-        description: "La pauvrete energetique affecte des millions de personnes au Cameroun. Les couts eleves d'electricite, les reseaux peu fiables et l'acces limite aux solutions d'energie renouvelable entravent les communautes et les entreprises.",
+        description:
+          "La pauvrete energetique affecte des millions de personnes au Cameroun. Les couts eleves d'electricite, les reseaux peu fiables et l'acces limite aux solutions d'energie renouvelable entravent les communautes et les entreprises.",
         withoutElectricity: "Sans Electricite",
         forSolarKit: "FCFA pour Kit Solaire",
         theChallenge: "Le Defi",
+        imageAlt:
+          "Defis energetiques au Cameroun - pylones electriques au coucher du soleil",
       },
       solution: {
         title: "Notre solution",
-        description: "CoopEnergie permet aux communautes de financer et de gerer collectivement des projets solaires. Financement transparent, rendements equitables et propriete collective habilitent chacun.",
+        description:
+          "CoopEnergie permet aux communautes de financer et de gerer collectivement des projets solaires. Financement transparent, rendements equitables et propriete collective habilitent chacun.",
         costSavings: "Economies",
         transparent: "Transparent",
         ourSolution: "Notre Solution",
+        imageAlt:
+          "Installation de panneaux solaires - energie renouvelable pour les communautes",
       },
       transparency: {
         title: "Construit sur la transparence",
-        description: "Les transactions verifiees par blockchain garantissent que chaque contribution est suivie, chaque rendement est verifie et chaque decision est documentee. Visibilite complete, confiance totale.",
+        description:
+          "Les transactions verifiees par blockchain garantissent que chaque contribution est suivie, chaque rendement est verifie et chaque decision est documentee. Visibilite complete, confiance totale.",
       },
       howItWorks: {
         title: "Comment ca marche",
@@ -334,23 +725,30 @@ const translations = {
         whyChooseUs: "Pourquoi Nous Choisir",
         builtForTrust: "Concu pour la Confiance",
         collectivePower: "Pouvoir Collectif",
-        collectivePowerDesc: "Mutualisez vos ressources avec votre communaute. Ensemble, realisez l'impossible.",
+        collectivePowerDesc:
+          "Mutualisez vos ressources avec votre communaute. Ensemble, realisez l'impossible.",
         democraticVoting: "Vote Democratique",
-        democraticVotingDesc: "Chaque membre a une voix. Les decisions sont prises collectivement par vote transparent.",
+        democraticVotingDesc:
+          "Chaque membre a une voix. Les decisions sont prises collectivement par vote transparent.",
       },
       community: {
         joinTheMovement: "Rejoignez Le Mouvement",
         powerYourCommunity: "Alimentez Votre Communaute Ensemble",
-        description: "Rejoignez des centaines de familles a travers le Cameroun qui beneficient deja de l'energie solaire cooperative. Ensemble, nous construisons un avenir plus lumineux et durable.",
+        description:
+          "Rejoignez des centaines de familles a travers le Cameroun qui beneficient deja de l'energie solaire cooperative. Ensemble, nous construisons un avenir plus lumineux et durable.",
         getStarted: "Commencer Maintenant",
+        imageAlt:
+          "Cooperation communautaire - village camerounais avec panneaux solaires",
       },
       cta: {
         readyToLight: "Pret a Illuminer Votre Avenir?",
-        joinToday: "Rejoignez CoopEnergie aujourd'hui et faites partie de la revolution solaire au Cameroun.",
+        joinToday:
+          "Rejoignez CoopEnergie aujourd'hui et faites partie de la revolution solaire au Cameroun.",
       },
       stats: {
         activeMembers: "Membres Actifs",
       },
+      footerRightsReserved: "Tous droits reserves.",
     },
     dashboard: {
       overview: "Apercu",
@@ -361,7 +759,8 @@ const translations = {
       settings: "Parametres",
       profile: "Profil",
       welcome: "Bienvenue sur votre tableau de bord",
-      welcomeDesc: "Gerez vos contributions cooperatives et suivez la progression",
+      welcomeDesc:
+        "Gerez vos contributions cooperatives et suivez la progression",
       totalContributions: "Contributions totales",
       activeProposals: "Propositions actives",
       returns: "Rendements gagnes",
@@ -381,6 +780,8 @@ const translations = {
       currentCooperative: "Cooperative Actuelle",
       loggedInAs: "Connecte en tant que",
       votedOn: "A vote sur",
+      walletAddress: "Adresse du wallet",
+      noRecentActivity: "Aucune activite recente.",
     },
     contributions: {
       title: "Mes contributions",
@@ -400,17 +801,23 @@ const translations = {
       user: "Utilisateur",
       active: "Actif",
       pending: "En attente",
+      txHashHeader: "Hash TX",
+      totalCollected: "Total Collecte",
+      goalLabel: "Objectif",
+      completeLabel: "complet",
     },
     proposals: {
       title: "Propositions actives",
-      description: "Votez sur les propositions qui faconnent l'avenir de notre cooperative",
+      description:
+        "Votez sur les propositions qui faconnent l'avenir de notre cooperative",
       noProposals: "Aucune proposition active",
       target: "Cible",
       progress: "Progression",
       deadline: "Delai",
       createProposal: "Creer une proposition",
       createNewProposal: "Creer une nouvelle proposition",
-      createDescription: "Soumettez une nouvelle proposition pour que la cooperative vote",
+      createDescription:
+        "Soumettez une nouvelle proposition pour que la cooperative vote",
       proposalTitle: "Titre de la proposition",
       proposalDescription: "Description de la proposition",
       titlePlaceholder: "Entrez le titre de la proposition",
@@ -425,6 +832,24 @@ const translations = {
       approved: "Approuve",
       rejected: "Rejete",
       voteRatio: "Ratio de vote",
+      proposeWithdrawal: "Proposer un retrait",
+      amountLabel: "Montant (FCFA)",
+      availableBalance: "Solde disponible",
+      reasonLabel: "Raison / Description",
+      reasonPlaceholder: "Expliquez la raison du retrait...",
+      destinationType: "Type de destination",
+      phoneNumber: "Numero de telephone",
+      bankTransfer: "Virement bancaire",
+      withdrawalTag: "RETRAIT",
+      eligibleMembers: "Membres eligibles",
+      yesShort: "OUI",
+      thresholdRequired: "Seuil requis",
+      notEligibleWithdrawal: "Non eligible au vote de retrait",
+      notEligibleWithdrawalDescription:
+        "Vous devez avoir effectue au moins une cotisation confirmee pour voter sur les retraits.",
+      phonePlaceholder: "6XXXXXXXX",
+      bankPlaceholder: "Nom de la banque",
+      recipientPlaceholder: "Nom du destinataire",
     },
     ledger: {
       title: "Grand livre de transparence",
@@ -438,11 +863,15 @@ const translations = {
       eventVote: "Vote enregistre",
       summary: "Resume",
       everything: "Tout est transparent et ne peut pas etre cache",
-      description: "Chaque action dans la cooperative est enregistree et stockee de facon permanente. Cela garantit une transparence et une responsabilite completes.",
+      description:
+        "Chaque action dans la cooperative est enregistree et stockee de facon permanente. Cela garantit une transparence et une responsabilite completes.",
       filterAll: "Tout",
       filterContributions: "Contributions",
       filterVotes: "Votes",
       filterProposals: "Propositions",
+      allFilter: "Tout",
+      contributionsFilter: "Contributions",
+      votesFilter: "Votes",
       permanentRecord: "Enregistrement permanent",
     },
     report: {
@@ -462,9 +891,11 @@ const translations = {
       cooperative: "Cooperative",
       fundingProgress: "Progression du financement",
       transparency: "Transparence et responsabilite completes",
-      transparencyDesc: "Chaque transaction est enregistree sur un grand livre immutable, garantissant une transparence et une responsabilite completes pour toutes les activites de la cooperative.",
+      transparencyDesc:
+        "Chaque transaction est enregistree sur un grand livre immutable, garantissant une transparence et une responsabilite completes pour toutes les activites de la cooperative.",
       monthsRemaining: "mois restants",
       completion: "Achevement",
+      walletAddress: "Adresse du wallet",
       atCurrentRate: "Au taux de contribution actuel",
       generatedBy: "Ce rapport a ete genere par CoopEnergie",
     },
@@ -474,14 +905,18 @@ const translations = {
 export type Locale = keyof typeof translations;
 export type TranslationKey = string;
 
+export function getTranslations(locale: Locale) {
+  return translations[locale];
+}
+
 export function t(locale: Locale, key: TranslationKey): string {
   const keys = key.split(".");
   let value: any = translations[locale];
-  
+
   for (const k of keys) {
     value = value?.[k];
   }
-  
+
   return value || key;
 }
 

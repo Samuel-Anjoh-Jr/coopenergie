@@ -106,6 +106,7 @@ model User {
   updatedAt              DateTime       @updatedAt
   memberships            Membership[]
   contributions          Contribution[]
+  proposals              Proposal[]
   votes                  Vote[]
   auditLogs              AuditLog[]
   deviceTokens           DeviceToken[]
@@ -188,6 +189,7 @@ model Proposal {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   votes             Vote[]
+  creator           User                @relation(fields: [creatorId], references: [id])
   cooperative       Cooperative         @relation(fields: [cooperativeId], references: [id])
   type              ProposalType        @default(STANDARD)
   withdrawalRequest WithdrawalRequest?
