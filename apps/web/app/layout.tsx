@@ -39,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="scroll-smooth">
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="fr" className="scroll-smooth" data-scroll-behavior="smooth">
+      <body className="font-sans antialiased bg-background text-foreground" suppressHydrationWarning>
         <ApolloAppProvider>
           <ThemeProvider>
             <AuthSessionProvider>

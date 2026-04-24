@@ -108,22 +108,22 @@ export default function Homepage() {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
-              <Link href={`/${locale}/dashboard`}>
+              <Link href={`/signup`}>
                 <Button
                   size="lg"
-                  className="bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
+                  className="bg-linear-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg btn-glow group text-lg px-8 py-6"
                 >
                   {t("homepage.hero.cta")}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Button
+              {/*<Button
                 size="lg"
                 variant="outline"
                 className="border-2 border-primary/50 hover:bg-primary/10 hover:border-primary text-lg px-8 py-6 transition-all duration-300"
               >
                 {t("homepage.hero.learnMore")}
-              </Button>
+              </Button>*/}
             </div>
           </div>
         </div>

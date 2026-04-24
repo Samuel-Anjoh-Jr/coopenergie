@@ -17,15 +17,17 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
-import { Zap, Mail, Lock, AlertCircle } from "lucide-react";
+import { Zap, Mail, Lock, AlertCircle, User } from "lucide-react";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const firstSegment = pathname.split("/").filter(Boolean)[0] || "en";
   const locale =
@@ -38,28 +40,76 @@ export default function LoginPage() {
     }
   }, [status, locale, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setIsLoading(false);
-
-    if (result?.error) {
-      const message = t("errors.invalidCredentials");
+    // Validation
+    if (!fullName || !email || !password || !confirmPassword) {
+      const message = t("errors.allFieldsRequired") || "All fields are required";
       setError(message);
       toast.error(message);
       return;
     }
 
-    toast.success(t("toasts.loginSuccess"));
-    router.push(`/${locale}/dashboard`);
+    if (password !== confirmPassword) {
+      const message = t("errors.passwordsDoNotMatch") || "Passwords do not match";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (password.length < 8) {
+      const message = t("errors.passwordTooShort") || "Password must be at least 8 characters";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call signup endpoint
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, fullName }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        const message = data.message || t("errors.signupFailed") || "Signup failed";
+        setError(message);
+        toast.error(message);
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success(t("toasts.signupSuccess") || "Account created successfully!");
+
+      // Auto-login after signup
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      setIsLoading(false);
+
+      if (result?.error) {
+        const message = t("errors.invalidCredentials");
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      router.push(`/${locale}/dashboard`);
+    } catch (err) {
+      setIsLoading(false);
+      const message = t("errors.signupFailed") || "An error occurred during signup";
+      setError(message);
+      toast.error(message);
+    }
   };
 
   return (
@@ -98,7 +148,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
+      {/* Right Side - Signup Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-linear-to-br from-background via-background to-muted/30">
         <Card className="w-full max-w-md border-border/50 shadow-2xl bg-card/80 backdrop-blur">
           <CardHeader className="text-center space-y-4 pb-2">
@@ -112,20 +162,41 @@ export default function LoginPage() {
               </span>
             </div>
             <CardTitle className="text-2xl font-bold text-foreground">
-              {t("auth.title")}
+              {t("auth.signup") || "Create Account"}
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              {t("auth.enterCredentials")}
+              {t("auth.signupDescription") || "Join our solar energy cooperative"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSignup} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="fullName"
+                  className="text-sm font-medium text-foreground"
+                >
+                  {t("common.fullName") || "Full Name"}
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder={t("auth.fullNamePlaceholder") || "Enter your full name"}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10 bg-input border-border text-foreground"
+                    required
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <label
@@ -169,13 +240,34 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="text-sm font-medium text-foreground"
+                >
+                  {t("auth.confirmPassword") || "Confirm Password"}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={t("auth.confirmPasswordPlaceholder") || "Confirm your password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 bg-input border-border text-foreground"
+                    required
+                  />
+                </div>
+              </div>
+
               <Button
                 type="submit"
-                disabled={isLoading || !email || !password}
-                className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg"
+                disabled={isLoading || !fullName || !email || !password || !confirmPassword}
+                className="w-full bg-linear-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg"
               >
                 {isLoading && <Spinner className="mr-2" />}
-                {t("common.login")}
+                {t("auth.createAccount") || "Create Account"}
               </Button>
             </form>
 
@@ -191,12 +283,12 @@ export default function LoginPage() {
             </div>
 
             <p className="text-center text-sm text-muted-foreground">
-              {t("auth.noAccount") || "No account?"}{" "}
+              {t("auth.alreadyHaveAccount") || "Already have an account?"}{" "}
               <Link
-                href={`/signup`}
+                href={`/login`}
                 className="text-primary hover:text-primary/80 font-semibold transition-colors"
               >
-                {t("auth.signup") || "Sign up"}
+                {t("common.login")}
               </Link>
             </p>
           </CardContent>

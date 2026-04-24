@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 
+import { CommonModule } from "../common/common.module";
 import { FACTORY_ADDRESS, RELAYER_ADDRESS } from "./blockchain.constants";
 import { celoChain, publicClient, walletClient } from "./celo-client";
 import { coopFactoryAbi } from "./abis/coop-factory.abi";
@@ -23,6 +24,7 @@ import { WalletService } from "./wallet.service";
 
 @Global()
 @Module({
+  imports: [CommonModule],
   providers: [
     {
       provide: CELO_CHAIN,
