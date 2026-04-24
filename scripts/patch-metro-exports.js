@@ -40,7 +40,11 @@ for (const packageName of metroFamilyPackages) {
   }
 
   packageJson.exports["./src/*"] = "./src/*.js";
-  fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
+  fs.writeFileSync(
+    packageJsonPath,
+    `${JSON.stringify(packageJson, null, 2)}\n`,
+    "utf8",
+  );
   patchedCount += 1;
 }
 
