@@ -12,7 +12,7 @@ import {
 import { ContributionStatus } from "@prisma/client";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
-import { PUBSUB } from "../../graphql/pubsub.module";
+import { PUBSUB } from "../../graphql/graphql.tokens";
 import { RelayerService } from "../../blockchain/relayer.service";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";

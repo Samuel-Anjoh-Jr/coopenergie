@@ -7,14 +7,8 @@ const path = require("node:path");
 
 const rootDir = path.resolve(__dirname, "..");
 
-// If Expo exits within this window with code 1, assume a startup failure
-// (network check, etc.) rather than a deliberate user quit. Retry offline.
-const QUICK_FAIL_WINDOW_MS = 30_000;
-
 function run(extraArgs) {
   return new Promise((resolve) => {
-    const startedAt = Date.now();
-
     const child = spawn(
       "bun",
       ["run", "--cwd", "apps/mobile", "start", ...extraArgs],
@@ -27,11 +21,11 @@ function run(extraArgs) {
 
     child.on("error", (err) => {
       console.error("[mobile-dev] Spawn error:", err.message);
-      resolve({ code: 1, elapsed: 0, signal: null });
+      resolve({ code: 1, signal: null });
     });
 
     child.on("exit", (code, signal) => {
-      resolve({ code: code ?? 0, elapsed: Date.now() - startedAt, signal });
+      resolve({ code: code ?? 0, signal });
     });
   });
 }
@@ -39,11 +33,9 @@ function run(extraArgs) {
 async function main() {
   const result = await run([]);
 
-  // Quick non-zero exit with no signal = startup error (e.g. network fetch)
-  const isStartupFail =
-    result.code !== 0 &&
-    result.elapsed < QUICK_FAIL_WINDOW_MS &&
-    !result.signal;
+  // Non-zero exit with no signal usually indicates startup/runtime failure.
+  // Retry once in offline mode to bypass Expo dependency fetch failures.
+  const isStartupFail = result.code !== 0 && !result.signal;
 
   if (isStartupFail) {
     process.stdout.write(

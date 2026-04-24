@@ -19,7 +19,7 @@ import {
   CELO_PUBLIC_CLIENT,
   CELO_WALLET_CLIENT,
   GAS_RELAYER_ADDRESS,
-} from "./blockchain.module";
+} from "./blockchain.tokens";
 import { createForwardRequestDigest, ForwardRequest } from "./signature-helper";
 
 type BlockchainPublicClient = typeof configuredPublicClient;

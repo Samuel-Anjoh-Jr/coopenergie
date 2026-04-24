@@ -16,7 +16,7 @@ import { getAddress, parseAbi } from "viem";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
 import { publicClient as configuredPublicClient } from "./celo-client";
-import { CELO_PUBLIC_CLIENT } from "./blockchain.module";
+import { CELO_PUBLIC_CLIENT } from "./blockchain.tokens";
 import { PrismaService } from "../prisma/prisma.service";
 
 type BlockchainPublicClient = typeof configuredPublicClient;

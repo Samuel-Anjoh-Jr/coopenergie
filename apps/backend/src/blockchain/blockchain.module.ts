@@ -4,21 +4,22 @@ import { FACTORY_ADDRESS, RELAYER_ADDRESS } from "./blockchain.constants";
 import { celoChain, publicClient, walletClient } from "./celo-client";
 import { coopFactoryAbi } from "./abis/coop-factory.abi";
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
+import {
+  CELO_CHAIN,
+  CELO_PUBLIC_CLIENT,
+  CELO_WALLET_CLIENT,
+  COOP_FACTORY_ABI,
+  COOPERATIVE_VAULT_ABI,
+  COOP_FACTORY_ADDRESS,
+  GAS_RELAYER_ABI,
+  GAS_RELAYER_ADDRESS,
+} from "./blockchain.tokens";
 import { EventListenerService } from "./event-listener.service";
 import { gasRelayerAbi } from "./abis/gas-relayer.abi";
 import { FactoryService } from "./factory.service";
 import { RelayerService } from "./relayer.service";
 import { VaultService } from "./vault.service";
 import { WalletService } from "./wallet.service";
-
-export const CELO_CHAIN = "CELO_CHAIN";
-export const CELO_PUBLIC_CLIENT = "CELO_PUBLIC_CLIENT";
-export const CELO_WALLET_CLIENT = "CELO_WALLET_CLIENT";
-export const COOP_FACTORY_ABI = "COOP_FACTORY_ABI";
-export const COOPERATIVE_VAULT_ABI = "COOPERATIVE_VAULT_ABI";
-export const GAS_RELAYER_ABI = "GAS_RELAYER_ABI";
-export const COOP_FACTORY_ADDRESS = "COOP_FACTORY_ADDRESS";
-export const GAS_RELAYER_ADDRESS = "GAS_RELAYER_ADDRESS";
 
 @Global()
 @Module({
@@ -78,3 +79,14 @@ export const GAS_RELAYER_ADDRESS = "GAS_RELAYER_ADDRESS";
   ],
 })
 export class BlockchainModule {}
+
+export {
+  CELO_CHAIN,
+  CELO_PUBLIC_CLIENT,
+  CELO_WALLET_CLIENT,
+  COOP_FACTORY_ABI,
+  COOPERATIVE_VAULT_ABI,
+  COOP_FACTORY_ADDRESS,
+  GAS_RELAYER_ABI,
+  GAS_RELAYER_ADDRESS,
+};

@@ -10,7 +10,7 @@ import { PubSub } from "graphql-subscriptions";
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
 import { CurrentUser } from "../../modules/auth/decorators/current-user.decorator";
 import { PrismaService } from "../../prisma/prisma.service";
-import { PUBSUB } from "../pubsub.module";
+import { PUBSUB } from "../graphql.tokens";
 import { ContributionType } from "../types/contribution.type";
 import { PaymentEventType } from "../types/payment-event.type";
 import { ProposalType } from "../types/proposal.type";

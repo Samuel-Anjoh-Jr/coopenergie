@@ -3,7 +3,7 @@ import { getAddress } from "viem";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
 import { publicClient as configuredPublicClient } from "./celo-client";
-import { CELO_PUBLIC_CLIENT } from "./blockchain.module";
+import { CELO_PUBLIC_CLIENT } from "./blockchain.tokens";
 
 type BlockchainPublicClient = typeof configuredPublicClient;
 

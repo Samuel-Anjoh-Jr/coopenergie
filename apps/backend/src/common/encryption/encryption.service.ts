@@ -15,12 +15,22 @@ export class EncryptionService {
   private readonly encryptionKey: Buffer;
 
   constructor() {
-    // Use encryption key from environment variable
-    // Should be a 32-character hex string for AES-256
-    const keyString = process.env.ENCRYPTION_KEY;
+    // Use encryption key from environment variable.
+    // In local development, fall back to a deterministic key to avoid boot failures.
+    let keyString = process.env.ENCRYPTION_KEY;
     if (!keyString) {
-      throw new Error(
-        "ENCRYPTION_KEY environment variable not set. Please set a 32-character hex string.",
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          "ENCRYPTION_KEY environment variable not set. Please set a 64-character hex string.",
+        );
+      }
+
+      const fallbackSeed =
+        process.env.NEXTAUTH_SECRET || "coopenergie-local-dev-encryption-key";
+      keyString = scryptSync(fallbackSeed, "coopenergie", 32).toString("hex");
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[EncryptionService] ENCRYPTION_KEY missing; using derived development fallback key.",
       );
     }
 

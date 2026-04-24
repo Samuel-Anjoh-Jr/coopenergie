@@ -10,7 +10,7 @@ import {
   CELO_PUBLIC_CLIENT,
   CELO_WALLET_CLIENT,
   COOP_FACTORY_ADDRESS,
-} from "./blockchain.module";
+} from "./blockchain.tokens";
 
 type BlockchainPublicClient = typeof configuredPublicClient;
 type BlockchainWalletClient = typeof configuredWalletClient;

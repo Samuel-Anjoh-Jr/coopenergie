@@ -17,8 +17,7 @@ import { ReportResolver } from "./resolvers/report.resolver";
 import { SubscriptionResolver } from "./resolvers/subscription.resolver";
 import { WithdrawalResolver } from "./resolvers/withdrawal.resolver";
 import { GraphqlResolver } from "./graphql.resolver";
-
-export const PUBSUB = "PUBSUB";
+import { PUBSUB } from "./graphql.tokens";
 
 @Global()
 @Module({

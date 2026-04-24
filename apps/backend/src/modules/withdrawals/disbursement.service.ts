@@ -13,7 +13,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PubSub } from "graphql-subscriptions";
 
 import { RelayerService } from "../../blockchain/relayer.service";
-import { PUBSUB } from "../../graphql/pubsub.module";
+import { PUBSUB } from "../../graphql/graphql.tokens";
 import { MailService } from "../../mail/mail.service";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
