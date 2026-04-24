@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ContributionStatus, ProposalStatus } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
@@ -126,20 +130,24 @@ export class ReportsService {
     ]);
 
     const totalCollectedXAF = contributionsAggregate._sum.amountXAF ?? 0;
-    const successfulPaymentsAmountXAF = successfulPaymentsAggregate._sum.amountXAF ?? 0;
+    const successfulPaymentsAmountXAF =
+      successfulPaymentsAggregate._sum.amountXAF ?? 0;
     const approvedProposals =
-      proposalCounts.find((entry) => entry.status === ProposalStatus.APPROVED)?._count
-        ._all ?? 0;
+      proposalCounts.find((entry) => entry.status === ProposalStatus.APPROVED)
+        ?._count._all ?? 0;
     const rejectedProposals =
-      proposalCounts.find((entry) => entry.status === ProposalStatus.REJECTED)?._count
-        ._all ?? 0;
+      proposalCounts.find((entry) => entry.status === ProposalStatus.REJECTED)
+        ?._count._all ?? 0;
     const pendingProposals =
-      proposalCounts.find((entry) => entry.status === ProposalStatus.PENDING)?._count
-        ._all ?? 0;
-    const totalProposals = approvedProposals + rejectedProposals + pendingProposals;
+      proposalCounts.find((entry) => entry.status === ProposalStatus.PENDING)
+        ?._count._all ?? 0;
+    const totalProposals =
+      approvedProposals + rejectedProposals + pendingProposals;
     const voteParticipationPercent =
       memberCount > 0 && totalProposals > 0
-        ? Number(((totalVotes / (memberCount * totalProposals)) * 100).toFixed(2))
+        ? Number(
+            ((totalVotes / (memberCount * totalProposals)) * 100).toFixed(2),
+          )
         : 0;
 
     return {
@@ -199,7 +207,14 @@ export class ReportsService {
         "Unité/Unit",
         "Notes",
       ],
-      ["Métadonnées", "Coopérative", "Nom", report.metadata.cooperativeName, "", ""],
+      [
+        "Métadonnées",
+        "Coopérative",
+        "Nom",
+        report.metadata.cooperativeName,
+        "",
+        "",
+      ],
       [
         "Métadonnées",
         "Rapport",
@@ -218,21 +233,119 @@ export class ReportsService {
       ],
       ["Métadonnées", "Langue", "Locale", report.metadata.locale, "", ""],
       ["", "", "", "", "", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.target, String(report.financial.targetAmountXAF), "XAF", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.collected, String(report.financial.totalCollectedXAF), "XAF", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.confirmedBalance, String(report.financial.confirmedBalanceXAF), "XAF", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.successfulPaymentsCount, String(report.financial.successfulPaymentsCount), "", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.successfulPaymentsAmount, String(report.financial.successfulPaymentsAmountXAF), "XAF", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.contributionsCount, String(report.financial.contributionsCount), "", ""],
-      [i18n.financial.section, i18n.financial.category, i18n.financial.avgContribution, String(report.financial.averageContributionXAF), "XAF", ""],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.target,
+        String(report.financial.targetAmountXAF),
+        "XAF",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.collected,
+        String(report.financial.totalCollectedXAF),
+        "XAF",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.confirmedBalance,
+        String(report.financial.confirmedBalanceXAF),
+        "XAF",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.successfulPaymentsCount,
+        String(report.financial.successfulPaymentsCount),
+        "",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.successfulPaymentsAmount,
+        String(report.financial.successfulPaymentsAmountXAF),
+        "XAF",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.contributionsCount,
+        String(report.financial.contributionsCount),
+        "",
+        "",
+      ],
+      [
+        i18n.financial.section,
+        i18n.financial.category,
+        i18n.financial.avgContribution,
+        String(report.financial.averageContributionXAF),
+        "XAF",
+        "",
+      ],
       ["", "", "", "", "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.totalProposals, String(report.governance.totalProposals), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.approved, String(report.governance.approvedProposals), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.rejected, String(report.governance.rejectedProposals), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.pending, String(report.governance.pendingProposals), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.totalVotes, String(report.governance.totalVotes), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.memberCount, String(report.governance.memberCount), "", ""],
-      [i18n.governance.section, i18n.governance.category, i18n.governance.participation, String(report.governance.voteParticipationPercent), "%", ""],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.totalProposals,
+        String(report.governance.totalProposals),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.approved,
+        String(report.governance.approvedProposals),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.rejected,
+        String(report.governance.rejectedProposals),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.pending,
+        String(report.governance.pendingProposals),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.totalVotes,
+        String(report.governance.totalVotes),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.memberCount,
+        String(report.governance.memberCount),
+        "",
+        "",
+      ],
+      [
+        i18n.governance.section,
+        i18n.governance.category,
+        i18n.governance.participation,
+        String(report.governance.voteParticipationPercent),
+        "%",
+        "",
+      ],
     ];
 
     const csv = rows
@@ -316,7 +429,9 @@ export class ReportsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
   }
 }

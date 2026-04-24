@@ -48,6 +48,7 @@ import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_PROPOSALS } from "@/lib/graphql/queries/proposals";
 import { GET_WITHDRAWAL_ELIGIBILITY } from "@/lib/graphql/queries/withdrawal";
 import { SUBSCRIPTION_ON_VOTE } from "@/lib/graphql/subscriptions/cooperative";
+import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -265,20 +266,28 @@ export default function ProposalsPage() {
       return;
     }
 
+    const isMobileMoneyDestination = ["MTN_MOMO", "ORANGE_MONEY"].includes(
+      withdrawalForm.destinationType,
+    );
+    const detectedMobileMoney = isMobileMoneyDestination
+      ? detectCameroonMobileMoney(withdrawalForm.recipientPhone)
+      : null;
+
+    if (isMobileMoneyDestination && !detectedMobileMoney) {
+      toast.error(t("errors.phoneRequired"));
+      return;
+    }
+
     setIsSubmittingWithdrawal(true);
     try {
       await restClient.post("/withdrawals/propose", {
         cooperativeId,
         amountXAF: amount,
         reason: withdrawalForm.reason.trim(),
-        destinationType: withdrawalForm.destinationType,
-        recipientPhone: withdrawalForm.recipientPhone || undefined,
-        recipientOperator:
-          withdrawalForm.destinationType === "MTN_MOMO"
-            ? "MTN"
-            : withdrawalForm.destinationType === "ORANGE_MONEY"
-              ? "ORANGE"
-              : undefined,
+        destinationType:
+          detectedMobileMoney?.destinationType ?? withdrawalForm.destinationType,
+        recipientPhone: detectedMobileMoney?.normalizedPhone,
+        recipientOperator: detectedMobileMoney?.carrier,
         recipientBankName: withdrawalForm.recipientBankName || undefined,
         recipientBankAccount: withdrawalForm.recipientBankAccount || undefined,
         recipientName: withdrawalForm.recipientName.trim(),
@@ -572,14 +581,26 @@ export default function ProposalsPage() {
                     id="phone"
                     placeholder={t("proposals.phonePlaceholder")}
                     value={withdrawalForm.recipientPhone}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const detected = detectCameroonMobileMoney(value);
                       setWithdrawalForm((prev) => ({
                         ...prev,
-                        recipientPhone: e.target.value,
-                      }))
-                    }
+                        recipientPhone: value,
+                        destinationType:
+                          detected?.destinationType ?? prev.destinationType,
+                      }));
+                    }}
                     className="bg-input border-border text-foreground h-12 text-base"
                   />
+                  {detectCameroonMobileMoney(withdrawalForm.recipientPhone) ? (
+                    <p className="text-xs text-muted-foreground">
+                      {detectCameroonMobileMoney(withdrawalForm.recipientPhone)
+                        ?.destinationType === "MTN_MOMO"
+                        ? t("profile.mtnMomo")
+                        : t("profile.orangeMoney")}
+                    </p>
+                  ) : null}
                 </div>
               )}
 
@@ -669,7 +690,9 @@ export default function ProposalsPage() {
                     (["MTN_MOMO", "ORANGE_MONEY"].includes(
                       withdrawalForm.destinationType,
                     ) &&
-                      !withdrawalForm.recipientPhone)
+                      !detectCameroonMobileMoney(
+                        withdrawalForm.recipientPhone,
+                      ))
                   }
                   className="flex-1 bg-orange-600 hover:bg-orange-700 text-white min-h-11 active:animate-button-press"
                 >

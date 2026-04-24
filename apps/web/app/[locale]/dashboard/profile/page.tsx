@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -31,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -54,6 +55,10 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
+  const detectedMobileMoney = useMemo(
+    () => detectCameroonMobileMoney(phone),
+    [phone],
+  );
 
   useEffect(() => {
     if (session?.user) {
@@ -61,6 +66,18 @@ export default function ProfilePage() {
       setEmail(session.user.email || "");
     }
   }, [session]);
+
+  useEffect(() => {
+    if (!detectedMobileMoney) {
+      return;
+    }
+
+    if (withdrawalMethod === "BANK_TRANSFER") {
+      return;
+    }
+
+    setWithdrawalMethod(detectedMobileMoney.destinationType);
+  }, [detectedMobileMoney, withdrawalMethod]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -71,7 +88,7 @@ export default function ProfilePage() {
     if (
       (withdrawalMethod === "MTN_MOMO" ||
         withdrawalMethod === "ORANGE_MONEY") &&
-      !phone.trim()
+      !detectedMobileMoney
     ) {
       toast.error(t("errors.phoneRequired"));
       return;
@@ -89,8 +106,14 @@ export default function ProfilePage() {
     try {
       await restClient.patch("/users/me", {
         name: name.trim(),
-        preferredWithdrawalMethod: withdrawalMethod,
-        withdrawalPhone: phone || undefined,
+        preferredWithdrawalMethod:
+          withdrawalMethod === "BANK_TRANSFER"
+            ? withdrawalMethod
+            : detectedMobileMoney?.destinationType,
+        withdrawalPhone:
+          withdrawalMethod === "BANK_TRANSFER"
+            ? undefined
+            : detectedMobileMoney?.normalizedPhone,
         withdrawalBankName: bankName || undefined,
         withdrawalBankAccount: bankAccount || undefined,
       });
@@ -245,6 +268,13 @@ export default function ProfilePage() {
                   onChange={(e) => setPhone(e.target.value)}
                   className="bg-input border-border text-foreground h-12 text-base"
                 />
+                {detectedMobileMoney ? (
+                  <p className="text-xs text-muted-foreground">
+                    {detectedMobileMoney.destinationType === "MTN_MOMO"
+                      ? t("profile.mtnMomo")
+                      : t("profile.orangeMoney")}
+                  </p>
+                ) : null}
               </div>
             )}
 

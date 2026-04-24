@@ -17,7 +17,9 @@ export class GqlJwtAuthGuard extends AuthGuard("jwt") {
     }
 
     const connectionParams =
-      contextValue?.connectionParams ?? contextValue?.extra?.connectionParams ?? {};
+      contextValue?.connectionParams ??
+      contextValue?.extra?.connectionParams ??
+      {};
     const authorization =
       this.readAuthHeader(connectionParams.authorization) ??
       this.readAuthHeader(connectionParams.Authorization) ??

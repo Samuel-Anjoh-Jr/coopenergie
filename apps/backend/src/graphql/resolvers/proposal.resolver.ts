@@ -1,5 +1,16 @@
-import { Args, Int, Parent, Query, ResolveField, Resolver } from "@nestjs/graphql";
-import { BadRequestException, ForbiddenException, UseGuards } from "@nestjs/common";
+import {
+  Args,
+  Int,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from "@nestjs/graphql";
+import {
+  BadRequestException,
+  ForbiddenException,
+  UseGuards,
+} from "@nestjs/common";
 import { ProposalStatus } from "@prisma/client";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
@@ -63,7 +74,9 @@ export class ProposalResolver {
     });
   }
 
-  @ResolveField("withdrawalRequest", () => WithdrawalRequestType, { nullable: true })
+  @ResolveField("withdrawalRequest", () => WithdrawalRequestType, {
+    nullable: true,
+  })
   withdrawalRequest(@Parent() proposal: { id: string }) {
     return this.prisma.withdrawalRequest.findUnique({
       where: {
@@ -113,7 +126,9 @@ export class ProposalResolver {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
   }
 }

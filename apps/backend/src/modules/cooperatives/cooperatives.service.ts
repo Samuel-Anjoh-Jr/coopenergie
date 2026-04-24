@@ -48,7 +48,9 @@ export class CooperativesService {
     const slug = this.generateSlug(normalizedName);
 
     if (!slug) {
-      throw new BadRequestException("Cooperative name cannot produce a valid slug.");
+      throw new BadRequestException(
+        "Cooperative name cannot produce a valid slug.",
+      );
     }
 
     try {
@@ -99,7 +101,9 @@ export class CooperativesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException("A cooperative with this name already exists.");
+        throw new ConflictException(
+          "A cooperative with this name already exists.",
+        );
       }
 
       throw error;
@@ -135,7 +139,9 @@ export class CooperativesService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     const cooperative = await this.prisma.cooperative.findUnique({

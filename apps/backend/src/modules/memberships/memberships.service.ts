@@ -105,7 +105,9 @@ export class MembershipsService {
       });
 
       if (coopAdminCount <= 1) {
-        throw new ForbiddenException("Cannot remove the last cooperative admin.");
+        throw new ForbiddenException(
+          "Cannot remove the last cooperative admin.",
+        );
       }
     }
 
@@ -145,7 +147,9 @@ export class MembershipsService {
     });
 
     if (!requestingMembership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     const targetMembership = await this.prisma.membership.findUnique({

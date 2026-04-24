@@ -1,4 +1,5 @@
 import { gql, useQuery } from "@apollo/client";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Share, Text, View } from "react-native";
 
@@ -58,11 +59,20 @@ const PROPOSALS_CACHE_QUERY = gql`
     proposals(cooperativeId: $cooperativeId) {
       id
       status
+      type
+      createdAt
       yesVotes
       noVotes
       title
       description
       hasUserVoted
+      withdrawalRequest {
+        amountXAF
+        destinationType
+        recipientPhone
+        recipientBankName
+        recipientName
+      }
     }
   }
 `;
@@ -76,9 +86,42 @@ type CachedContribution = {
 type CachedProposal = {
   id: string;
   status: string;
+  type?: string;
+  createdAt?: string;
+  withdrawalRequest?: {
+    amountXAF: number;
+    destinationType: "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER";
+    recipientPhone?: string | null;
+    recipientBankName?: string | null;
+    recipientName?: string | null;
+  } | null;
 };
 
+function getDestinationLabel(
+  destinationType: "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER",
+  t: (key: string) => string,
+) {
+  if (destinationType === "MTN_MOMO") {
+    return t("proposals.mtnMomo");
+  }
+
+  if (destinationType === "ORANGE_MONEY") {
+    return t("proposals.orangeMoney");
+  }
+
+  return t("proposals.bankTransfer");
+}
+
 export default function ReportScreen() {
+  const params = useLocalSearchParams<{
+    source?: string;
+    proposalId?: string;
+    withdrawalRequestId?: string;
+    amountXAF?: string;
+    destinationType?: "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER";
+    recipientName?: string;
+    reason?: string;
+  }>();
   const { token } = useDashboardAuth();
   const { activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
@@ -191,6 +234,48 @@ export default function ReportScreen() {
     } as ReportData;
   }, [cachedContributions, cachedProposals]);
 
+  const recentWithdrawals = useMemo(
+    () =>
+      cachedProposals
+        .filter(
+          (proposal) =>
+            proposal.type === "WITHDRAWAL" && proposal.withdrawalRequest,
+        )
+        .sort(
+          (left, right) =>
+            +new Date(right.createdAt || 0) - +new Date(left.createdAt || 0),
+        )
+        .slice(0, 3),
+    [cachedProposals],
+  );
+
+  const pushWithdrawalContext = useMemo(() => {
+    if (params.source !== "push") {
+      return null;
+    }
+
+    if (!params.proposalId && !params.withdrawalRequestId) {
+      return null;
+    }
+
+    return {
+      proposalId: params.proposalId,
+      withdrawalRequestId: params.withdrawalRequestId,
+      amountXAF: params.amountXAF ? Number(params.amountXAF) : null,
+      destinationType: params.destinationType,
+      recipientName: params.recipientName,
+      reason: params.reason,
+    };
+  }, [
+    params.amountXAF,
+    params.destinationType,
+    params.proposalId,
+    params.reason,
+    params.recipientName,
+    params.source,
+    params.withdrawalRequestId,
+  ]);
+
   async function downloadCsv() {
     if (!activeCooperativeId || !token) {
       return;
@@ -239,6 +324,51 @@ export default function ReportScreen() {
         <Text className="text-[#1B5E20]">{t("status.loadingReport")}</Text>
       ) : (
         <View className="gap-3">
+          {pushWithdrawalContext ? (
+            <View className="bg-white rounded-2xl border border-orange-300 p-4 gap-2">
+              <Text className="text-orange-700 text-xs font-semibold">
+                PUSH
+              </Text>
+              <Text className="text-[#1B5E20] font-bold">
+                {t("proposals.withdrawalTag")}
+              </Text>
+              {pushWithdrawalContext.amountXAF ? (
+                <Text className="text-slate-700">
+                  {pushWithdrawalContext.amountXAF.toLocaleString()} FCFA
+                </Text>
+              ) : null}
+              {pushWithdrawalContext.destinationType ? (
+                <Text className="text-slate-700">
+                  {getDestinationLabel(
+                    pushWithdrawalContext.destinationType,
+                    t,
+                  )}
+                </Text>
+              ) : null}
+              {pushWithdrawalContext.recipientName ? (
+                <Text className="text-slate-700">
+                  {t("proposals.recipientName")}:{" "}
+                  {pushWithdrawalContext.recipientName}
+                </Text>
+              ) : null}
+              {pushWithdrawalContext.reason ? (
+                <Text className="text-slate-600 text-xs">
+                  {pushWithdrawalContext.reason}
+                </Text>
+              ) : null}
+              {pushWithdrawalContext.proposalId ? (
+                <Text className="text-slate-500 text-xs">
+                  Proposal: {pushWithdrawalContext.proposalId}
+                </Text>
+              ) : null}
+              {pushWithdrawalContext.withdrawalRequestId ? (
+                <Text className="text-slate-500 text-xs">
+                  Request: {pushWithdrawalContext.withdrawalRequestId}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
             <Text className="text-[#1B5E20] text-lg font-bold">
               {report.cooperativeName}
@@ -289,6 +419,52 @@ export default function ReportScreen() {
               {report.estimatedMonthsToGoal ?? "-"}
             </Text>
           </View>
+
+          {recentWithdrawals.length > 0 ? (
+            <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4 gap-3">
+              <Text className="text-[#1B5E20] font-bold">
+                {t("proposals.withdrawalTag")}
+              </Text>
+              {recentWithdrawals.map((proposal) => (
+                <View
+                  key={proposal.id}
+                  className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3"
+                >
+                  <Text className="text-orange-800 font-semibold">
+                    {proposal.withdrawalRequest?.amountXAF?.toLocaleString() ||
+                      "-"}{" "}
+                    FCFA
+                  </Text>
+                  {proposal.withdrawalRequest ? (
+                    <Text className="text-orange-700 mt-1">
+                      {getDestinationLabel(
+                        proposal.withdrawalRequest.destinationType,
+                        t,
+                      )}
+                    </Text>
+                  ) : null}
+                  {proposal.withdrawalRequest?.recipientPhone ? (
+                    <Text className="text-orange-700 mt-1">
+                      {t("proposals.phoneNumber")}:{" "}
+                      {proposal.withdrawalRequest.recipientPhone}
+                    </Text>
+                  ) : null}
+                  {proposal.withdrawalRequest?.recipientBankName ? (
+                    <Text className="text-orange-700 mt-1">
+                      {t("proposals.bankName")}:{" "}
+                      {proposal.withdrawalRequest.recipientBankName}
+                    </Text>
+                  ) : null}
+                  {proposal.withdrawalRequest?.recipientName ? (
+                    <Text className="text-orange-700 mt-1">
+                      {t("proposals.recipientName")}:{" "}
+                      {proposal.withdrawalRequest.recipientName}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           <Pressable
             className={`rounded-xl py-3 ${isOnline ? "bg-[#1B5E20]" : "bg-slate-400"}`}

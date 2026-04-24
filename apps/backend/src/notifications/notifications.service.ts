@@ -49,6 +49,13 @@ export class NotificationsService {
     cooperativeId: string,
     proposalTitle: string,
     proposalType: ProposalType,
+    details?: {
+      proposalId?: string;
+      withdrawalRequestId?: string;
+      amountXAF?: number;
+      destinationType?: string;
+      recipientName?: string;
+    },
   ) {
     const recipients =
       proposalType === ProposalType.WITHDRAWAL
@@ -65,6 +72,19 @@ export class NotificationsService {
         type: "PROPOSAL",
         proposalType,
         cooperativeId,
+        ...(details?.proposalId ? { proposalId: details.proposalId } : {}),
+        ...(details?.withdrawalRequestId
+          ? { withdrawalRequestId: details.withdrawalRequestId }
+          : {}),
+        ...(details?.amountXAF !== undefined
+          ? { amountXAF: details.amountXAF.toString() }
+          : {}),
+        ...(details?.destinationType
+          ? { destinationType: details.destinationType }
+          : {}),
+        ...(details?.recipientName
+          ? { recipientName: details.recipientName }
+          : {}),
       },
       "PROPOSAL",
     );
@@ -94,6 +114,12 @@ export class NotificationsService {
     cooperativeId: string,
     adminUserId: string,
     amountXAF: number,
+    details?: {
+      proposalId?: string;
+      withdrawalRequestId?: string;
+      destinationType?: string;
+      recipientName?: string;
+    },
   ) {
     await this.dispatch(
       [adminUserId],
@@ -103,6 +129,16 @@ export class NotificationsService {
         type: "WITHDRAWAL_APPROVED",
         cooperativeId,
         amountXAF: amountXAF.toString(),
+        ...(details?.proposalId ? { proposalId: details.proposalId } : {}),
+        ...(details?.withdrawalRequestId
+          ? { withdrawalRequestId: details.withdrawalRequestId }
+          : {}),
+        ...(details?.destinationType
+          ? { destinationType: details.destinationType }
+          : {}),
+        ...(details?.recipientName
+          ? { recipientName: details.recipientName }
+          : {}),
       },
       "WITHDRAWAL_APPROVED",
     );
@@ -112,6 +148,11 @@ export class NotificationsService {
     cooperativeId: string,
     amountXAF: number,
     recipientName: string,
+    details?: {
+      proposalId?: string;
+      withdrawalRequestId?: string;
+      destinationType?: string;
+    },
   ) {
     await this.dispatch(
       await this.getCooperativeMembers(cooperativeId),
@@ -122,6 +163,13 @@ export class NotificationsService {
         cooperativeId,
         amountXAF: amountXAF.toString(),
         recipientName,
+        ...(details?.proposalId ? { proposalId: details.proposalId } : {}),
+        ...(details?.withdrawalRequestId
+          ? { withdrawalRequestId: details.withdrawalRequestId }
+          : {}),
+        ...(details?.destinationType
+          ? { destinationType: details.destinationType }
+          : {}),
       },
       "WITHDRAWAL_DISBURSED",
     );
@@ -131,6 +179,13 @@ export class NotificationsService {
     adminUserId: string,
     amountXAF: number,
     reason: string,
+    details?: {
+      cooperativeId?: string;
+      proposalId?: string;
+      withdrawalRequestId?: string;
+      destinationType?: string;
+      recipientName?: string;
+    },
   ) {
     await this.dispatch(
       [adminUserId],
@@ -140,6 +195,19 @@ export class NotificationsService {
         type: "WITHDRAWAL_FAILED",
         amountXAF: amountXAF.toString(),
         reason,
+        ...(details?.cooperativeId
+          ? { cooperativeId: details.cooperativeId }
+          : {}),
+        ...(details?.proposalId ? { proposalId: details.proposalId } : {}),
+        ...(details?.withdrawalRequestId
+          ? { withdrawalRequestId: details.withdrawalRequestId }
+          : {}),
+        ...(details?.destinationType
+          ? { destinationType: details.destinationType }
+          : {}),
+        ...(details?.recipientName
+          ? { recipientName: details.recipientName }
+          : {}),
       },
       "WITHDRAWAL_FAILED",
     );

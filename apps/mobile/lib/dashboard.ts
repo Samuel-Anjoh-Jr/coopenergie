@@ -9,7 +9,11 @@ const MY_COOPERATIVES_QUERY = gql`
     myCooperatives {
       id
       name
+      balance
       vaultAddress
+      membership {
+        role
+      }
     }
   }
 `;
@@ -17,7 +21,11 @@ const MY_COOPERATIVES_QUERY = gql`
 type CooperativeSummary = {
   id: string;
   name: string;
+  balance?: number;
   vaultAddress?: string | null;
+  membership?: {
+    role?: string;
+  } | null;
 };
 
 export function useDashboardAuth() {

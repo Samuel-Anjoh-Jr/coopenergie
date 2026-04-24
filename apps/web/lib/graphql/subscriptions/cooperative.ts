@@ -41,3 +41,17 @@ export const SUBSCRIPTION_ON_PROPOSAL = gql`
     }
   }
 `;
+
+export const SUBSCRIPTION_ON_PAYMENT = gql`
+  subscription OnPayment($cooperativeId: String!) {
+    onPayment(cooperativeId: $cooperativeId) {
+      id
+      amountXAF
+      status
+      reference
+      cooperativeId
+      createdAt
+      updatedAt
+    }
+  }
+`;

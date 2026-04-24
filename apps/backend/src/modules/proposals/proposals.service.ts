@@ -63,7 +63,9 @@ export class ProposalsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     if (
@@ -71,7 +73,9 @@ export class ProposalsService {
       membership.role !== Role.MEMBER &&
       membership.role !== Role.PLATFORM_ADMIN
     ) {
-      throw new ForbiddenException("Only cooperative members can create proposals.");
+      throw new ForbiddenException(
+        "Only cooperative members can create proposals.",
+      );
     }
 
     const cooperative = await this.prisma.cooperative.findUnique({
@@ -302,7 +306,9 @@ export class ProposalsService {
       return mappedProposals;
     }
 
-    return mappedProposals.filter((proposal) => proposal.computedStatus === status);
+    return mappedProposals.filter(
+      (proposal) => proposal.computedStatus === status,
+    );
   }
 
   async findById(id: string, userId: string) {
@@ -344,7 +350,9 @@ export class ProposalsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     const [mappedProposal] = await this.attachComputedStatuses([proposal]);
@@ -361,7 +369,9 @@ export class ProposalsService {
       return ProposalStatus.PENDING;
     }
 
-    return yesVotes > noVotes ? ProposalStatus.APPROVED : ProposalStatus.REJECTED;
+    return yesVotes > noVotes
+      ? ProposalStatus.APPROVED
+      : ProposalStatus.REJECTED;
   }
 
   private async attachComputedStatuses(proposals: ProposalWithVotes[]) {
@@ -422,7 +432,9 @@ export class ProposalsService {
     description: string,
   ): `0x${string}` {
     return `0x${createHash("sha256")
-      .update(`${cooperativeId}-${userId}-${title}-${description}-${Date.now()}`)
+      .update(
+        `${cooperativeId}-${userId}-${title}-${description}-${Date.now()}`,
+      )
       .digest("hex")
       .slice(0, 64)}`;
   }

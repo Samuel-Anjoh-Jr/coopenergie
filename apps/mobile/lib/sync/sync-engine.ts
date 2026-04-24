@@ -26,6 +26,10 @@ function getEndpoint(action: OfflineAction) {
     return "/proposals";
   }
 
+  if (action.type === "withdrawal.propose") {
+    return "/withdrawals/propose";
+  }
+
   if (action.type === "vote.cast") {
     return "/votes";
   }

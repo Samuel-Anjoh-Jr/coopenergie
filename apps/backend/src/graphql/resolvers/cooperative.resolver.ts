@@ -34,10 +34,7 @@ export class CooperativeResolver {
   }
 
   @Query(() => CooperativeType)
-  cooperative(
-    @Args("id") id: string,
-    @CurrentUser() user: { userId: string },
-  ) {
+  cooperative(@Args("id") id: string, @CurrentUser() user: { userId: string }) {
     return this.cooperativesService.findById(id, user.userId);
   }
 
@@ -49,9 +46,7 @@ export class CooperativeResolver {
       return 0;
     }
 
-    return Number(
-      ((totalCollected / coop.targetAmountXAF) * 100).toFixed(2),
-    );
+    return Number(((totalCollected / coop.targetAmountXAF) * 100).toFixed(2));
   }
 
   @ResolveField("totalCollected", () => Int)
@@ -93,7 +88,10 @@ export class CooperativeResolver {
     });
 
     const totalsByUserId = new Map(
-      contributionTotals.map((entry) => [entry.userId, entry._sum.amountXAF ?? 0]),
+      contributionTotals.map((entry) => [
+        entry.userId,
+        entry._sum.amountXAF ?? 0,
+      ]),
     );
 
     return members.map((member) => ({

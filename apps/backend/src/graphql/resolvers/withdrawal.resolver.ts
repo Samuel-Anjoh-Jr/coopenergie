@@ -124,9 +124,8 @@ export class WithdrawalResolver {
   ) {
     await this.assertMembership(user.userId, cooperativeId);
 
-    const settings = await this.platformSettingsService.getCooperativeThreshold(
-      cooperativeId,
-    );
+    const settings =
+      await this.platformSettingsService.getCooperativeThreshold(cooperativeId);
 
     return {
       cooperativeId,
@@ -169,7 +168,9 @@ export class WithdrawalResolver {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
   }
 

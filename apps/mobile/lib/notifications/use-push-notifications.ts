@@ -15,6 +15,10 @@ type NotificationData = {
   [key: string]: unknown;
 };
 
+function readString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
 export function usePushNotifications() {
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -57,17 +61,55 @@ export function usePushNotifications() {
       (response) => {
         const data = response.notification.request.content
           .data as NotificationData;
+        const proposalType = readString(data.proposalType);
+        const proposalId = readString(data.proposalId);
+        const withdrawalRequestId = readString(data.withdrawalRequestId);
+        const amountXAF = readString(data.amountXAF);
+        const destinationType = readString(data.destinationType);
+        const recipientName = readString(data.recipientName);
+        const reason = readString(data.reason);
+        const cooperativeId = readString(data.cooperativeId);
 
         if (data.type === "CONTRIBUTION") {
           router.push("/(dashboard)/contributions");
+        }
+
+        if (data.type === "PROPOSAL" && proposalType === "WITHDRAWAL") {
+          router.push({
+            pathname: "/(dashboard)/proposals",
+            params: {
+              focusProposalId: proposalId,
+              withdrawalRequestId,
+              cooperativeId,
+            },
+          });
+          return;
         }
 
         if (data.type === "PROPOSAL") {
           router.push("/(dashboard)/proposals");
         }
 
-        if (data.type === "WITHDRAWAL") {
-          router.push("/(dashboard)/proposals");
+        if (
+          data.type === "WITHDRAWAL" ||
+          data.type === "WITHDRAWAL_APPROVED" ||
+          data.type === "WITHDRAWAL_DISBURSED" ||
+          data.type === "WITHDRAWAL_FAILED"
+        ) {
+          router.push({
+            pathname: "/(dashboard)/report",
+            params: {
+              source: "push",
+              proposalId,
+              withdrawalRequestId,
+              amountXAF,
+              destinationType,
+              recipientName,
+              reason,
+              cooperativeId,
+            },
+          });
+          return;
         }
       },
     );

@@ -22,10 +22,7 @@ export class PlatformSettingsService {
     });
   }
 
-  async updateSettings(
-    adminUserId: string,
-    dto: UpdatePlatformSettingsDto,
-  ) {
+  async updateSettings(adminUserId: string, dto: UpdatePlatformSettingsDto) {
     const currentSettings = await this.getSettings();
 
     const nextSettings = {

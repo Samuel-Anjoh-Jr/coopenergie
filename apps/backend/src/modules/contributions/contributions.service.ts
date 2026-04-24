@@ -50,7 +50,9 @@ export class ContributionsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     const cooperative = await this.prisma.cooperative.findUnique({
@@ -180,7 +182,9 @@ export class ContributionsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
 
     return this.prisma.contribution.findMany({

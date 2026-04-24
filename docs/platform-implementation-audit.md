@@ -30,7 +30,8 @@ Verified during this audit:
 
 Validation note:
 
-- Running `bunx tsc --noEmit -p apps/mobile/tsconfig.json` from the workspace root can resolve an older TypeScript binary from another workspace package and report false `moduleResolution` errors. The mobile package-local TypeScript check passes.
+- A dedicated root script now exists for mobile typechecking: `bun run typecheck:mobile`.
+- Root `bun run typecheck` includes web, backend, and mobile checks to avoid package-resolution ambiguity.
 
 ## Executive Summary
 
@@ -43,14 +44,17 @@ Implemented and verified:
 - Authentication, user wallet setup, cooperative membership, contributions, proposals, voting, withdrawals, ledger, reports, notifications, and mobile offline-first behavior
 - Celo integration with relayer, vault interactions, tx hash persistence, and CeloScan links
 - CamPay payment initiation and webhook confirmation with signature validation and idempotency
+- Contribution payment waiting/return flow with status polling and GraphQL subscription fallback
+- Web invitation management UI for cooperative admins (email invites, shareable links, pending/revoke)
+- Mobile withdrawal proposal creation, eligibility-aware voting UX, and offline queued withdrawal banners
+- Automatic MTN/Orange operator detection from phone numbers across web and mobile contribution/withdrawal entry points
+- Withdrawal notification payload enrichment and deep-link parity into mobile proposals/report views
 - Web and mobile dashboards with FR/EN translation support
 - CI validation and deployment workflow files
 
 Verified remaining issues:
 
 - SRS requirement `FR-01-5` says evaluator credentials should be displayed on the login page, but the current login screen does not render any evaluator/demo credentials.
-- Invitation backend flows exist, and mobile can accept invitation links, but there is no visible web admin invitation management UI for sending email invites or generating shareable links.
-- The mobile proposals screen only supports generic proposal creation and voting; it does not expose the detailed withdrawal proposal flow implemented in backend and web.
 - Some architecture document technology versions have drifted from the codebase: for example Next.js, Apollo Server, and Prisma versions differ from the architecture document.
 
 ## Requirement Mapping
@@ -169,11 +173,13 @@ Backend implementation:
 
 - Contribution creation and blockchain-mode branching: `apps/backend/src/modules/contributions/contributions.service.ts`
 - Payment initiation and webhook processing: `apps/backend/src/modules/payments/payments.service.ts`, `apps/backend/src/modules/payments/payments.controller.ts`
+- Payment status retrieval endpoint for client polling: `apps/backend/src/modules/payments/payments.controller.ts`, `apps/backend/src/modules/payments/payments.service.ts`
 - CamPay integration: `apps/backend/src/modules/payments/campay.service.ts`
 
 Web implementation:
 
 - Contributions page: `apps/web/app/[locale]/dashboard/contributions/page.tsx`
+- Contribution payment return/waiting page: `apps/web/app/[locale]/dashboard/contributions/payment/page.tsx`
 - REST client for write actions: `apps/web/lib/rest-client.ts`
 
 Mobile implementation:
@@ -183,7 +189,8 @@ Mobile implementation:
 
 Display and interactability:
 
-- Web lets authenticated members submit a contribution and see resulting tx hashes
+- Web initiates contribution payments through `/payments/initiate`, then routes users to a waiting page that polls payment status and listens to realtime payment events
+- Web waiting flow provides carrier-specific USSD guidance and pending/success/failure states
 - Mobile lets users queue contributions offline and sync them later
 - Contribution status is reflected in dashboard, ledger, and notifications
 
@@ -191,10 +198,11 @@ Audit notes:
 
 - Payment initiation idempotency is implemented via client-provided key uniqueness and duplicate-safe replay in `apps/backend/src/modules/payments/payments.service.ts`
 - Webhook signature validation is implemented through `campayService.verifyWebhookSignature(...)`
+- Phone numbers are normalized and operator-detected in backend and client layers via `apps/backend/src/common/phone-utils.ts`, `apps/web/lib/phone-utils.ts`, and `apps/mobile/lib/phone-utils.ts`
 
 ### 5. Proposals, Voting, and Withdrawal Governance
 
-Status: Implemented on backend and web, partial on mobile
+Status: Implemented
 
 Docs covered:
 
@@ -217,21 +225,17 @@ Web implementation:
 
 Mobile implementation:
 
-- Generic proposals/voting screen: `apps/mobile/app/(dashboard)/proposals.tsx`
+- Proposals/voting with withdrawal proposal creation, recipient destination details, eligibility visibility, and offline queue support: `apps/mobile/app/(dashboard)/proposals.tsx`
 
 Display and interactability:
 
 - Web supports generic proposals and withdrawal proposals with destination type, phone or bank fields, eligibility messaging, threshold display, vote progress, and tx hash explorer links
 - Web settings page exposes cooperative-admin and platform-admin threshold controls and maintenance mode
-- Mobile supports proposal list, yes/no voting, offline vote queueing, and generic proposal creation
-
-Gap:
-
-- The mobile proposals screen does not currently expose the detailed withdrawal proposal form or withdrawal-specific governance UI that exists on backend and web.
+- Mobile now supports withdrawal proposal creation, automatic mobile-money destination detection, withdrawal-specific eligibility context, vote controls, and offline queued-withdrawal banners
 
 ### 6. Invitations and Cooperative Membership
 
-Status: Backend complete, frontend partial
+Status: Implemented
 
 Docs covered:
 
@@ -245,7 +249,8 @@ Backend implementation:
 
 Web implementation:
 
-- No dedicated invitation management page found in current web routes
+- Admin invitation management page: `apps/web/app/[locale]/dashboard/invitations/page.tsx`
+- Dashboard navigation visibility by cooperative role: `apps/web/app/[locale]/dashboard/layout.tsx`
 
 Mobile implementation:
 
@@ -254,11 +259,8 @@ Mobile implementation:
 Display and interactability:
 
 - Backend supports sending email invites, generating shareable links, lookup by token, acceptance, revocation, and listing pending invitations
+- Web cooperative admins can send invites by email, generate shareable join links, copy latest link, review pending invitations, and revoke invitations
 - Mobile can accept an invitation token and route authenticated or unauthenticated users into the join flow
-
-Gap:
-
-- No visible web admin UI was found for sending invites, generating shareable links, or reviewing pending invitations, despite the backend capability being implemented.
 
 ### 7. GraphQL Read Layer and Realtime Updates
 
@@ -356,7 +358,8 @@ Mobile implementation:
 Display and interactability:
 
 - Web prompts users to enable notifications and unregisters tokens on logout only
-- Mobile registers device tokens and routes contribution/proposal/withdrawal notifications to the relevant screens
+- Mobile registers device tokens and routes contribution/proposal/withdrawal notifications to context-aware destinations (proposals or report) with withdrawal detail payload fields
+- Backend withdrawal notifications now include richer deep-link metadata (proposal, withdrawal request, amount, destination, recipient, reason) for push/report parity
 
 ### 10. Offline-First Mobile Behavior
 
@@ -422,8 +425,6 @@ Display and interactability:
 ### Product Gaps
 
 1. Login page does not show evaluator/demo credentials required by SRS `FR-01-5`.
-2. Invitation backend is complete, but a web invitation management surface was not found.
-3. Mobile does not expose the detailed withdrawal proposal flow implemented on backend and web.
 
 ### Documentation Drift
 
@@ -439,16 +440,14 @@ These are not necessarily runtime bugs, but the documents no longer exactly matc
 Priority 1:
 
 - Add evaluator/demo credentials to the login page or update the SRS if that requirement is intentionally no longer applicable.
-- Add a web invitation management page for cooperative admins, backed by the existing invitation endpoints.
-- Add mobile withdrawal proposal creation and withdrawal-specific voting/eligibility UI.
 
 Priority 2:
 
 - Update architecture and implementation documents to reflect the actual framework/library versions and the current translation approach.
-- Add an explicit mobile package typecheck command to root scripts or CI to avoid root-level TypeScript resolution ambiguity.
+- Ensure CI continues to run root `typecheck` (including `typecheck:mobile`) so mobile TypeScript checks stay explicit and stable.
 
 ## Conclusion
 
 The platform is feature-complete across the core cooperative flows described in the docs: authentication, cooperative dashboard, contributions, voting, withdrawals, ledger, reports, notifications, blockchain proof, and offline-first mobile behavior are all present and wired through backend, web, and mobile layers.
 
-The remaining issues are concentrated in three areas: one explicit SRS requirement not rendered on the login page, one missing admin-facing invitation UI surface, and one missing mobile withdrawal UX surface. The rest of the variance is documentation drift rather than functional platform failure.
+The remaining implementation issue is concentrated in one explicit SRS requirement (`FR-01-5`) that is not rendered on the login page. The rest of the variance observed in this audit is documentation/version drift rather than functional platform failure.

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import { Calendar, Copy, ExternalLink, Plus } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
@@ -32,6 +32,7 @@ import { CELOSCAN_BASE } from "@/lib/config";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_CONTRIBUTIONS } from "@/lib/graphql/queries/contributions";
 import { SUBSCRIPTION_ON_CONTRIBUTION } from "@/lib/graphql/subscriptions/cooperative";
+import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import { Locale, useTranslations } from "@/lib/translations";
 import { restClient } from "@/lib/rest-client";
 
@@ -44,9 +45,11 @@ type Contribution = {
   userName?: string | null;
 };
 
-type CreateContributionResponse = {
-  id: string;
-  txHash?: string | null;
+type InitiatePaymentResponse = {
+  paymentId: string;
+  reference: string;
+  status: string;
+  message: string;
 };
 
 function formatXaf(amount: number): string {
@@ -72,9 +75,11 @@ export default function ContributionsPage() {
   const locale = (params.locale as string) || "en";
   const t = useTranslations(locale as Locale);
   const { data: session } = useSession();
+  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
@@ -122,38 +127,47 @@ export default function ContributionsPage() {
 
   const handleAddContribution = async () => {
     const amountNumber = Number(amount);
+    const detectedCarrier = detectCameroonMobileMoney(phoneNumber);
 
     if (!cooperativeId || !amountNumber || amountNumber <= 0) {
       toast.error(t("errors.invalidAmount"));
       return;
     }
 
+    if (!detectedCarrier) {
+      toast.error(t("errors.phoneRequired"));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const response = await restClient.post<CreateContributionResponse>(
-        "/contributions",
+      const idempotencyKey = `payment-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const response = await restClient.post<InitiatePaymentResponse>(
+        "/payments/initiate",
         {
           cooperativeId,
           amountXAF: amountNumber,
+          idempotencyKey,
+          phoneNumber: detectedCarrier.normalizedPhone,
         },
       );
 
       setAmount("");
+      setPhoneNumber("");
       setIsOpen(false);
 
-      const txHash = response?.txHash;
-      toast.success(
-        txHash
-          ? `${t("feedback.contributionConfirmed")} (${truncateHash(txHash)})`
-          : t("contributions.contributionAdded"),
-      );
-
-      void refetchContributions();
+      const query = new URLSearchParams({
+        paymentId: response.paymentId,
+        cooperativeId,
+        amountXAF: amountNumber.toString(),
+        phone: detectedCarrier.normalizedPhone,
+      });
+      router.push(`/${locale}/dashboard/contributions/payment?${query.toString()}`);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : t("errors.addContributionFailed"),
+          : t("errors.contributionFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -411,6 +425,23 @@ export default function ContributionsPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <label
+                htmlFor="phoneNumber"
+                className="text-sm font-medium text-foreground"
+              >
+                {t("profile.phoneNumber")}
+              </label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder={t("profile.phonePlaceholder")}
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="bg-input border-border text-foreground h-12 text-base"
+              />
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 variant="outline"
@@ -422,7 +453,7 @@ export default function ContributionsPage() {
               </Button>
               <Button
                 onClick={() => void handleAddContribution()}
-                disabled={!amount || isSubmitting || !cooperativeId}
+                disabled={!amount || !phoneNumber.trim() || isSubmitting || !cooperativeId}
                 className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
               >
                 {isSubmitting ? (

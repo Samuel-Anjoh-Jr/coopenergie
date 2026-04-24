@@ -178,7 +178,9 @@ export class MailService {
   }
 
   private getFromAddress() {
-    return process.env.EMAIL_FROM?.trim() || "CoopEnergie <noreply@coopenergie.cm>";
+    return (
+      process.env.EMAIL_FROM?.trim() || "CoopEnergie <noreply@coopenergie.cm>"
+    );
   }
 
   private buildFailureHtml(

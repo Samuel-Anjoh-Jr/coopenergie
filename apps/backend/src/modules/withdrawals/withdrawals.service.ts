@@ -12,9 +12,11 @@ import {
   ContributionStatus,
   ProposalType,
   Role,
+  WithdrawalDestinationType,
   WithdrawalStatus,
 } from "@prisma/client";
 
+import { detectCameroonCarrier } from "../../common/phone-utils";
 import { RelayerService } from "../../blockchain/relayer.service";
 import { VaultService } from "../../blockchain/vault.service";
 import { MailService } from "../../mail/mail.service";
@@ -171,7 +173,9 @@ export class WithdrawalsService {
       }
     } else {
       if (blockchainEnabled && !vaultReady) {
-        this.logger.warn(`Cooperative ${cooperativeId} has no vault address yet`);
+        this.logger.warn(
+          `Cooperative ${cooperativeId} has no vault address yet`,
+        );
       }
 
       created.proposal = await this.prisma.proposal.update({
@@ -193,6 +197,13 @@ export class WithdrawalsService {
       cooperativeId,
       created.proposal.title,
       created.proposal.type,
+      {
+        proposalId: created.proposal.id,
+        withdrawalRequestId: created.withdrawalRequest.id,
+        amountXAF: created.withdrawalRequest.amountXAF,
+        destinationType: created.withdrawalRequest.destinationType,
+        recipientName: created.withdrawalRequest.recipientName,
+      },
     );
     await this.mailService.sendVoteNotification(
       await this.getCooperativeMemberEmails(cooperativeId),
@@ -231,7 +242,9 @@ export class WithdrawalsService {
       },
     });
 
-    const memberIds = new Set(memberships.map((membership) => membership.userId));
+    const memberIds = new Set(
+      memberships.map((membership) => membership.userId),
+    );
 
     return contributionSums
       .filter((entry) => memberIds.has(entry.userId))
@@ -441,6 +454,10 @@ export class WithdrawalsService {
         proposal.cooperativeId,
         proposal.creatorId,
         proposal.withdrawalRequest.amountXAF,
+        {
+          proposalId,
+          withdrawalRequestId: proposal.withdrawalRequest.id,
+        },
       );
 
       try {
@@ -517,7 +534,7 @@ export class WithdrawalsService {
   }
 
   private validateDestinationDetails(dto: CreateWithdrawalProposalDto) {
-    if (dto.destinationType === "BANK_TRANSFER") {
+    if (dto.destinationType === WithdrawalDestinationType.BANK_TRANSFER) {
       if (!dto.recipientBankName || !dto.recipientBankAccount) {
         throw new BadRequestException(
           "Bank name and account are required for bank transfers.",
@@ -527,11 +544,18 @@ export class WithdrawalsService {
       return;
     }
 
-    if (!dto.recipientPhone || !dto.recipientOperator) {
+    const detectedCarrier = dto.recipientPhone
+      ? detectCameroonCarrier(dto.recipientPhone)
+      : null;
+
+    if (!detectedCarrier) {
       throw new BadRequestException(
-        "Recipient phone and operator are required for mobile money withdrawals.",
+        "A valid MTN or Orange Cameroon number is required for mobile money withdrawals.",
       );
     }
+
+    dto.recipientPhone = detectedCarrier.normalizedPhone;
+    dto.recipientOperator = detectedCarrier.carrier;
   }
 
   private generateFakeTxHash(

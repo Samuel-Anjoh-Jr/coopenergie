@@ -13,6 +13,7 @@ import {
   Bell,
   BellOff,
   HandshakeIcon,
+  Mail,
   Lightbulb,
   FileText,
   Download,
@@ -27,6 +28,12 @@ import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 const navItems = [
   { key: "overview", icon: BarChart3, href: "/dashboard" },
   { key: "contributions", icon: HandshakeIcon, href: "/dashboard/contributions" },
+  {
+    key: "invitations",
+    icon: Mail,
+    href: "/dashboard/invitations",
+    requiresCoopAdmin: true,
+  },
   { key: "proposals", icon: Lightbulb, href: "/dashboard/proposals" },
   { key: "ledger", icon: FileText, href: "/dashboard/ledger" },
   { key: "report", icon: Download, href: "/dashboard/report" },
@@ -52,6 +59,7 @@ export default function DashboardLayout({
     skip: status !== "authenticated",
   });
   const cooperativeName = myCooperativesData?.myCooperatives?.[0]?.name ?? "-";
+  const userRole = myCooperativesData?.myCooperatives?.[0]?.membership?.role;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -164,7 +172,11 @@ export default function DashboardLayout({
 
         {/* Navigation */}
         <nav className="space-y-1 p-3 pt-4 lg:pt-6">
-          {navItems.map((item) => {
+          {navItems
+            .filter(
+              (item) => !item.requiresCoopAdmin || userRole === "COOP_ADMIN",
+            )
+            .map((item) => {
             const Icon = item.icon;
             const isActive = pathname === `/${locale}${item.href}` || 
               (item.href === "/dashboard" && pathname === `/${locale}/dashboard`);

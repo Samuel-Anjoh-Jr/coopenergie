@@ -99,7 +99,10 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async watchVaultEvents(vaultAddress: string) {
-    const normalizedVaultAddress = this.parseAddress(vaultAddress, "vaultAddress");
+    const normalizedVaultAddress = this.parseAddress(
+      vaultAddress,
+      "vaultAddress",
+    );
     const watcherKey = normalizedVaultAddress.toLowerCase();
 
     if (this.activeWatchers.has(watcherKey)) {
@@ -252,7 +255,10 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async addVaultToWatch(vaultAddress: string, cooperativeId: string) {
-    const normalizedVaultAddress = this.parseAddress(vaultAddress, "vaultAddress");
+    const normalizedVaultAddress = this.parseAddress(
+      vaultAddress,
+      "vaultAddress",
+    );
     const watcherKey = normalizedVaultAddress.toLowerCase();
     const existing = this.activeWatchers.get(watcherKey);
 
@@ -575,7 +581,9 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async getStartingBlock(cooperativeId: string): Promise<bigint | undefined> {
+  private async getStartingBlock(
+    cooperativeId: string,
+  ): Promise<bigint | undefined> {
     const latestLedgerEvent = await this.prisma.ledgerEvent.findFirst({
       where: {
         cooperativeId,

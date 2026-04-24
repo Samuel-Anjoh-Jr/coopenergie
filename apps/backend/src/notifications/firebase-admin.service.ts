@@ -7,7 +7,8 @@ type NotificationPayload = Record<string, string>;
 @Injectable()
 export class FirebaseAdminService {
   private readonly logger = new Logger(FirebaseAdminService.name);
-  private readonly projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  private readonly projectId =
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   private readonly serverKey = process.env.FIREBASE_SERVER_KEY?.trim();
   private readonly privateKey =
     process.env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -19,7 +20,9 @@ export class FirebaseAdminService {
   constructor(private readonly usersService: UsersService) {
     if (!this.privateKey) {
       if (!this.serverKey) {
-        this.logger.warn("Firebase not configured - push notifications disabled");
+        this.logger.warn(
+          "Firebase not configured - push notifications disabled",
+        );
       }
       return;
     }
@@ -156,11 +159,9 @@ export class FirebaseAdminService {
       }),
     });
 
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          results?: Array<{ error?: string }>;
-        }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      results?: Array<{ error?: string }>;
+    } | null;
 
     if (!response.ok) {
       this.logger.warn(

@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  Query,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Patch, Query, UseGuards } from "@nestjs/common";
 
 import { PlatformAdminGuard } from "../../common/guards/platform-admin.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -29,10 +22,7 @@ export class AdminController {
 
   @UseGuards(JwtAuthGuard, PlatformAdminGuard)
   @Get("cooperatives")
-  cooperatives(
-    @Query("page") page?: string,
-    @Query("limit") limit?: string,
-  ) {
+  cooperatives(@Query("page") page?: string, @Query("limit") limit?: string) {
     const parsedPage = page ? Number(page) : 1;
     const parsedLimit = limit ? Number(limit) : 20;
 

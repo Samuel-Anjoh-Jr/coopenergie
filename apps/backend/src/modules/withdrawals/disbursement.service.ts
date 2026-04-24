@@ -82,7 +82,10 @@ export class DisbursementService {
     });
 
     try {
-      const response = await this.callCampayTransfer(withdrawalRequest, reference);
+      const response = await this.callCampayTransfer(
+        withdrawalRequest,
+        reference,
+      );
       const campayReference =
         this.readString(response.reference) ??
         this.readString(response.external_reference) ??
@@ -145,7 +148,8 @@ export class DisbursementService {
         return updatedWithdrawal;
       });
 
-      const releaseTxHash = await this.tryRelayFundsReleased(disbursedWithdrawal);
+      const releaseTxHash =
+        await this.tryRelayFundsReleased(disbursedWithdrawal);
       const adminEmails = await this.getCooperativeAdminEmails(
         disbursedWithdrawal.cooperativeId,
       );
@@ -167,6 +171,11 @@ export class DisbursementService {
         disbursedWithdrawal.cooperativeId,
         disbursedWithdrawal.amountXAF,
         disbursedWithdrawal.recipientName,
+        {
+          proposalId: disbursedWithdrawal.proposalId,
+          withdrawalRequestId: disbursedWithdrawal.id,
+          destinationType: disbursedWithdrawal.destinationType,
+        },
       );
       await Promise.all(
         adminEmails.map((adminEmail) =>
@@ -182,7 +191,9 @@ export class DisbursementService {
       return disbursedWithdrawal;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unknown CamPay transfer error.";
+        error instanceof Error
+          ? error.message
+          : "Unknown CamPay transfer error.";
 
       await this.prisma.$transaction(async (tx) => {
         await tx.withdrawalRequest.update({
@@ -213,6 +224,13 @@ export class DisbursementService {
         withdrawalRequest.proposal.creatorId,
         withdrawalRequest.amountXAF,
         message,
+        {
+          cooperativeId: withdrawalRequest.cooperativeId,
+          proposalId: withdrawalRequest.proposalId,
+          withdrawalRequestId,
+          destinationType: withdrawalRequest.destinationType,
+          recipientName: withdrawalRequest.recipientName,
+        },
       );
       await Promise.all(
         adminEmails.map((adminEmail) =>
@@ -350,13 +368,21 @@ export class DisbursementService {
           amountXAF: updated.amountXAF,
           campayReference: providerReference,
         });
-        await this.pubSub.publish(`withdrawal.disbursed.${updated.cooperativeId}`, {
-          onWithdrawal: updated,
-        });
+        await this.pubSub.publish(
+          `withdrawal.disbursed.${updated.cooperativeId}`,
+          {
+            onWithdrawal: updated,
+          },
+        );
         await this.notificationsService.notifyWithdrawalDisbursed(
           updated.cooperativeId,
           updated.amountXAF,
           updated.recipientName,
+          {
+            proposalId: updated.proposalId,
+            withdrawalRequestId: updated.id,
+            destinationType: updated.destinationType,
+          },
         );
         await Promise.all(
           adminEmails.map((adminEmail) =>
@@ -410,6 +436,13 @@ export class DisbursementService {
       withdrawalRequest.proposal.creatorId,
       withdrawalRequest.amountXAF,
       failureReason,
+      {
+        cooperativeId: withdrawalRequest.cooperativeId,
+        proposalId: withdrawalRequest.proposalId,
+        withdrawalRequestId: withdrawalRequest.id,
+        destinationType: withdrawalRequest.destinationType,
+        recipientName: withdrawalRequest.recipientName,
+      },
     );
     await Promise.all(
       adminEmails.map((adminEmail) =>
@@ -489,7 +522,10 @@ export class DisbursementService {
     },
     reference: string,
   ) {
-    if (withdrawalRequest.destinationType === WithdrawalDestinationType.BANK_TRANSFER) {
+    if (
+      withdrawalRequest.destinationType ===
+      WithdrawalDestinationType.BANK_TRANSFER
+    ) {
       if (
         !withdrawalRequest.recipientBankName ||
         !withdrawalRequest.recipientBankAccount
@@ -509,8 +545,13 @@ export class DisbursementService {
       };
     }
 
-    if (!withdrawalRequest.recipientPhone || !withdrawalRequest.recipientOperator) {
-      throw new BadRequestException("Mobile money transfer details are incomplete.");
+    if (
+      !withdrawalRequest.recipientPhone ||
+      !withdrawalRequest.recipientOperator
+    ) {
+      throw new BadRequestException(
+        "Mobile money transfer details are incomplete.",
+      );
     }
 
     return {
@@ -538,7 +579,10 @@ export class DisbursementService {
       return null;
     }
 
-    if (!withdrawalRequest.cooperative.vaultAddress || !withdrawalRequest.proposal.blockNumber) {
+    if (
+      !withdrawalRequest.cooperative.vaultAddress ||
+      !withdrawalRequest.proposal.blockNumber
+    ) {
       return null;
     }
 
@@ -569,7 +613,9 @@ export class DisbursementService {
     const secret = process.env.CAMPAY_WEBHOOK_SECRET?.trim();
 
     if (!secret) {
-      this.logger.warn("CAMPAY_WEBHOOK_SECRET is not configured; skipping signature validation.");
+      this.logger.warn(
+        "CAMPAY_WEBHOOK_SECRET is not configured; skipping signature validation.",
+      );
       return;
     }
 
@@ -584,8 +630,9 @@ export class DisbursementService {
       throw new BadRequestException("Missing CamPay signature.");
     }
 
-    const rawPayload =
-      rawBody?.length ? rawBody : Buffer.from(JSON.stringify(payload));
+    const rawPayload = rawBody?.length
+      ? rawBody
+      : Buffer.from(JSON.stringify(payload));
     const expectedSignature = createHmac("sha256", secret)
       .update(rawPayload)
       .digest("hex");
@@ -643,7 +690,9 @@ export class DisbursementService {
       .filter(Boolean);
 
     if (recipients.length === 0) {
-      this.logger.warn(`No cooperative admin email found for ${cooperativeId}.`);
+      this.logger.warn(
+        `No cooperative admin email found for ${cooperativeId}.`,
+      );
       return [];
     }
 

@@ -28,7 +28,10 @@ export class InvitationsService {
     email: string,
     locale = "fr",
   ) {
-    const cooperative = await this.getAdminCooperative(adminUserId, cooperativeId);
+    const cooperative = await this.getAdminCooperative(
+      adminUserId,
+      cooperativeId,
+    );
     const normalizedLocale = this.normalizeLocale(locale);
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -193,7 +196,9 @@ export class InvitationsService {
     });
 
     if (existingMembership) {
-      throw new ConflictException("You are already a member of this cooperative.");
+      throw new ConflictException(
+        "You are already a member of this cooperative.",
+      );
     }
 
     const membership = await this.prisma.$transaction(async (tx) => {
@@ -279,7 +284,10 @@ export class InvitationsService {
     });
   }
 
-  private async getAdminCooperative(adminUserId: string, cooperativeId: string) {
+  private async getAdminCooperative(
+    adminUserId: string,
+    cooperativeId: string,
+  ) {
     const membership = await this.prisma.membership.findUnique({
       where: {
         userId_cooperativeId: {
@@ -314,10 +322,9 @@ export class InvitationsService {
   }
 
   private buildJoinUrl(locale: string, token: string) {
-    const baseUrl = (process.env.APP_URL?.trim() || "http://localhost:3000").replace(
-      /\/+$/,
-      "",
-    );
+    const baseUrl = (
+      process.env.APP_URL?.trim() || "http://localhost:3000"
+    ).replace(/\/+$/, "");
 
     return `${baseUrl}/${locale}/join/${token}`;
   }

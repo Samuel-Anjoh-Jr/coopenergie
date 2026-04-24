@@ -1,5 +1,9 @@
 import { Args, Int, Query, Resolver } from "@nestjs/graphql";
-import { BadRequestException, ForbiddenException, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  UseGuards,
+} from "@nestjs/common";
 import { LedgerEventType as PrismaLedgerEventType } from "@prisma/client";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
@@ -56,7 +60,9 @@ export class LedgerResolver {
     });
 
     if (!membership) {
-      throw new ForbiddenException("You do not have access to this cooperative.");
+      throw new ForbiddenException(
+        "You do not have access to this cooperative.",
+      );
     }
   }
 }
