@@ -99,7 +99,8 @@ const translations = {
       newWithdrawal: "New withdrawal proposal",
       titlePlaceholder: "Title",
       descriptionPlaceholder: "Description",
-      withdrawalDescription: "Create a withdrawal request for members to vote on.",
+      withdrawalDescription:
+        "Create a withdrawal request for members to vote on.",
       amountLabel: "Amount (FCFA)",
       availableBalance: "Available balance",
       reasonLabel: "Reason",

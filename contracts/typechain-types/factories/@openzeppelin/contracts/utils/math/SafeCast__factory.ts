@@ -74,7 +74,7 @@ type SafeCastConstructorParams =
   | ConstructorParameters<typeof ContractFactory>;
 
 const isSuperArgs = (
-  xs: SafeCastConstructorParams
+  xs: SafeCastConstructorParams,
 ): xs is ConstructorParameters<typeof ContractFactory> => xs.length > 1;
 
 export class SafeCast__factory extends ContractFactory {
@@ -87,12 +87,12 @@ export class SafeCast__factory extends ContractFactory {
   }
 
   override deploy(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<SafeCast> {
     return super.deploy(overrides || {}) as Promise<SafeCast>;
   }
   override getDeployTransaction(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): TransactionRequest {
     return super.getDeployTransaction(overrides || {});
   }
@@ -110,7 +110,7 @@ export class SafeCast__factory extends ContractFactory {
   }
   static connect(
     address: string,
-    signerOrProvider: Signer | Provider
+    signerOrProvider: Signer | Provider,
   ): SafeCast {
     return new Contract(address, _abi, signerOrProvider) as SafeCast;
   }

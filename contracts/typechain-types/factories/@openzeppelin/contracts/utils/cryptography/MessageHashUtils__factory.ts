@@ -25,7 +25,7 @@ type MessageHashUtilsConstructorParams =
   | ConstructorParameters<typeof ContractFactory>;
 
 const isSuperArgs = (
-  xs: MessageHashUtilsConstructorParams
+  xs: MessageHashUtilsConstructorParams,
 ): xs is ConstructorParameters<typeof ContractFactory> => xs.length > 1;
 
 export class MessageHashUtils__factory extends ContractFactory {
@@ -38,12 +38,12 @@ export class MessageHashUtils__factory extends ContractFactory {
   }
 
   override deploy(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<MessageHashUtils> {
     return super.deploy(overrides || {}) as Promise<MessageHashUtils>;
   }
   override getDeployTransaction(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): TransactionRequest {
     return super.getDeployTransaction(overrides || {});
   }
@@ -61,7 +61,7 @@ export class MessageHashUtils__factory extends ContractFactory {
   }
   static connect(
     address: string,
-    signerOrProvider: Signer | Provider
+    signerOrProvider: Signer | Provider,
   ): MessageHashUtils {
     return new Contract(address, _abi, signerOrProvider) as MessageHashUtils;
   }

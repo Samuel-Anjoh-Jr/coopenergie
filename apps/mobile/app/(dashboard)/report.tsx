@@ -1,5 +1,5 @@
 import { gql, useQuery } from "@apollo/client";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Share, Text, View } from "react-native";
 
@@ -113,6 +113,7 @@ function getDestinationLabel(
 }
 
 export default function ReportScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{
     source?: string;
     proposalId?: string;
@@ -325,7 +326,20 @@ export default function ReportScreen() {
       ) : (
         <View className="gap-3">
           {pushWithdrawalContext ? (
-            <View className="bg-white rounded-2xl border border-orange-300 p-4 gap-2">
+            <Pressable
+              className="bg-white rounded-2xl border border-orange-300 p-4 gap-2"
+              onPress={() => {
+                router.push({
+                  pathname: "/(dashboard)/proposals",
+                  params: {
+                    focusProposalId: pushWithdrawalContext.proposalId,
+                    withdrawalRequestId:
+                      pushWithdrawalContext.withdrawalRequestId,
+                    cooperativeId: activeCooperativeId,
+                  },
+                });
+              }}
+            >
               <Text className="text-orange-700 text-xs font-semibold">
                 PUSH
               </Text>
@@ -366,7 +380,7 @@ export default function ReportScreen() {
                   Request: {pushWithdrawalContext.withdrawalRequestId}
                 </Text>
               ) : null}
-            </View>
+            </Pressable>
           ) : null}
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">

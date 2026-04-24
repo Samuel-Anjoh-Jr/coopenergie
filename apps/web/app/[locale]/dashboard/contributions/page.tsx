@@ -162,12 +162,12 @@ export default function ContributionsPage() {
         amountXAF: amountNumber.toString(),
         phone: detectedCarrier.normalizedPhone,
       });
-      router.push(`/${locale}/dashboard/contributions/payment?${query.toString()}`);
+      router.push(
+        `/${locale}/dashboard/contributions/payment?${query.toString()}`,
+      );
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : t("errors.contributionFailed"),
+        error instanceof Error ? error.message : t("errors.contributionFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -453,7 +453,12 @@ export default function ContributionsPage() {
               </Button>
               <Button
                 onClick={() => void handleAddContribution()}
-                disabled={!amount || !phoneNumber.trim() || isSubmitting || !cooperativeId}
+                disabled={
+                  !amount ||
+                  !phoneNumber.trim() ||
+                  isSubmitting ||
+                  !cooperativeId
+                }
                 className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
               >
                 {isSubmitting ? (

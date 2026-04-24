@@ -43,7 +43,12 @@ export const authOptions: NextAuthConfig = {
           token?: string;
         };
 
-        if (!data.user?.id || !data.user.email || !data.user.name || !data.token) {
+        if (
+          !data.user?.id ||
+          !data.user.email ||
+          !data.user.name ||
+          !data.token
+        ) {
           return null;
         }
 

@@ -14,92 +14,92 @@ declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
       name: "Ownable",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.Ownable__factory>;
     getContractFactory(
       name: "ECDSA",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.ECDSA__factory>;
     getContractFactory(
       name: "MessageHashUtils",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.MessageHashUtils__factory>;
     getContractFactory(
       name: "SafeCast",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.SafeCast__factory>;
     getContractFactory(
       name: "Strings",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.Strings__factory>;
     getContractFactory(
       name: "CooperativeVault",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.CooperativeVault__factory>;
     getContractFactory(
       name: "CoopFactory",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.CoopFactory__factory>;
     getContractFactory(
       name: "GasRelayer",
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.GasRelayer__factory>;
 
     getContractAt(
       name: "Ownable",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.Ownable>;
     getContractAt(
       name: "ECDSA",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.ECDSA>;
     getContractAt(
       name: "MessageHashUtils",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.MessageHashUtils>;
     getContractAt(
       name: "SafeCast",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.SafeCast>;
     getContractAt(
       name: "Strings",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.Strings>;
     getContractAt(
       name: "CooperativeVault",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.CooperativeVault>;
     getContractAt(
       name: "CoopFactory",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.CoopFactory>;
     getContractAt(
       name: "GasRelayer",
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<Contracts.GasRelayer>;
 
     // default types
     getContractFactory(
       name: string,
-      signerOrOptions?: ethers.Signer | FactoryOptions
+      signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<ethers.ContractFactory>;
     getContractFactory(
       abi: any[],
       bytecode: ethers.utils.BytesLike,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<ethers.ContractFactory>;
     getContractAt(
       nameOrAbi: string | any[],
       address: string,
-      signer?: ethers.Signer
+      signer?: ethers.Signer,
     ): Promise<ethers.Contract>;
   }
 }

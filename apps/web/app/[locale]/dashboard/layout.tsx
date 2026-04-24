@@ -27,7 +27,11 @@ import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 
 const navItems = [
   { key: "overview", icon: BarChart3, href: "/dashboard" },
-  { key: "contributions", icon: HandshakeIcon, href: "/dashboard/contributions" },
+  {
+    key: "contributions",
+    icon: HandshakeIcon,
+    href: "/dashboard/contributions",
+  },
   {
     key: "invitations",
     icon: Mail,
@@ -53,7 +57,8 @@ export default function DashboardLayout({
   const t = useTranslations(locale as Locale);
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notificationBannerDismissed, setNotificationBannerDismissed] = useState(false);
+  const [notificationBannerDismissed, setNotificationBannerDismissed] =
+    useState(false);
   const { notificationsEnabled, requestPermission } = useNotifications();
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
     skip: status !== "authenticated",
@@ -123,7 +128,7 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-background">
       {/* Mobile Backdrop Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
@@ -136,19 +141,21 @@ export default function DashboardLayout({
         size="icon"
         className="fixed top-18 left-4 z-50 lg:hidden bg-card/90 backdrop-blur-md shadow-lg border border-border/50 w-11 h-11 rounded-xl hover:bg-card"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label={sidebarOpen ? t("navigation.closeMenu") : t("navigation.openMenu")}
+        aria-label={
+          sidebarOpen ? t("navigation.closeMenu") : t("navigation.openMenu")
+        }
         aria-expanded={sidebarOpen}
       >
         {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </Button>
 
       {/* Sidebar - Slide-in drawer on mobile */}
-      <aside 
+      <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-72 lg:w-64 border-r border-border/50 bg-card/98 backdrop-blur-md
           transform transition-transform duration-300 ease-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           shadow-2xl lg:shadow-none
         `}
         role="navigation"
@@ -177,31 +184,37 @@ export default function DashboardLayout({
               (item) => !item.requiresCoopAdmin || userRole === "COOP_ADMIN",
             )
             .map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === `/${locale}${item.href}` || 
-              (item.href === "/dashboard" && pathname === `/${locale}/dashboard`);
-            return (
-              <Link
-                key={item.key}
-                href={`/${locale}${item.href}`}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group min-h-11 ${
-                  isActive
-                    ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium shadow-sm border border-primary/20"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:bg-muted"
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted group-hover:bg-primary/10"
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <span className="text-sm lg:text-base">{t(`dashboard.${item.key}`)}</span>
-              </Link>
-            );
-          })}
+              const Icon = item.icon;
+              const isActive =
+                pathname === `/${locale}${item.href}` ||
+                (item.href === "/dashboard" &&
+                  pathname === `/${locale}/dashboard`);
+              return (
+                <Link
+                  key={item.key}
+                  href={`/${locale}${item.href}`}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group min-h-11 ${
+                    isActive
+                      ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium shadow-sm border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:bg-muted"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg transition-all duration-300 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted group-hover:bg-primary/10"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm lg:text-base">
+                    {t(`dashboard.${item.key}`)}
+                  </span>
+                </Link>
+              );
+            })}
         </nav>
 
         {/* Bottom Card */}
@@ -210,7 +223,9 @@ export default function DashboardLayout({
             <p className="text-xs text-muted-foreground mb-2">
               {t("dashboard.currentCooperative")}
             </p>
-            <p className="text-sm font-semibold text-foreground">{cooperativeName}</p>
+            <p className="text-sm font-semibold text-foreground">
+              {cooperativeName}
+            </p>
             {session?.user && (
               <p className="text-xs text-muted-foreground mt-2 truncate">
                 {t("dashboard.loggedInAs")}: {session.user.name}

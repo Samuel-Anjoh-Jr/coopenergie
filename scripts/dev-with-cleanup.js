@@ -93,7 +93,9 @@ if (!existsSync(backendDir)) {
   if (existsSync(backendEntry) && existsSync(backendPackage)) {
     startProcess("backend", ["run", "--cwd", "apps/backend", "dev"]);
   } else {
-    console.log("Skipping backend: apps/backend/src/main.ts or package.json is missing.");
+    console.log(
+      "Skipping backend: apps/backend/src/main.ts or package.json is missing.",
+    );
   }
 
   const mobilePackage = path.join(rootDir, "apps/mobile/package.json");

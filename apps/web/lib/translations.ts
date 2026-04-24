@@ -358,8 +358,7 @@ const translations = {
       description:
         "Invite members to your cooperative by email or shareable join link",
       adminOnlyTitle: "Admin Access Required",
-      adminOnlyDescription:
-        "Only cooperative admins can manage invitations.",
+      adminOnlyDescription: "Only cooperative admins can manage invitations.",
       emailInviteTitle: "Invite by Email",
       emailPlaceholder: "member@example.com",
       sendInvite: "Send Invite",

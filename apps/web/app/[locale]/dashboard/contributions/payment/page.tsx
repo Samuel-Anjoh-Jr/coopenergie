@@ -77,7 +77,9 @@ export default function ContributionPaymentPage() {
   );
   const [loading, setLoading] = useState(true);
   const [timedOut, setTimedOut] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(Math.floor(TOTAL_TIMEOUT_MS / 1000));
+  const [secondsLeft, setSecondsLeft] = useState(
+    Math.floor(TOTAL_TIMEOUT_MS / 1000),
+  );
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -87,10 +89,7 @@ export default function ContributionPaymentPage() {
     return detected?.carrier ?? "UNKNOWN";
   }, [phone]);
 
-  const ussdCode = useMemo(
-    () => getUssdCode(carrier),
-    [carrier],
-  );
+  const ussdCode = useMemo(() => getUssdCode(carrier), [carrier]);
 
   const checkStatus = useCallback(async () => {
     if (!paymentId || timedOut) {
@@ -189,9 +188,13 @@ export default function ContributionPaymentPage() {
                   : "Payment is taking longer than expected."}
               </p>
             </div>
-            <Button onClick={() => router.push(`/${locale}/dashboard/contributions`)}>
+            <Button
+              onClick={() => router.push(`/${locale}/dashboard/contributions`)}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
-              {locale === "fr" ? "Retour aux cotisations" : "Back to contributions"}
+              {locale === "fr"
+                ? "Retour aux cotisations"
+                : "Back to contributions"}
             </Button>
           </CardContent>
         </Card>
@@ -208,7 +211,9 @@ export default function ContributionPaymentPage() {
               <Loader2 className="h-14 w-14 animate-spin text-primary mx-auto" />
               <div>
                 <h2 className="text-xl font-bold">
-                  {locale === "fr" ? "Paiement en cours" : "Payment in progress"}
+                  {locale === "fr"
+                    ? "Paiement en cours"
+                    : "Payment in progress"}
                 </h2>
                 <p className="text-muted-foreground text-sm mt-1">
                   {locale === "fr"
@@ -298,7 +303,9 @@ export default function ContributionPaymentPage() {
             </p>
           </div>
 
-          <Button onClick={() => router.push(`/${locale}/dashboard/contributions`)}>
+          <Button
+            onClick={() => router.push(`/${locale}/dashboard/contributions`)}
+          >
             {locale === "fr" ? "Voir les cotisations" : "View contributions"}
           </Button>
         </CardContent>

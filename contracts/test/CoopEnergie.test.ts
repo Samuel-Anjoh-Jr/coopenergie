@@ -19,7 +19,15 @@ async function signForwardRequest(
 ) {
   const { chainId } = await ethers.provider.getNetwork();
   const encoded = new ethers.utils.AbiCoder().encode(
-    ["address", "uint256", "address", "address", "uint256", "uint256", "bytes32"],
+    [
+      "address",
+      "uint256",
+      "address",
+      "address",
+      "uint256",
+      "uint256",
+      "bytes32",
+    ],
     [
       relayerAddress,
       chainId,
@@ -39,7 +47,10 @@ describe("CoopEnergie contracts", function () {
   describe("GasRelayer", function () {
     it("owner can add whitelisted addresses", async function () {
       const [owner] = await ethers.getSigners();
-      const RelayerFactory = await ethers.getContractFactory("GasRelayer", owner);
+      const RelayerFactory = await ethers.getContractFactory(
+        "GasRelayer",
+        owner,
+      );
       const relayer = await RelayerFactory.deploy();
       await relayer.deployed();
 
@@ -54,11 +65,17 @@ describe("CoopEnergie contracts", function () {
 
     it("non-owner cannot call execute", async function () {
       const [owner, admin, user, other] = await ethers.getSigners();
-      const RelayerFactory = await ethers.getContractFactory("GasRelayer", owner);
+      const RelayerFactory = await ethers.getContractFactory(
+        "GasRelayer",
+        owner,
+      );
       const relayer = await RelayerFactory.deploy();
       await relayer.deployed();
 
-      const VaultFactory = await ethers.getContractFactory("CooperativeVault", owner);
+      const VaultFactory = await ethers.getContractFactory(
+        "CooperativeVault",
+        owner,
+      );
       const vault = await VaultFactory.deploy(
         "Bonaberi",
         850000,
@@ -74,7 +91,10 @@ describe("CoopEnergie contracts", function () {
         to: vault.address,
         nonce: 0,
         deadline: (await timeNow()) + 3600,
-        data: vault.interface.encodeFunctionData("contribute", [user.address, 1000]),
+        data: vault.interface.encodeFunctionData("contribute", [
+          user.address,
+          1000,
+        ]),
       };
       const signature = await signForwardRequest(
         relayer.address,
@@ -82,16 +102,23 @@ describe("CoopEnergie contracts", function () {
         user,
       );
 
-      await expect(relayer.connect(other).execute(request, signature)).to.be.reverted;
+      await expect(relayer.connect(other).execute(request, signature)).to.be
+        .reverted;
     });
 
     it("increments nonce after each valid execution", async function () {
       const [owner, admin, user] = await ethers.getSigners();
-      const RelayerFactory = await ethers.getContractFactory("GasRelayer", owner);
+      const RelayerFactory = await ethers.getContractFactory(
+        "GasRelayer",
+        owner,
+      );
       const relayer = await RelayerFactory.deploy();
       await relayer.deployed();
 
-      const VaultFactory = await ethers.getContractFactory("CooperativeVault", owner);
+      const VaultFactory = await ethers.getContractFactory(
+        "CooperativeVault",
+        owner,
+      );
       const vault = await VaultFactory.deploy(
         "Bonaberi",
         850000,
@@ -135,7 +162,10 @@ describe("CoopEnergie contracts", function () {
     async function deployVaultFixture() {
       const [deployer, admin, relayerSigner, member, outsider, ...voters] =
         await ethers.getSigners();
-      const VaultFactory = await ethers.getContractFactory("CooperativeVault", deployer);
+      const VaultFactory = await ethers.getContractFactory(
+        "CooperativeVault",
+        deployer,
+      );
       const vault = await VaultFactory.deploy(
         "Cooperative Solaire Bonaberi",
         850000,
@@ -144,34 +174,48 @@ describe("CoopEnergie contracts", function () {
       );
       await vault.deployed();
 
-      return { deployer, admin, relayerSigner, member, outsider, voters, vault };
+      return {
+        deployer,
+        admin,
+        relayerSigner,
+        member,
+        outsider,
+        voters,
+        vault,
+      };
     }
 
     it("only relayer can call contribute, createProposal, and vote", async function () {
       const { vault, admin, outsider, member } = await deployVaultFixture();
 
-      await expect(vault.connect(outsider).contribute(member.address, 1000)).to.be
+      await expect(vault.connect(outsider).contribute(member.address, 1000)).to
+        .be.reverted;
+      await expect(vault.connect(admin).contribute(member.address, 1000)).to.be
         .reverted;
-      await expect(
-        vault.connect(admin).contribute(member.address, 1000),
-      ).to.be.reverted;
 
       await expect(
-        vault.connect(outsider).createProposal(member.address, "Solar", "Install panels"),
+        vault
+          .connect(outsider)
+          .createProposal(member.address, "Solar", "Install panels"),
       ).to.be.reverted;
       await expect(
-        vault.connect(admin).createProposal(member.address, "Solar", "Install panels"),
+        vault
+          .connect(admin)
+          .createProposal(member.address, "Solar", "Install panels"),
       ).to.be.reverted;
 
       await expect(vault.connect(outsider).vote(member.address, 1, true)).to.be
         .reverted;
-      await expect(vault.connect(admin).vote(member.address, 1, true)).to.be.reverted;
+      await expect(vault.connect(admin).vote(member.address, 1, true)).to.be
+        .reverted;
     });
 
     it("contribute emits ContributionMade with correct data", async function () {
       const { vault, relayerSigner, member } = await deployVaultFixture();
 
-      await expect(vault.connect(relayerSigner).contribute(member.address, 50000))
+      await expect(
+        vault.connect(relayerSigner).contribute(member.address, 50000),
+      )
         .to.emit(vault, "ContributionMade")
         .withArgs(member.address, 50000, 50000, anyValue);
     });
@@ -198,23 +242,35 @@ describe("CoopEnergie contracts", function () {
     });
 
     it("vote emits VoteCast", async function () {
-      const { vault, relayerSigner, member, voters } = await deployVaultFixture();
+      const { vault, relayerSigner, member, voters } =
+        await deployVaultFixture();
 
       await vault
         .connect(relayerSigner)
-        .createProposal(member.address, "Solar Expansion", "Extend the solar grid.");
+        .createProposal(
+          member.address,
+          "Solar Expansion",
+          "Extend the solar grid.",
+        );
 
-      await expect(vault.connect(relayerSigner).vote(voters[0].address, 1, true))
+      await expect(
+        vault.connect(relayerSigner).vote(voters[0].address, 1, true),
+      )
         .to.emit(vault, "VoteCast")
         .withArgs(1, voters[0].address, true, 1, 0, anyValue);
     });
 
     it("prevents double voting", async function () {
-      const { vault, relayerSigner, member, voters } = await deployVaultFixture();
+      const { vault, relayerSigner, member, voters } =
+        await deployVaultFixture();
 
       await vault
         .connect(relayerSigner)
-        .createProposal(member.address, "Solar Expansion", "Extend the solar grid.");
+        .createProposal(
+          member.address,
+          "Solar Expansion",
+          "Extend the solar grid.",
+        );
       await vault.connect(relayerSigner).vote(voters[0].address, 1, true);
 
       await expect(
@@ -223,17 +279,24 @@ describe("CoopEnergie contracts", function () {
     });
 
     it("resolves proposals automatically at quorum", async function () {
-      const { vault, relayerSigner, member, voters } = await deployVaultFixture();
+      const { vault, relayerSigner, member, voters } =
+        await deployVaultFixture();
 
       await vault
         .connect(relayerSigner)
-        .createProposal(member.address, "Solar Expansion", "Extend the solar grid.");
+        .createProposal(
+          member.address,
+          "Solar Expansion",
+          "Extend the solar grid.",
+        );
 
       for (let i = 0; i < 5; i += 1) {
         await vault.connect(relayerSigner).vote(voters[i].address, 1, true);
       }
 
-      await expect(vault.connect(relayerSigner).vote(voters[5].address, 1, true))
+      await expect(
+        vault.connect(relayerSigner).vote(voters[5].address, 1, true),
+      )
         .to.emit(vault, "ProposalResolved")
         .withArgs(1, true, 6, 0);
 
@@ -250,7 +313,11 @@ describe("CoopEnergie contracts", function () {
 
       await vault
         .connect(relayerSigner)
-        .createProposal(member.address, "Solar Expansion", "Extend the solar grid.");
+        .createProposal(
+          member.address,
+          "Solar Expansion",
+          "Extend the solar grid.",
+        );
 
       await expect(
         vault.connect(admin).releaseFunds(outsider.address, 20000, 1),
@@ -273,11 +340,17 @@ describe("CoopEnergie contracts", function () {
   describe("CoopFactory", function () {
     it("deploys a cooperative vault and tracks it", async function () {
       const [owner, admin] = await ethers.getSigners();
-      const RelayerFactory = await ethers.getContractFactory("GasRelayer", owner);
+      const RelayerFactory = await ethers.getContractFactory(
+        "GasRelayer",
+        owner,
+      );
       const relayer = await RelayerFactory.deploy();
       await relayer.deployed();
 
-      const FactoryFactory = await ethers.getContractFactory("CoopFactory", owner);
+      const FactoryFactory = await ethers.getContractFactory(
+        "CoopFactory",
+        owner,
+      );
       const factory = await FactoryFactory.deploy(relayer.address);
       await factory.deployed();
 
@@ -291,7 +364,12 @@ describe("CoopEnergie contracts", function () {
         ),
       )
         .to.emit(factory, "CooperativeDeployed")
-        .withArgs(anyValue, "Cooperative Solaire Bonaberi", admin.address, anyValue);
+        .withArgs(
+          anyValue,
+          "Cooperative Solaire Bonaberi",
+          admin.address,
+          anyValue,
+        );
 
       expect(await factory.getVaultCount()).to.equal(1);
 

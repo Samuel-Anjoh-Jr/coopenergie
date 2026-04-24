@@ -597,7 +597,7 @@ type CooperativeVaultConstructorParams =
   | ConstructorParameters<typeof ContractFactory>;
 
 const isSuperArgs = (
-  xs: CooperativeVaultConstructorParams
+  xs: CooperativeVaultConstructorParams,
 ): xs is ConstructorParameters<typeof ContractFactory> => xs.length > 1;
 
 export class CooperativeVault__factory extends ContractFactory {
@@ -614,14 +614,14 @@ export class CooperativeVault__factory extends ContractFactory {
     _target: PromiseOrValue<BigNumberish>,
     _admin: PromiseOrValue<string>,
     _relayer: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<CooperativeVault> {
     return super.deploy(
       _name,
       _target,
       _admin,
       _relayer,
-      overrides || {}
+      overrides || {},
     ) as Promise<CooperativeVault>;
   }
   override getDeployTransaction(
@@ -629,14 +629,14 @@ export class CooperativeVault__factory extends ContractFactory {
     _target: PromiseOrValue<BigNumberish>,
     _admin: PromiseOrValue<string>,
     _relayer: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): TransactionRequest {
     return super.getDeployTransaction(
       _name,
       _target,
       _admin,
       _relayer,
-      overrides || {}
+      overrides || {},
     );
   }
   override attach(address: string): CooperativeVault {
@@ -653,7 +653,7 @@ export class CooperativeVault__factory extends ContractFactory {
   }
   static connect(
     address: string,
-    signerOrProvider: Signer | Provider
+    signerOrProvider: Signer | Provider,
   ): CooperativeVault {
     return new Contract(address, _abi, signerOrProvider) as CooperativeVault;
   }

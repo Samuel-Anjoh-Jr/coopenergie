@@ -196,7 +196,9 @@ export default function InvitationsPage() {
     return (
       <Alert>
         <AlertTitle>{t("invitations.adminOnlyTitle")}</AlertTitle>
-        <AlertDescription>{t("invitations.adminOnlyDescription")}</AlertDescription>
+        <AlertDescription>
+          {t("invitations.adminOnlyDescription")}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -229,7 +231,11 @@ export default function InvitationsPage() {
               disabled={isSendingEmail || !email.trim()}
               className="w-full"
             >
-              {isSendingEmail ? <Spinner className="mr-2" /> : <Mail className="mr-2 h-4 w-4" />}
+              {isSendingEmail ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
               {t("invitations.sendInvite")}
             </Button>
           </CardContent>
@@ -256,9 +262,17 @@ export default function InvitationsPage() {
 
             {latestJoinUrl ? (
               <div className="space-y-2 rounded-md border p-3">
-                <p className="text-sm font-medium">{t("invitations.latestLink")}</p>
-                <p className="text-xs text-muted-foreground break-all">{latestJoinUrl}</p>
-                <Button size="sm" variant="outline" onClick={() => void copyJoinUrl()}>
+                <p className="text-sm font-medium">
+                  {t("invitations.latestLink")}
+                </p>
+                <p className="text-xs text-muted-foreground break-all">
+                  {latestJoinUrl}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void copyJoinUrl()}
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   {t("invitations.copyLink")}
                 </Button>
@@ -271,7 +285,11 @@ export default function InvitationsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t("invitations.pendingTitle")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => void loadPendingInvitations()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadPendingInvitations()}
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             {t("invitations.refresh")}
           </Button>
@@ -282,7 +300,9 @@ export default function InvitationsPage() {
               <Spinner />
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("invitations.noPending")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("invitations.noPending")}
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -290,7 +310,9 @@ export default function InvitationsPage() {
                   <TableHead>{t("ledger.type")}</TableHead>
                   <TableHead>{t("common.email")}</TableHead>
                   <TableHead>{t("invitations.expiresAt")}</TableHead>
-                  <TableHead className="text-right">{t("invitations.actions")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("invitations.actions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

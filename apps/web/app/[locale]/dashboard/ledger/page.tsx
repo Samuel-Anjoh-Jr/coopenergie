@@ -107,7 +107,10 @@ function getEventColor(type: string) {
   return "text-muted-foreground bg-muted";
 }
 
-function getPayloadSummary(type: string, payload: Record<string, unknown>): string {
+function getPayloadSummary(
+  type: string,
+  payload: Record<string, unknown>,
+): string {
   if (!payload) return "-";
 
   const lowered = type.toUpperCase();
@@ -130,7 +133,6 @@ function getPayloadSummary(type: string, payload: Record<string, unknown>): stri
   return JSON.stringify(payload).substring(0, 50);
 }
 
-
 export default function LedgerPage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
@@ -142,7 +144,8 @@ export default function LedgerPage() {
 
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const vaultAddress = myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
+  const vaultAddress =
+    myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
 
   const filterType =
     activeFilter === "all" ? undefined : (activeFilter as string);
@@ -174,8 +177,7 @@ export default function LedgerPage() {
       .map(([blockNumber, transactions]) => ({
         blockNumber,
         transactions: transactions.sort(
-          (a, b) =>
-            +new Date(b.createdAt) - +new Date(a.createdAt)
+          (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
         ),
       }))
       .sort((a, b) => b.blockNumber - a.blockNumber);
@@ -203,7 +205,11 @@ export default function LedgerPage() {
     label: string;
     icon: React.ReactNode;
   }> = [
-    { key: "all", label: t("ledger.filterAll"), icon: <Filter className="w-4 h-4" /> },
+    {
+      key: "all",
+      label: t("ledger.filterAll"),
+      icon: <Filter className="w-4 h-4" />,
+    },
     {
       key: "CONTRIBUTION",
       label: t("ledger.filterContributions"),
@@ -302,7 +308,10 @@ export default function LedgerPage() {
                 </div>
 
                 <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
-                  <QRCodeSVG value={celoScanAddressUrl || vaultAddress} size={96} />
+                  <QRCodeSVG
+                    value={celoScanAddressUrl || vaultAddress}
+                    size={96}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -314,7 +323,9 @@ export default function LedgerPage() {
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
             <CardTitle className="text-base md:text-lg flex items-center gap-2">
               <Info className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              {locale === "fr" ? "Pourquoi c'est important" : "Why This Matters"}
+              {locale === "fr"
+                ? "Pourquoi c'est important"
+                : "Why This Matters"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
@@ -429,7 +440,7 @@ export default function LedgerPage() {
           {filterButtons.map((filter) => {
             const count = events.filter(
               (e) =>
-                filter.key === "all" || e.type.toUpperCase() === filter.key
+                filter.key === "all" || e.type.toUpperCase() === filter.key,
             ).length;
 
             return (
@@ -511,7 +522,10 @@ export default function LedgerPage() {
                       const txUrl = event.celoScanUrl
                         ? event.celoScanUrl
                         : `${CELOSCAN_BASE}/tx/${event.txHash}`;
-                      const summary = getPayloadSummary(event.type, event.payload);
+                      const summary = getPayloadSummary(
+                        event.type,
+                        event.payload,
+                      );
 
                       return (
                         <div
@@ -549,7 +563,10 @@ export default function LedgerPage() {
                                           : "Verified"}
                                       </Badge>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-xs">
+                                    <TooltipContent
+                                      side="top"
+                                      className="max-w-xs"
+                                    >
                                       <p className="text-sm">
                                         {locale === "fr"
                                           ? "Cette transaction est enregistrée de manière permanente et ne peut pas être modifiée ou supprimée."

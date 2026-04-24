@@ -244,7 +244,7 @@ type CoopFactoryConstructorParams =
   | ConstructorParameters<typeof ContractFactory>;
 
 const isSuperArgs = (
-  xs: CoopFactoryConstructorParams
+  xs: CoopFactoryConstructorParams,
 ): xs is ConstructorParameters<typeof ContractFactory> => xs.length > 1;
 
 export class CoopFactory__factory extends ContractFactory {
@@ -258,13 +258,13 @@ export class CoopFactory__factory extends ContractFactory {
 
   override deploy(
     _relayer: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<CoopFactory> {
     return super.deploy(_relayer, overrides || {}) as Promise<CoopFactory>;
   }
   override getDeployTransaction(
     _relayer: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): TransactionRequest {
     return super.getDeployTransaction(_relayer, overrides || {});
   }
@@ -282,7 +282,7 @@ export class CoopFactory__factory extends ContractFactory {
   }
   static connect(
     address: string,
-    signerOrProvider: Signer | Provider
+    signerOrProvider: Signer | Provider,
   ): CoopFactory {
     return new Contract(address, _abi, signerOrProvider) as CoopFactory;
   }

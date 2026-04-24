@@ -285,7 +285,8 @@ export default function ProposalsPage() {
         amountXAF: amount,
         reason: withdrawalForm.reason.trim(),
         destinationType:
-          detectedMobileMoney?.destinationType ?? withdrawalForm.destinationType,
+          detectedMobileMoney?.destinationType ??
+          withdrawalForm.destinationType,
         recipientPhone: detectedMobileMoney?.normalizedPhone,
         recipientOperator: detectedMobileMoney?.carrier,
         recipientBankName: withdrawalForm.recipientBankName || undefined,
@@ -690,9 +691,7 @@ export default function ProposalsPage() {
                     (["MTN_MOMO", "ORANGE_MONEY"].includes(
                       withdrawalForm.destinationType,
                     ) &&
-                      !detectCameroonMobileMoney(
-                        withdrawalForm.recipientPhone,
-                      ))
+                      !detectCameroonMobileMoney(withdrawalForm.recipientPhone))
                   }
                   className="flex-1 bg-orange-600 hover:bg-orange-700 text-white min-h-11 active:animate-button-press"
                 >

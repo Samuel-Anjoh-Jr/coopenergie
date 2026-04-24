@@ -1,4 +1,5 @@
 import { gql, useQuery } from "@apollo/client";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -130,6 +131,11 @@ function getDestinationLabel(
 }
 
 export default function ProposalsScreen() {
+  const params = useLocalSearchParams<{
+    focusProposalId?: string;
+    withdrawalRequestId?: string;
+    cooperativeId?: string;
+  }>();
   const { activeCooperative, activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
   const { t } = useMobileTranslations();
@@ -177,13 +183,27 @@ export default function ProposalsScreen() {
   );
 
   const proposals = useMemo(() => data?.proposals ?? [], [data]);
+  const focusedProposalId =
+    typeof params.focusProposalId === "string"
+      ? params.focusProposalId
+      : undefined;
   const displayItems = useMemo(() => {
     const items = proposals.length ? proposals : localItems;
-    return [...items].sort(
+    const sorted = [...items].sort(
       (left, right) =>
         +new Date(right.createdAt || 0) - +new Date(left.createdAt || 0),
     );
-  }, [localItems, proposals]);
+
+    if (!focusedProposalId) {
+      return sorted;
+    }
+
+    return sorted.sort((left, right) => {
+      const leftFocused = left.id === focusedProposalId ? 1 : 0;
+      const rightFocused = right.id === focusedProposalId ? 1 : 0;
+      return rightFocused - leftFocused;
+    });
+  }, [focusedProposalId, localItems, proposals]);
 
   useEffect(() => {
     async function persistFresh() {
@@ -464,7 +484,12 @@ export default function ProposalsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: 10, paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <ProposalCard item={item} onVote={submitVote} t={t} />
+            <ProposalCard
+              item={item}
+              onVote={submitVote}
+              t={t}
+              isFocused={item.id === focusedProposalId}
+            />
           )}
         />
       )}
@@ -708,10 +733,12 @@ function ProposalCard({
   item,
   onVote,
   t,
+  isFocused,
 }: {
   item: Proposal;
   onVote: (proposalId: string, choice: boolean) => Promise<void>;
   t: (key: string) => string;
+  isFocused?: boolean;
 }) {
   const isQueuedOffline =
     item.localSyncState === "QUEUED_OFFLINE" ||
@@ -735,7 +762,11 @@ function ProposalCard({
     Boolean(cannotVoteWithdrawal);
 
   return (
-    <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
+    <View
+      className={`bg-white rounded-2xl border p-4 ${
+        isFocused ? "border-orange-400" : "border-[#DDEBDD]"
+      }`}
+    >
       <View className="flex-row items-center justify-between gap-2">
         <Text className="text-[#1B5E20] font-bold text-base flex-1 pr-3">
           {item.title}

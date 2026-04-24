@@ -47,7 +47,7 @@ export declare namespace CooperativeVault {
     BigNumber,
     boolean,
     boolean,
-    BigNumber
+    BigNumber,
   ] & {
     id: BigNumber;
     title: string;
@@ -95,49 +95,49 @@ export interface CooperativeVaultInterface extends utils.Interface {
       | "releaseFunds"
       | "targetAmountXAF"
       | "totalContributedXAF"
-      | "vote"
+      | "vote",
   ): FunctionFragment;
 
   encodeFunctionData(functionFragment: "admin", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "contribute",
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
+    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(
     functionFragment: "cooperativeName",
-    values?: undefined
+    values?: undefined,
   ): string;
   encodeFunctionData(
     functionFragment: "createProposal",
     values: [
       PromiseOrValue<string>,
       PromiseOrValue<string>,
-      PromiseOrValue<string>
-    ]
+      PromiseOrValue<string>,
+    ],
   ): string;
   encodeFunctionData(
     functionFragment: "getMemberContribution",
-    values: [PromiseOrValue<string>]
+    values: [PromiseOrValue<string>],
   ): string;
   encodeFunctionData(
     functionFragment: "getProposal",
-    values: [PromiseOrValue<BigNumberish>]
+    values: [PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(
     functionFragment: "hasVoted",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>],
   ): string;
   encodeFunctionData(
     functionFragment: "memberContributions",
-    values: [PromiseOrValue<string>]
+    values: [PromiseOrValue<string>],
   ): string;
   encodeFunctionData(
     functionFragment: "proposalCount",
-    values?: undefined
+    values?: undefined,
   ): string;
   encodeFunctionData(
     functionFragment: "proposals",
-    values: [PromiseOrValue<BigNumberish>]
+    values: [PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(functionFragment: "relayer", values?: undefined): string;
   encodeFunctionData(
@@ -145,66 +145,66 @@ export interface CooperativeVaultInterface extends utils.Interface {
     values: [
       PromiseOrValue<string>,
       PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>
-    ]
+      PromiseOrValue<BigNumberish>,
+    ],
   ): string;
   encodeFunctionData(
     functionFragment: "targetAmountXAF",
-    values?: undefined
+    values?: undefined,
   ): string;
   encodeFunctionData(
     functionFragment: "totalContributedXAF",
-    values?: undefined
+    values?: undefined,
   ): string;
   encodeFunctionData(
     functionFragment: "vote",
     values: [
       PromiseOrValue<string>,
       PromiseOrValue<BigNumberish>,
-      PromiseOrValue<boolean>
-    ]
+      PromiseOrValue<boolean>,
+    ],
   ): string;
 
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "contribute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "cooperativeName",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "createProposal",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "getMemberContribution",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "getProposal",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(functionFragment: "hasVoted", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "memberContributions",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "proposalCount",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(functionFragment: "proposals", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "relayer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "releaseFunds",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "targetAmountXAF",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(
     functionFragment: "totalContributedXAF",
-    data: BytesLike
+    data: BytesLike,
   ): Result;
   decodeFunctionResult(functionFragment: "vote", data: BytesLike): Result;
 
@@ -302,15 +302,15 @@ export interface CooperativeVault extends BaseContract {
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    toBlock?: string | number | undefined,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
   removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
+    eventFilter: TypedEventFilter<TEvent>,
   ): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
@@ -324,7 +324,7 @@ export interface CooperativeVault extends BaseContract {
     contribute(
       member: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     cooperativeName(overrides?: CallOverrides): Promise<[string]>;
@@ -333,35 +333,35 @@ export interface CooperativeVault extends BaseContract {
       creator: PromiseOrValue<string>,
       title: PromiseOrValue<string>,
       description: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     getMemberContribution(
       member: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
     getProposal(
       id: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[CooperativeVault.ProposalStructOutput]>;
 
     hasVoted(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     memberContributions(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
     proposalCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<
       [
         BigNumber,
@@ -371,7 +371,7 @@ export interface CooperativeVault extends BaseContract {
         BigNumber,
         boolean,
         boolean,
-        BigNumber
+        BigNumber,
       ] & {
         id: BigNumber;
         title: string;
@@ -390,7 +390,7 @@ export interface CooperativeVault extends BaseContract {
       recipient: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     targetAmountXAF(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -401,7 +401,7 @@ export interface CooperativeVault extends BaseContract {
       voter: PromiseOrValue<string>,
       proposalId: PromiseOrValue<BigNumberish>,
       choice: PromiseOrValue<boolean>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
   };
 
@@ -410,7 +410,7 @@ export interface CooperativeVault extends BaseContract {
   contribute(
     member: PromiseOrValue<string>,
     amountXAF: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   cooperativeName(overrides?: CallOverrides): Promise<string>;
@@ -419,35 +419,35 @@ export interface CooperativeVault extends BaseContract {
     creator: PromiseOrValue<string>,
     title: PromiseOrValue<string>,
     description: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   getMemberContribution(
     member: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<BigNumber>;
 
   getProposal(
     id: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<CooperativeVault.ProposalStructOutput>;
 
   hasVoted(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   memberContributions(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<BigNumber>;
 
   proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
 
   proposals(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<
     [
       BigNumber,
@@ -457,7 +457,7 @@ export interface CooperativeVault extends BaseContract {
       BigNumber,
       boolean,
       boolean,
-      BigNumber
+      BigNumber,
     ] & {
       id: BigNumber;
       title: string;
@@ -476,7 +476,7 @@ export interface CooperativeVault extends BaseContract {
     recipient: PromiseOrValue<string>,
     amountXAF: PromiseOrValue<BigNumberish>,
     proposalId: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   targetAmountXAF(overrides?: CallOverrides): Promise<BigNumber>;
@@ -487,7 +487,7 @@ export interface CooperativeVault extends BaseContract {
     voter: PromiseOrValue<string>,
     proposalId: PromiseOrValue<BigNumberish>,
     choice: PromiseOrValue<boolean>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   callStatic: {
@@ -496,7 +496,7 @@ export interface CooperativeVault extends BaseContract {
     contribute(
       member: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     cooperativeName(overrides?: CallOverrides): Promise<string>;
@@ -505,35 +505,35 @@ export interface CooperativeVault extends BaseContract {
       creator: PromiseOrValue<string>,
       title: PromiseOrValue<string>,
       description: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     getMemberContribution(
       member: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     getProposal(
       id: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<CooperativeVault.ProposalStructOutput>;
 
     hasVoted(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     memberContributions(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<
       [
         BigNumber,
@@ -543,7 +543,7 @@ export interface CooperativeVault extends BaseContract {
         BigNumber,
         boolean,
         boolean,
-        BigNumber
+        BigNumber,
       ] & {
         id: BigNumber;
         title: string;
@@ -562,7 +562,7 @@ export interface CooperativeVault extends BaseContract {
       recipient: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     targetAmountXAF(overrides?: CallOverrides): Promise<BigNumber>;
@@ -573,7 +573,7 @@ export interface CooperativeVault extends BaseContract {
       voter: PromiseOrValue<string>,
       proposalId: PromiseOrValue<BigNumberish>,
       choice: PromiseOrValue<boolean>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
   };
 
@@ -582,52 +582,52 @@ export interface CooperativeVault extends BaseContract {
       member?: PromiseOrValue<string> | null,
       amountXAF?: null,
       totalXAF?: null,
-      timestamp?: null
+      timestamp?: null,
     ): ContributionMadeEventFilter;
     ContributionMade(
       member?: PromiseOrValue<string> | null,
       amountXAF?: null,
       totalXAF?: null,
-      timestamp?: null
+      timestamp?: null,
     ): ContributionMadeEventFilter;
 
     "FundsReleased(address,uint256,uint256,uint256)"(
       recipient?: PromiseOrValue<string> | null,
       amountXAF?: null,
       proposalId?: PromiseOrValue<BigNumberish> | null,
-      timestamp?: null
+      timestamp?: null,
     ): FundsReleasedEventFilter;
     FundsReleased(
       recipient?: PromiseOrValue<string> | null,
       amountXAF?: null,
       proposalId?: PromiseOrValue<BigNumberish> | null,
-      timestamp?: null
+      timestamp?: null,
     ): FundsReleasedEventFilter;
 
     "ProposalCreated(uint256,address,string,uint256)"(
       proposalId?: PromiseOrValue<BigNumberish> | null,
       creator?: PromiseOrValue<string> | null,
       title?: null,
-      timestamp?: null
+      timestamp?: null,
     ): ProposalCreatedEventFilter;
     ProposalCreated(
       proposalId?: PromiseOrValue<BigNumberish> | null,
       creator?: PromiseOrValue<string> | null,
       title?: null,
-      timestamp?: null
+      timestamp?: null,
     ): ProposalCreatedEventFilter;
 
     "ProposalResolved(uint256,bool,uint256,uint256)"(
       proposalId?: PromiseOrValue<BigNumberish> | null,
       approved?: null,
       yesVotes?: null,
-      noVotes?: null
+      noVotes?: null,
     ): ProposalResolvedEventFilter;
     ProposalResolved(
       proposalId?: PromiseOrValue<BigNumberish> | null,
       approved?: null,
       yesVotes?: null,
-      noVotes?: null
+      noVotes?: null,
     ): ProposalResolvedEventFilter;
 
     "VoteCast(uint256,address,bool,uint256,uint256,uint256)"(
@@ -636,7 +636,7 @@ export interface CooperativeVault extends BaseContract {
       choice?: null,
       yesVotes?: null,
       noVotes?: null,
-      timestamp?: null
+      timestamp?: null,
     ): VoteCastEventFilter;
     VoteCast(
       proposalId?: PromiseOrValue<BigNumberish> | null,
@@ -644,7 +644,7 @@ export interface CooperativeVault extends BaseContract {
       choice?: null,
       yesVotes?: null,
       noVotes?: null,
-      timestamp?: null
+      timestamp?: null,
     ): VoteCastEventFilter;
   };
 
@@ -654,7 +654,7 @@ export interface CooperativeVault extends BaseContract {
     contribute(
       member: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     cooperativeName(overrides?: CallOverrides): Promise<BigNumber>;
@@ -663,35 +663,35 @@ export interface CooperativeVault extends BaseContract {
       creator: PromiseOrValue<string>,
       title: PromiseOrValue<string>,
       description: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     getMemberContribution(
       member: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     getProposal(
       id: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     hasVoted(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     memberContributions(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     relayer(overrides?: CallOverrides): Promise<BigNumber>;
@@ -700,7 +700,7 @@ export interface CooperativeVault extends BaseContract {
       recipient: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     targetAmountXAF(overrides?: CallOverrides): Promise<BigNumber>;
@@ -711,7 +711,7 @@ export interface CooperativeVault extends BaseContract {
       voter: PromiseOrValue<string>,
       proposalId: PromiseOrValue<BigNumberish>,
       choice: PromiseOrValue<boolean>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
   };
 
@@ -721,7 +721,7 @@ export interface CooperativeVault extends BaseContract {
     contribute(
       member: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     cooperativeName(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -730,35 +730,35 @@ export interface CooperativeVault extends BaseContract {
       creator: PromiseOrValue<string>,
       title: PromiseOrValue<string>,
       description: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     getMemberContribution(
       member: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     getProposal(
       id: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     hasVoted(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     memberContributions(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     proposalCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     relayer(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -767,20 +767,20 @@ export interface CooperativeVault extends BaseContract {
       recipient: PromiseOrValue<string>,
       amountXAF: PromiseOrValue<BigNumberish>,
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     targetAmountXAF(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     totalContributedXAF(
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     vote(
       voter: PromiseOrValue<string>,
       proposalId: PromiseOrValue<BigNumberish>,
       choice: PromiseOrValue<boolean>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
   };
 }

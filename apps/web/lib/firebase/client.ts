@@ -28,7 +28,9 @@ export async function requestNotificationPermission(): Promise<string | null> {
   if (permission !== "granted") return null;
 
   const registration =
-    (await navigator.serviceWorker.getRegistration("/api/firebase-messaging-sw")) ??
+    (await navigator.serviceWorker.getRegistration(
+      "/api/firebase-messaging-sw",
+    )) ??
     (await navigator.serviceWorker.getRegistration()) ??
     (await navigator.serviceWorker.ready.catch(() => null));
 
