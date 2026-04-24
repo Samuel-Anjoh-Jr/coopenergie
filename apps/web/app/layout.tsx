@@ -40,7 +40,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="scroll-smooth" data-scroll-behavior="smooth">
-      <body className="font-sans antialiased bg-background text-foreground" suppressHydrationWarning>
+      <body
+        className="font-sans antialiased bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <ApolloAppProvider>
           <ThemeProvider>
             <AuthSessionProvider>

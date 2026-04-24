@@ -46,21 +46,25 @@ export default function SignupPage() {
 
     // Validation
     if (!fullName || !email || !password || !confirmPassword) {
-      const message = t("errors.allFieldsRequired") || "All fields are required";
+      const message =
+        t("errors.allFieldsRequired") || "All fields are required";
       setError(message);
       toast.error(message);
       return;
     }
 
     if (password !== confirmPassword) {
-      const message = t("errors.passwordsDoNotMatch") || "Passwords do not match";
+      const message =
+        t("errors.passwordsDoNotMatch") || "Passwords do not match";
       setError(message);
       toast.error(message);
       return;
     }
 
     if (password.length < 8) {
-      const message = t("errors.passwordTooShort") || "Password must be at least 8 characters";
+      const message =
+        t("errors.passwordTooShort") ||
+        "Password must be at least 8 characters";
       setError(message);
       toast.error(message);
       return;
@@ -78,14 +82,17 @@ export default function SignupPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        const message = data.message || t("errors.signupFailed") || "Signup failed";
+        const message =
+          data.message || t("errors.signupFailed") || "Signup failed";
         setError(message);
         toast.error(message);
         setIsLoading(false);
         return;
       }
 
-      toast.success(t("toasts.signupSuccess") || "Account created successfully!");
+      toast.success(
+        t("toasts.signupSuccess") || "Account created successfully!",
+      );
 
       // Auto-login after signup
       const result = await signIn("credentials", {
@@ -106,7 +113,8 @@ export default function SignupPage() {
       router.push(`/${locale}/dashboard`);
     } catch (err) {
       setIsLoading(false);
-      const message = t("errors.signupFailed") || "An error occurred during signup";
+      const message =
+        t("errors.signupFailed") || "An error occurred during signup";
       setError(message);
       toast.error(message);
     }
@@ -165,7 +173,8 @@ export default function SignupPage() {
               {t("auth.signup") || "Create Account"}
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              {t("auth.signupDescription") || "Join our solar energy cooperative"}
+              {t("auth.signupDescription") ||
+                "Join our solar energy cooperative"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
@@ -189,7 +198,9 @@ export default function SignupPage() {
                   <Input
                     id="fullName"
                     type="text"
-                    placeholder={t("auth.fullNamePlaceholder") || "Enter your full name"}
+                    placeholder={
+                      t("auth.fullNamePlaceholder") || "Enter your full name"
+                    }
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="pl-10 bg-input border-border text-foreground"
@@ -252,7 +263,10 @@ export default function SignupPage() {
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder={t("auth.confirmPasswordPlaceholder") || "Confirm your password"}
+                    placeholder={
+                      t("auth.confirmPasswordPlaceholder") ||
+                      "Confirm your password"
+                    }
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10 bg-input border-border text-foreground"
@@ -263,7 +277,13 @@ export default function SignupPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading || !fullName || !email || !password || !confirmPassword}
+                disabled={
+                  isLoading ||
+                  !fullName ||
+                  !email ||
+                  !password ||
+                  !confirmPassword
+                }
                 className="w-full bg-linear-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg"
               >
                 {isLoading && <Spinner className="mr-2" />}

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !fullName) {
       return NextResponse.json(
         { message: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       const data = await response.json();
       return NextResponse.json(
         { message: data.message || "Registration failed" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     console.error("Signup error:", error);
     return NextResponse.json(
       { message: "An error occurred during signup" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -105,7 +105,10 @@ async function bootstrap() {
           endpointName = relevantSegments[0];
 
           // For nested routes, append the action
-          if (relevantSegments.length > 1 && !relevantSegments[1].startsWith(":")) {
+          if (
+            relevantSegments.length > 1 &&
+            !relevantSegments[1].startsWith(":")
+          ) {
             endpointName = `${endpointName}.${relevantSegments[1]}`;
           }
         }
@@ -146,7 +149,9 @@ async function bootstrap() {
     console.log(
       `  ✓ Database:        ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`,
     );
-    console.log(`  ✓ Redis:           ${process.env.REDIS_URL ? "Connected" : "Not configured"}`);
+    console.log(
+      `  ✓ Redis:           ${process.env.REDIS_URL ? "Connected" : "Not configured"}`,
+    );
     console.log(
       `  ✓ JWT enabled:     ${process.env.NEXTAUTH_SECRET ? "Yes" : "No"}`,
     );
