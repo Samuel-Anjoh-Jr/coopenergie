@@ -11,8 +11,10 @@
     "env:sync": "node scripts/sync-env.mjs",
     "dev:web": "bun run env:sync && bun run --cwd apps/web dev",
     "dev:api": "bun run env:sync && bun run --cwd apps/backend dev",
-    "dev:mobile": "bun run env:sync && bun run --cwd apps/mobile start",
+    "dev:mobile": "bun run env:sync && node scripts/patch-metro-exports.js && node scripts/mobile-dev.js",
     "mobile:android": "bun run --cwd apps/mobile android",
+    "mobile:android:install": "node scripts/mobile-android-install.js",
+    "mobile:android:release:install": "node scripts/mobile-android-install.js --release",
     "db:up": "docker compose up -d postgres redis",
     "db:down": "docker compose down",
     "dev": "bun run env:sync && node scripts/dev-with-cleanup.js",
@@ -41,6 +43,7 @@
     "@typescript-eslint/parser": "^8.46.2",
     "@vscode/ripgrep": "^1.17.1",
     "eslint": "^9.39.1",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "source-map-support": "^0.5.21"
   }
 }

@@ -6,10 +6,10 @@ const rootDir = path.resolve(__dirname, "..");
 const children = new Set();
 let shuttingDown = false;
 
-function startProcess(name, args) {
+function startProcess(name, args, command = "bun") {
   console.log(`Starting ${name}...`);
 
-  const child = spawn("bun", args, {
+  const child = spawn(command, args, {
     cwd: rootDir,
     stdio: "inherit",
     env: process.env,
@@ -75,6 +75,15 @@ function shutdown(exitCode = 0) {
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
+try {
+  execSync("node scripts/patch-metro-exports.js", {
+    cwd: rootDir,
+    stdio: "inherit",
+  });
+} catch (error) {
+  console.error("Failed to patch metro exports:", error.message);
+}
+
 const webPackage = path.join(rootDir, "apps/web/package.json");
 if (!existsSync(webPackage)) {
   console.error("apps/web/package.json not found.");
@@ -100,7 +109,7 @@ if (!existsSync(backendDir)) {
 
   const mobilePackage = path.join(rootDir, "apps/mobile/package.json");
   if (existsSync(mobilePackage)) {
-    startProcess("mobile", ["run", "--cwd", "apps/mobile", "dev"]);
+    startProcess("mobile", ["scripts/mobile-dev.js"], "node");
   } else {
     console.log("Skipping mobile: apps/mobile/package.json is missing.");
   }

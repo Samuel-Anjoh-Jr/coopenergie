@@ -39,3 +39,6 @@ dist-ssr
 *.sw?
 .vscode\settings.json
 
+docs/~$opEnergie-Implementation-Guide.docx
+docs/~$rch-en.docx
+docs/~$srs-en.docx

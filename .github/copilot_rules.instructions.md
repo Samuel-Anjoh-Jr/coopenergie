@@ -1,5 +1,8 @@
 ---
-applyTo: "**/"
+alwaysApply: true
+always_on: true
+trigger: always_on
+applyTo: "**"
 ---
 
 # Project Implementation Best Practices
