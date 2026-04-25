@@ -1,0 +1,824 @@
+
+CoopEnergie — MIABE Hackathon 2026
+
+Implementation Guide
+
+Supplement 3 — Notifications & Blockchain Proof
+Push Notifications · Email Events · Firebase Setup · How Blockchain Hashes Prove Actions
+
+Document Type
+Supplement 3 — to be used after Addendum v2
+Insert After
+Task 4.7 (Platform Settings Service)
+New Tasks
+4.8, 4.9, 4.10, 4.11, 9.9 (web), 10.6 (mobile)
+Prerequisites
+Nodemailer (Task 5.1 updated), Firebase account
+Date
+April 2026
+
+This supplement adds push notification infrastructure (Firebase FCM for web + Expo for mobile) and explains the cryptographic proof mechanism of blockchain transaction hashes.
+
+  SECTION 1 — HOW BLOCKCHAIN HASHES ACTUALLY PROVE ACTIONS  
+1. The Blockchain Proof Mechanism — Full Explanation
+1.1 What a transaction hash is (and is not)
+A transaction hash (TX hash) is NOT a garbled or encrypted version of your data. It is a Keccak-256 cryptographic fingerprint of the signed transaction object that was submitted to the Celo network. The hash itself is just a 64-character lookup key — think of it as a receipt number. The actual proof lives inside the transaction that hash points to.
+
+The hash is the pointer. The event logs stored at that pointer are the proof. CeloScan reads those logs and displays them in plain human-readable form.
+
+1.2 What Celo actually stores when an action happens
+When your backend calls contribute(0xUserAddress, 850000) on the CooperativeVault smart contract, Celo permanently stores three layers of data inside that transaction:
+Layer
+What it contains
+Who can read it
+Raw transaction
+The ABI-encoded function call: which contract, which function, which arguments (address and number). Immutable forever.
+Anyone — it is public bytes on the chain
+Transaction receipt
+Gas used, success status, the block number and timestamp it was included in.
+Anyone
+Event logs
+The decoded, human-readable events emitted by the contract. For a contribution: ContributionMade(member=0x1234..., amountXAF=850000, totalXAF=950000, timestamp=1714320000)
+Anyone — CeloScan displays these as formatted tables
+
+None of this is encrypted. All of it is public. The TX hash is the key to retrieve it. This is why celoscan.io can show you the full details when you paste a TX hash — it is simply reading what is already stored on the chain.
+
+1.3 Step-by-step: what happens when a member contributes
+  Step 1  —  Member clicks "Contribute 50,000 FCFA"
+The web/mobile app sends a REST POST to your NestJS backend with { cooperativeId, amountXAF: 50000 }.
+  Step 2  —  Backend creates a pending record
+Contribution row created in PostgreSQL with status PENDING. No blockchain call yet.
+  Step 3  —  Backend encodes the contract call
+Using viem: const data = encodeFunctionData({ abi: cooperativeVaultAbi, functionName: "contribute", args: ["0xUserCeloAddress", 50000n] }). This produces an ABI-encoded byte string like 0xabcd1234... that represents "call contribute with these exact arguments".
+  Step 4  —  Backend signs and submits the transaction
+The relayer wallet signs a transaction: { to: vaultAddress, data: encodedCall, from: relayerWallet }. This creates a signed transaction object. Keccak-256 of this signed object = the TX hash. It is computed before submission and is deterministic.
+  Step 5  —  Celo network validates and executes
+Celo validators verify the relayer's signature is valid, execute the contract function, and write the state change (member's contribution amount increases). The transaction is included in a block.
+  Step 6  —  CooperativeVault emits an event
+Inside the contribute() function: emit ContributionMade(member, amountXAF, totalXAF, block.timestamp). Celo stores this event permanently in the transaction receipt logs. This is plain-text data — address, numbers, timestamp — readable by anyone.
+  Step 7  —  Backend reads the TX hash and stores it
+viem returns { txHash, blockNumber } after waiting for receipt. Backend updates the Contribution record: txHash = "0xabc...", blockNumber = 28471935, status = CONFIRMED.
+  Step 8  —  User sees the proof
+The UI displays the TX hash as a clickable link: https://alfajores.celoscan.io/tx/0xabc... Clicking it opens CeloScan which decodes the event logs and shows: "ContributionMade — member: 0x1234..., amountXAF: 50000, totalXAF: 950000, at block 28471935 (April 28, 2026 14:32:11 UTC)".
+
+1.4 What makes the hash cryptographically unforgeable
+Property
+What it means in practice
+Deterministic
+The same transaction inputs always produce the same hash. If you submit the same call with the same nonce and signature, you get the same hash.
+Collision-resistant
+It is computationally impossible to find two different transactions that produce the same hash. Each hash uniquely identifies exactly one transaction.
+Avalanche effect
+Changing a single bit of the input (e.g., changing 50000 to 50001 FCFA) produces a completely different hash — not a similar one. You cannot fake a hash that decodes to slightly different data.
+Signature binding
+The transaction is signed with the relayer's private key. Celo validators verify the signature before accepting the transaction. A hash submitted without a valid signature is rejected.
+Block finality
+Once a transaction is included in a Celo block and several more blocks are added after it, reversing it would require controlling >51% of Celo validator power. For practical purposes: finality after ~5 blocks (~12 seconds on Celo).
+
+1.5 What is on-chain vs. what is off-chain (privacy boundary)
+Data
+Where it lives
+Who can see it
+Celo wallet address of contributor (0x1234...)
+On-chain in event logs
+Anyone with the TX hash
+Amount in FCFA (e.g., 50000)
+On-chain in event logs
+Anyone with the TX hash
+Block number and timestamp
+On-chain
+Anyone
+CooperativeVault contract address
+On-chain
+Anyone — displayed in the UI as the community wallet
+Member full name (Jean-Baptiste Akogo)
+Off-chain — PostgreSQL only
+Platform and the user only
+Phone number
+Off-chain — PostgreSQL only
+Platform only
+Email address
+Off-chain — PostgreSQL only
+Platform only
+CamPay payment reference
+Off-chain — PostgreSQL only
+Platform only
+The Celo address is pseudonymous, not anonymous. On-chain you see 0x1234... contributed 50000 FCFA. Only your platform database links that address to a real name. This is the same model used by all public blockchains.
+
+1.6 How a judge or user verifies a specific action independently
+The full verification flow, requiring zero trust in CoopEnergie:
+Go to celoscan.io (or alfajores.celoscan.io for testnet).
+Paste the TX hash displayed in the app into the search bar.
+CeloScan displays the full transaction: the contract called (CooperativeVault address), the function called (contribute), and the arguments decoded from ABI: member address, FCFA amount.
+In the "Logs" tab: see the ContributionMade event in human-readable form with exact values.
+Compare the amounts and addresses with what the CoopEnergie app shows. They are identical — because the app reads these same logs from the backend's event listener, not from a separate source.
+To verify the community wallet balance: search the CooperativeVault contract address. See the complete transaction history — every contribution and every withdrawal that ever happened.
+This is the complete trustless verification. A member can check their own contribution, a judge can verify the platform is not fabricating data, an NGO can audit the cooperative funds — all without asking CoopEnergie for anything.
+
+1.7 What the Ledger page in the app is actually showing
+The LedgerEvent table in your PostgreSQL is a local copy of the on-chain event logs, indexed for fast querying. Here is how it is populated and why it matches celoscan.io:
+Field in LedgerEvent
+Source
+Verified by
+txHash
+Returned by viem after transaction confirmed on Celo
+Paste into celoscan.io — must return matching transaction
+blockNumber
+From the transaction receipt
+Visible in celoscan.io transaction details
+type (CONTRIBUTION / VOTE / etc.)
+Inferred from which smart contract event fired
+The contract's ABI defines which events map to which actions
+payload (JSON)
+Decoded from the contract event arguments
+Visible in celoscan.io Logs tab — identical values
+cooperativeId
+Mapped by the EventListenerService from vault address
+The vault address is the on-chain identifier for the cooperative
+celoScanUrl
+Constructed: ${CELOSCAN_BASE}/tx/${txHash}
+The URL resolves to the exact transaction on the public explorer
+The "Verified on Celo" badge in the UI means: this event has a txHash that resolves to a real confirmed transaction on the Celo network. The badge is only shown when txHash is not null.
+
+  SECTION 2 — FIREBASE SETUP & KEY MANAGEMENT  
+2. Firebase Setup — Complete Guide
+2.1 Firebase architecture for CoopEnergie
+Channel
+Technology
+Used for
+Key needed
+Web push (PWA)
+Firebase Cloud Messaging (FCM) via Service Worker
+Contribution confirmed, new proposal, vote update, withdrawal disbursed
+VAPID key (public) + FCM Server key (private)
+Mobile push (Expo)
+Expo Push Notification Service (which wraps FCM for Android and APNs for iOS)
+Same events + payment status, invitation accepted
+Expo project ID — no direct FCM key needed for Expo managed workflow
+Email
+Nodemailer SMTP
+Invitations, withdrawal approval, payment failures
+SMTP credentials (already configured in Addendum v2)
+Expo Push Notification Service is a proxy that handles FCM (Android) and APNs (iOS) for you. You do NOT need to configure raw FCM or APNs credentials separately for mobile in the Expo managed workflow. Only the web push requires direct Firebase configuration.
+
+2.2 Create a Firebase project — step by step
+Step
+Action
+URL / Location
+1
+Go to Firebase Console
+https://console.firebase.google.com
+2
+Click "Add project"
+Firebase Console homepage
+3
+Enter project name: "coopenergie-prod" (create a separate "coopenergie-dev" for staging)
+New project dialog
+4
+Disable Google Analytics (not needed for notifications)
+Step 2 of project creation
+5
+Click "Create project" and wait ~30 seconds
+—
+6
+In the left sidebar: click the gear icon → "Project settings"
+Project overview
+7
+Under "Your apps" → click the web icon (</>)
+Project settings > General
+8
+Register app with nickname "CoopEnergie Web"
+Add Firebase to your web app
+9
+COPY the firebaseConfig object shown — you will need all 7 fields
+Firebase SDK setup dialog
+10
+Click "Continue to console"
+—
+11
+Go to Project Settings → "Cloud Messaging" tab
+Project settings
+12
+Scroll to "Web configuration" → click "Generate key pair" under Web Push certificates
+Cloud Messaging tab
+13
+COPY the VAPID public key generated
+Web Push certificates section
+14
+Scroll to "Cloud Messaging API (Legacy)"
+Cloud Messaging tab
+15
+Note the Server Key (this is your FIREBASE_SERVER_KEY for the backend)
+Cloud Messaging tab
+16
+If Cloud Messaging API (V1) is preferred: go to Project Settings → Service Accounts → Generate new private key → Download JSON
+Service Accounts tab
+
+2.3 Firebase environment variables — where each key goes
+Variable
+Value source
+Where it goes
+Safe to expose?
+NEXT_PUBLIC_FIREBASE_API_KEY
+firebaseConfig.apiKey
+apps/web .env.local
+YES — public key, frontend only
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+firebaseConfig.authDomain
+apps/web .env.local
+YES
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+firebaseConfig.projectId
+apps/web .env.local + apps/backend .env
+YES
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+firebaseConfig.storageBucket
+apps/web .env.local
+YES
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+firebaseConfig.messagingSenderId
+apps/web .env.local
+YES
+NEXT_PUBLIC_FIREBASE_APP_ID
+firebaseConfig.appId
+apps/web .env.local
+YES
+NEXT_PUBLIC_FIREBASE_VAPID_KEY
+VAPID key from step 12 above
+apps/web .env.local
+YES — this is a public key
+FIREBASE_SERVER_KEY
+Server Key from step 15 above
+apps/backend .env ONLY
+NO — never in frontend code
+EXPO_PUBLIC_FIREBASE_PROJECT_ID
+Same as projectId
+apps/mobile .env
+YES
+FIREBASE_SERVER_KEY is a private credential. It must never appear in any frontend code, never be committed to git, and must be stored as a Railway secret and GitHub Actions secret.
+
+2.4 Add Firebase keys to your .env files
+Add these to root .env (they will be synced to apps via the sync-env.mjs script):
+  ⬤  Root .env additions — Firebase
+# ── FIREBASE (Web Push) ────────────────────────────────────────
+# Get these from Firebase Console > Project Settings > General > Your apps > Web
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=coopenergie-prod.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=coopenergie-prod
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=coopenergie-prod.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+ 
+# Get from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=BHzKP...
+ 
+# Get from Firebase Console > Project Settings > Cloud Messaging > Server Key (LEGACY)
+# OR use service account JSON (V1 API — recommended for production)
+FIREBASE_SERVER_KEY=AAAAabc...
+ 
+# For Expo mobile — only the project ID is needed in managed workflow
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=coopenergie-prod
+
+  SECTION 3 — ALL NOTIFICATION EVENTS  
+3. Complete Notification Events Map
+Every trigger, channel, recipient, and message for every notification in the platform:
+
+Trigger Event
+Channel
+Recipients
+Message (FR / EN)
+Contribution confirmed on-chain
+Push (web+mobile) + Email (optional)
+All cooperative members
+[Name] a cotisé [X] FCFA · [Name] contributed [X] FCFA
+New STANDARD proposal created
+Push (web+mobile) + Email
+All cooperative members
+Nouvelle proposition à voter : [title] · New proposal to vote on: [title]
+New WITHDRAWAL proposal created
+Push (web+mobile) + Email
+All eligible voters (contributors only)
+Proposition de retrait de [X] FCFA — votez maintenant · Withdrawal of [X] FCFA proposed — vote now
+Vote cast on any proposal
+Push (web+mobile)
+Cooperative admin only
+[N] membres ont voté · [N] members have voted
+Proposal approved (standard)
+Push (web+mobile) + Email
+All cooperative members
+Proposition approuvée : [title] · Proposal approved: [title]
+Withdrawal approved (threshold met)
+Push (web+mobile) + Email
+Cooperative admin (recipient)
+Votre retrait de [X] FCFA a été approuvé — décaissement en cours · Withdrawal of [X] FCFA approved — disbursement in progress
+Withdrawal disbursed (CamPay confirmed)
+Push (web+mobile) + Email
+Cooperative admin + all members
+[X] FCFA transférés vers [recipient] · [X] FCFA transferred to [recipient]
+Withdrawal failed (CamPay error)
+Push (web+mobile) + Email
+Cooperative admin only
+Échec du retrait : [reason] · Withdrawal failed: [reason]
+Payment confirmed (CamPay webhook)
+Push (web+mobile)
+Contributor only
+Paiement de [X] FCFA confirmé · Payment of [X] FCFA confirmed
+Payment failed
+Push (web+mobile) + Email
+Contributor only
+Paiement de [X] FCFA échoué · Payment of [X] FCFA failed
+Invitation accepted
+Push (web+mobile)
+Cooperative admin
+[Name] a rejoint la coopérative · [Name] joined the cooperative
+New member joined
+Push (web+mobile)
+All existing members
+Bienvenue [Name] dans la coopérative ! · Welcome [Name] to the cooperative!
+Push notifications degrade gracefully: if a user has not granted permission, or if Firebase is unavailable, the action completes normally. Never throw on notification failure.
+
+  SECTION 4 — COPILOT IMPLEMENTATION PROMPTS (Tasks 4.8 → 4.11 + 9.9 + 10.6)  
+Task 4.8 — Notification Service (NestJS Backend)
+Insert after Task 4.7. This is the core notification dispatcher that all modules call.
+  ⬤  COPILOT PROMPT — Task 4.8
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the core notification service in the NestJS backend.
+This service handles both web push (Firebase FCM) and Expo push (mobile).
+ 
+1. Install dependencies:
+   cd apps/backend
+   bun add firebase-admin expo-server-sdk
+ 
+2. Create apps/backend/src/notifications/notifications.module.ts
+   @Global() module — provides and exports NotificationsService
+ 
+3. Create apps/backend/src/notifications/firebase-admin.service.ts:
+   Initialises Firebase Admin SDK using the FIREBASE_SERVER_KEY env var.
+ 
+   import * as admin from "firebase-admin"
+ 
+   In the constructor:
+   if (!admin.apps.length) {
+     admin.initializeApp({
+       credential: admin.credential.cert({
+         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+         privateKey: process.env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+         clientEmail: process.env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+       }),
+     })
+   }
+ 
+   NOTE: For simplicity with the legacy Server Key, the service can also use
+   the FCM HTTP v1 API directly via fetch instead of firebase-admin.
+   Implement whichever works with the keys available.
+ 
+   Method: sendToToken(token: string, title: string, body: string, data?: Record<string, string>):
+   admin.messaging().send({ token, notification: { title, body }, data })
+ 
+   Method: sendToTokens(tokens: string[], title: string, body: string, data?):
+   admin.messaging().sendEachForMulticast({ tokens, notification: { title, body }, data })
+   Handle InvalidRegistrationToken errors — remove stale tokens from DB.
+ 
+4. Create apps/backend/src/notifications/expo-push.service.ts:
+   Uses expo-server-sdk to send push notifications to Expo/React Native devices.
+ 
+   import { Expo } from "expo-server-sdk"
+   const expo = new Expo()
+ 
+   Method: sendExpoNotifications(tokens: string[], title: string, body: string, data?):
+   - Filter: tokens.filter(t => Expo.isExpoPushToken(t))
+   - Build messages: tokens.map(to => ({ to, title, body, data, sound: "default" }))
+   - Chunk: expo.chunkPushNotifications(messages)
+   - Send all chunks: for (const chunk of chunks) { await expo.sendPushNotificationsAsync(chunk) }
+   - Log any errors but never throw
+ 
+5. Create apps/backend/src/notifications/notifications.service.ts:
+   Injects FirebaseAdminService, ExpoPushService, PrismaService.
+ 
+   Private method: getDeviceTokensForUsers(userIds: string[]):
+   Queries DeviceToken table WHERE userId IN userIds.
+   Separates into: webTokens (platform=WEB), expoTokens (platform=IOS or ANDROID).
+   Returns: { webTokens: string[], expoTokens: string[] }
+ 
+   Private method: getCooperativeMembers(cooperativeId: string):
+   Returns all user IDs who are active members of the cooperative.
+ 
+   Private method: getEligibleVoterIds(cooperativeId: string):
+   Returns user IDs who have at least 1 CONFIRMED contribution.
+ 
+   Private method: dispatch(userIds, title, body, data?):
+   a. Call getDeviceTokensForUsers(userIds)
+   b. Call firebaseAdmin.sendToTokens(webTokens, title, body, data) if webTokens.length > 0
+   c. Call expoPush.sendExpoNotifications(expoTokens, title, body, data) if expoTokens.length > 0
+   d. Wrap entirely in try/catch — log errors, never throw
+ 
+   Public methods (call dispatch internally):
+ 
+   notifyContributionConfirmed(cooperativeId, contributorName, amountXAF, txHash):
+   Recipients: all cooperative members
+   Title: "Nouvelle cotisation" / body: `${contributorName} a cotisé ${amountXAF.toLocaleString()} FCFA`
+   data: { type: "CONTRIBUTION", txHash, cooperativeId }
+ 
+   notifyNewProposal(cooperativeId, proposalTitle, proposalType):
+   Recipients: all members (if STANDARD) or eligible voters only (if WITHDRAWAL)
+   Title: proposalType === "WITHDRAWAL" ? "Proposition de retrait" : "Nouvelle proposition"
+   body: `${proposalTitle} — votez maintenant`
+   data: { type: "PROPOSAL", proposalType, cooperativeId }
+ 
+   notifyVoteCast(cooperativeId, adminUserId, yesCount, noCount):
+   Recipients: [adminUserId] only
+   body: `${yesCount} oui · ${noCount} non`
+ 
+   notifyWithdrawalApproved(cooperativeId, adminUserId, amountXAF):
+   Recipients: [adminUserId]
+   Title: "Retrait approuvé", body: `${amountXAF.toLocaleString()} FCFA — décaissement en cours`
+ 
+   notifyWithdrawalDisbursed(cooperativeId, amountXAF, recipientName):
+   Recipients: all members
+   Title: "Fonds transférés"
+   body: `${amountXAF.toLocaleString()} FCFA transférés vers ${recipientName}`
+ 
+   notifyWithdrawalFailed(adminUserId, amountXAF, reason):
+   Recipients: [adminUserId]
+   Title: "Échec du retrait"
+ 
+   notifyPaymentConfirmed(userId, amountXAF):
+   Recipients: [userId]
+   Title: "Paiement confirmé"
+ 
+   notifyPaymentFailed(userId, amountXAF):
+   Recipients: [userId]
+   Title: "Paiement échoué"
+ 
+   notifyMemberJoined(cooperativeId, newMemberName, adminUserId):
+   Recipients: [adminUserId] + all existing members
+   Title: "Nouveau membre"
+ 
+6. Update services to call notifications:
+ 
+   contributions.service.ts — after CONFIRMED:
+   await this.notificationsService.notifyContributionConfirmed(
+     cooperativeId, user.name, amountXAF, txHash)
+ 
+   proposals.service.ts — after creation:
+   await this.notificationsService.notifyNewProposal(
+     cooperativeId, proposal.title, proposal.type)
+ 
+   votes.service.ts — after vote:
+   await this.notificationsService.notifyVoteCast(
+     cooperativeId, coopAdminId, yesCount, noCount)
+ 
+   disbursement.service.ts — after disburse success:
+   await this.notificationsService.notifyWithdrawalDisbursed(...)
+ 
+   disbursement.service.ts — after disburse failure:
+   await this.notificationsService.notifyWithdrawalFailed(...)
+ 
+   payments.service.ts — after webhook SUCCESS:
+   await this.notificationsService.notifyPaymentConfirmed(userId, amountXAF)
+ 
+   payments.service.ts — after webhook FAILED:
+   await this.notificationsService.notifyPaymentFailed(userId, amountXAF)
+ 
+   invitations.service.ts — after acceptInvitation:
+   await this.notificationsService.notifyMemberJoined(cooperativeId, user.name, coopAdminId)
+ 
+7. Add two new env variables to .env.example:
+   FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY=REPLACE (from JSON file)
+   FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL=REPLACE (from JSON file)
+ 
+Import NotificationsModule in app.module.ts
+
+Task 4.9 — Device Token Registration Endpoint
+  ⬤  COPILOT PROMPT — Task 4.9
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create API endpoints for registering and unregistering device push tokens.
+Both web (FCM token) and mobile (Expo push token) use the same endpoints.
+ 
+Add to apps/backend/src/modules/users/users.controller.ts:
+ 
+POST /users/device-token
+  @UseGuards(JwtAuthGuard)
+  Body: { token: string, platform: "WEB" | "IOS" | "ANDROID" }
+  Action: upsert DeviceToken { userId, token, platform }
+  If a token already exists for this device (same token string): update the userId.
+  This handles: user logs out and a new user logs in on same device.
+  Return: { success: true }
+ 
+DELETE /users/device-token
+  @UseGuards(JwtAuthGuard)
+  Body: { token: string }
+  Action: delete DeviceToken WHERE token = token AND userId = currentUser.id
+  Return: { success: true }
+ 
+Add to users.service.ts:
+ 
+registerDeviceToken(userId, token, platform):
+  prisma.deviceToken.upsert({
+    where: { token },
+    update: { userId, platform },
+    create: { userId, token, platform }
+  })
+ 
+unregisterDeviceToken(userId, token):
+  prisma.deviceToken.deleteMany({
+    where: { token, userId }
+  })
+ 
+Also add a cleanup method called by notifications when FCM returns InvalidRegistrationToken:
+ 
+removeStaleToken(token):
+  prisma.deviceToken.deleteMany({ where: { token } })
+ 
+The FirebaseAdminService should import and call this on token errors.
+Inject UsersService into FirebaseAdminService (use forwardRef if circular).
+
+Task 4.10 — Add to .env and wiring check
+  ⬤  COPILOT PROMPT — Task 4.10
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add all Firebase notification variables to .env.example and
+verify all notification service injections are correct.
+ 
+1. Update apps/backend/.env.example (or root .env.example) to add:
+ 
+# Firebase Service Account (from Project Settings > Service Accounts > Generate key)
+# Download the JSON, then extract these two fields:
+FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nREPLACE\n-----END PRIVATE KEY-----\n"
+FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL=firebase-adminsdk-xxxxx@coopenergie-prod.iam.gserviceaccount.com
+ 
+2. Verify that NotificationsModule is imported in app.module.ts
+ 
+3. Verify each of these services injects NotificationsService:
+   - ContributionsService
+   - ProposalsService
+   - VotesService
+   - DisbursementService
+   - PaymentsService
+   - InvitationsService
+ 
+4. Run: bun run --cwd apps/backend typecheck
+   Fix any TypeScript errors related to NotificationsService injection.
+ 
+5. Run: bun run dev:api
+   Confirm the backend starts without errors.
+   The "No Firebase app" error means the env vars are not set yet —
+   that is expected. Add a graceful null check in firebase-admin.service.ts:
+   if (!process.env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+     this.logger.warn("Firebase not configured — push notifications disabled")
+     return  // exit constructor without initialising
+   }
+
+Task 9.9 — Web Push Notifications (Next.js)
+Insert after Task 9.7 in the original Implementation Guide.
+  ⬤  COPILOT PROMPT — Task 9.9
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add web push notification support to the Next.js app.
+ 
+1. Install in apps/web:
+   bun add firebase
+ 
+2. Create apps/web/lib/firebase/client.ts:
+ 
+   import { initializeApp, getApps } from "firebase/app"
+   import { getMessaging, getToken, onMessage } from "firebase/messaging"
+ 
+   const firebaseConfig = {
+     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+   }
+ 
+   export const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]
+ 
+   export async function requestNotificationPermission(): Promise<string | null> {
+     if (typeof window === "undefined") return null
+     if (!("Notification" in window)) return null
+     const permission = await Notification.requestPermission()
+     if (permission !== "granted") return null
+     const messaging = getMessaging(app)
+     const token = await getToken(messaging, {
+       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+       serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
+     })
+     return token
+   }
+ 
+   export function onForegroundMessage(callback: (payload: any) => void) {
+     if (typeof window === "undefined") return () => {}
+     const messaging = getMessaging(app)
+     return onMessage(messaging, callback)
+   }
+ 
+3. Create apps/web/public/firebase-messaging-sw.js:
+   (Service worker for background push notifications)
+ 
+   importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js")
+   importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js")
+ 
+   firebase.initializeApp({
+     apiKey: "NEXT_PUBLIC_FIREBASE_API_KEY_PLACEHOLDER",  // will be injected
+     projectId: "NEXT_PUBLIC_FIREBASE_PROJECT_ID_PLACEHOLDER",
+     messagingSenderId: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_PLACEHOLDER",
+     appId: "NEXT_PUBLIC_FIREBASE_APP_ID_PLACEHOLDER",
+   })
+ 
+   const messaging = firebase.messaging()
+ 
+   messaging.onBackgroundMessage((payload) => {
+     const { title, body } = payload.notification
+     self.registration.showNotification(title, {
+       body,
+       icon: "/icons/icon-192x192.png",
+       badge: "/icons/icon-72x72.png",
+       data: payload.data,
+     })
+   })
+ 
+   NOTE: For production, generate this file dynamically via a Next.js API route
+   (GET /api/firebase-messaging-sw.js) that injects the actual env var values.
+   This avoids hardcoding config in a static file.
+ 
+   Create apps/web/app/api/firebase-messaging-sw/route.ts that returns the
+   service worker JS with env vars interpolated.
+ 
+4. Create apps/web/lib/firebase/use-notifications.ts:
+   A React hook that:
+   a. On mount: registers service worker at /api/firebase-messaging-sw
+   b. Calls requestNotificationPermission()
+   c. On success: calls POST /api/v1/users/device-token { token, platform: "WEB" }
+   d. Sets up onForegroundMessage to show toast notifications
+   e. On unmount: calls DELETE /api/v1/users/device-token { token }
+   f. Returns: { notificationsEnabled, requestPermission }
+ 
+5. Add the useNotifications hook to the dashboard layout:
+   In apps/web/app/[locale]/(dashboard)/layout.tsx:
+   Import and call useNotifications() at the top level.
+   Wrap in a "use client" component.
+ 
+6. Add a notification permission banner to the dashboard:
+   Show a soft banner at the top of the dashboard if notificationsEnabled is false:
+   "Activez les notifications pour être informé des cotisations et votes en temps réel"
+   With a button: "Activer les notifications"
+   On click: calls requestPermission() from the hook.
+   Dismiss button that sets a localStorage flag to never show again.
+
+Task 10.6 — Mobile Push Notifications (Expo)
+Insert after Task 10.5 in the original Implementation Guide.
+  ⬤  COPILOT PROMPT — Task 10.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add push notification support to the Expo mobile app.
+ 
+Expo managed workflow uses Expo Push Notification Service which handles
+FCM (Android) and APNs (iOS) automatically. No raw FCM or APNs credentials
+are needed in the app code.
+ 
+1. Install in apps/mobile:
+   bun add expo-notifications expo-device expo-constants
+ 
+2. Update apps/mobile/app.json:
+   Add to "expo" section:
+   "plugins": [
+     ["expo-notifications", {
+       "icon": "./assets/icon.png",
+       "color": "#1B5E20",
+       "sounds": []
+     }]
+   ]
+ 
+3. Create apps/mobile/lib/notifications/push-token.ts:
+ 
+   import * as Notifications from "expo-notifications"
+   import * as Device from "expo-device"
+   import Constants from "expo-constants"
+ 
+   export async function registerForPushNotifications(): Promise<string | null> {
+     if (!Device.isDevice) {
+       console.warn("Push notifications only work on physical devices")
+       return null
+     }
+ 
+     const { status: existingStatus } = await Notifications.getPermissionsAsync()
+     let finalStatus = existingStatus
+ 
+     if (existingStatus !== "granted") {
+       const { status } = await Notifications.requestPermissionsAsync()
+       finalStatus = status
+     }
+ 
+     if (finalStatus !== "granted") return null
+ 
+     const projectId = Constants.expoConfig?.extra?.eas?.projectId
+     const token = await Notifications.getExpoPushTokenAsync({ projectId })
+     return token.data  // format: ExponentPushToken[xxxxxxxx]
+   }
+ 
+   export function configurePushHandlers() {
+     // How to handle notifications while app is in foreground
+     Notifications.setNotificationHandler({
+       handleNotification: async () => ({
+         shouldShowAlert: true,
+         shouldPlaySound: true,
+         shouldSetBadge: true,
+       }),
+     })
+   }
+ 
+4. Create apps/mobile/lib/notifications/use-push-notifications.ts:
+   A hook that:
+   a. Calls configurePushHandlers() once on mount
+   b. Calls registerForPushNotifications()
+   c. On success: calls POST /users/device-token { token, platform: "IOS" or "ANDROID" }
+      Determine platform: Platform.OS === "ios" ? "IOS" : "ANDROID"
+   d. Stores the token in MMKV ("push_token")
+   e. Sets up notification response handler:
+      Notifications.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data
+        if (data.type === "CONTRIBUTION") router.push("/(dashboard)/contributions")
+        if (data.type === "PROPOSAL") router.push("/(dashboard)/proposals")
+        if (data.type === "WITHDRAWAL") router.push("/(dashboard)/proposals")
+      })
+   f. Returns { pushToken, notificationsEnabled }
+ 
+5. Call usePushNotifications() in the root dashboard layout:
+   apps/mobile/app/(dashboard)/_layout.tsx
+   Import and call the hook at the top level of the layout component.
+ 
+6. On logout (in auth.ts logout function):
+   const pushToken = storage.getString("push_token")
+   if (pushToken) {
+     await api.delete("/users/device-token", { token: pushToken })
+     storage.delete("push_token")
+   }
+ 
+7. Update apps/mobile/app.json with EAS project ID:
+   "extra": { "eas": { "projectId": "YOUR_EAS_PROJECT_ID" } }
+ 
+   To get EAS project ID:
+   bun add -g eas-cli
+   eas login
+   eas build:configure
+   (This generates the projectId and updates app.json automatically)
+
+  QUICK REFERENCE — FIREBASE + EXPO KEYS  
+
+Quick Reference — All Notification Keys and Where They Live
+Key / Variable
+How to get it
+Location
+Exposure
+NEXT_PUBLIC_FIREBASE_API_KEY
+Firebase Console > Project Settings > Your Apps > Web app
+apps/web .env
+Public
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+Same source
+apps/web .env
+Public
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+Same source
+All apps .env
+Public
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+Same source
+apps/web .env
+Public
+NEXT_PUBLIC_FIREBASE_APP_ID
+Same source
+apps/web .env
+Public
+NEXT_PUBLIC_FIREBASE_VAPID_KEY
+Firebase Console > Project Settings > Cloud Messaging > Web Push certificates > Generate key pair
+apps/web .env
+Public (VAPID keys are always public)
+FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+Firebase Console > Project Settings > Service Accounts > Generate new private key > Download JSON > copy private_key field
+apps/backend .env ONLY
+PRIVATE — never in frontend
+FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL
+Same JSON file > copy client_email field
+apps/backend .env ONLY
+PRIVATE
+NEXT_PUBLIC_FIREBASE_PROJECT_ID (mobile)
+Same as above
+apps/mobile .env
+Public
+EAS Project ID
+Run: eas build:configure in apps/mobile — auto-written to app.json
+apps/mobile/app.json
+Public
+Expo Push Token
+Generated at runtime on device by registerForPushNotifications()
+Stored in DeviceToken table + MMKV on device
+Per-user, stored securely
+
+The EAS Project ID is different from the Firebase Project ID. EAS is Expo's build service; Firebase is Google's notification delivery service. Both are needed for mobile push to work end-to-end.
+
+— End of Supplement 3 —

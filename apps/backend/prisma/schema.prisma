@@ -1,0 +1,319 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  COOP_ADMIN
+  MEMBER
+}
+
+enum InvitationType {
+  EMAIL
+  LINK
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum ContributionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentProvider {
+  CAMPAY
+}
+
+enum LedgerEventType {
+  CONTRIBUTION
+  VOTE
+  PROPOSAL
+  PAYMENT
+  MEMBERSHIP
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  FREE
+  ONE_TIME
+  MONTHLY
+  YEARLY
+}
+
+enum DevicePlatform {
+  WEB
+  IOS
+  ANDROID
+}
+
+enum WithdrawalStatus {
+  PENDING_VOTE
+  APPROVED
+  REJECTED
+  DISBURSING
+  DISBURSED
+  FAILED
+}
+
+enum WithdrawalDestinationType {
+  MTN_MOMO
+  ORANGE_MONEY
+  BANK_TRANSFER
+}
+
+enum ProposalType {
+  STANDARD
+  WITHDRAWAL
+}
+
+model User {
+  id                     String         @id @default(cuid())
+  email                  String         @unique
+  passwordHash           String
+  name                   String
+  suspended              Boolean        @default(false)
+  celoAddress            String?        @unique
+  celoKeyEncrypted       String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  memberships            Membership[]
+  contributions          Contribution[]
+  proposals              Proposal[]
+  votes                  Vote[]
+  auditLogs              AuditLog[]
+  deviceTokens           DeviceToken[]
+  withdrawalPhone        String?
+  withdrawalOperator     String?
+  withdrawalBankName     String?
+  withdrawalBankAccount  String?
+}
+
+model Cooperative {
+  id                   String                @id @default(cuid())
+  name                 String
+  slug                 String                @unique
+  targetAmountXAF      Int
+  vaultAddress         String?
+  celoScanUrl          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  memberships          Membership[]
+  contributions        Contribution[]
+  proposals            Proposal[]
+  ledgerEvents         LedgerEvent[]
+  payments             Payment[]
+  invitations          Invitation[]
+  subscriptions        Subscription[]
+  auditLogs            AuditLog[]
+  settings             CooperativeSettings?
+  confirmedBalanceXAF  Int                   @default(0)
+  withdrawalRequests   WithdrawalRequest[]
+}
+
+model Membership {
+  id            String      @id @default(cuid())
+  userId        String
+  cooperativeId String
+  role          Role        @default(MEMBER)
+  joinedAt      DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cooperativeId])
+}
+
+model Invitation {
+  id            String           @id @default(cuid())
+  email         String?
+  token         String           @unique @default(cuid())
+  cooperativeId String
+  type          InvitationType   @default(EMAIL)
+  status        InvitationStatus @default(PENDING)
+  expiresAt     DateTime
+  createdAt     DateTime         @default(now())
+  cooperative   Cooperative      @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+}
+
+model Contribution {
+  id            String             @id @default(cuid())
+  amountXAF     Int
+  userId        String
+  cooperativeId String
+  txHash        String?
+  blockNumber   Int?
+  status        ContributionStatus @default(PENDING)
+  paymentId     String?            @unique
+  createdAt     DateTime           @default(now())
+  user          User               @relation(fields: [userId], references: [id])
+  cooperative   Cooperative        @relation(fields: [cooperativeId], references: [id])
+  payment       Payment?           @relation(fields: [paymentId], references: [id])
+}
+
+model Proposal {
+  id                String              @id @default(cuid())
+  title             String
+  description       String
+  status            ProposalStatus      @default(PENDING)
+  cooperativeId     String
+  creatorId         String
+  txHash            String?
+  blockNumber       Int?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  votes             Vote[]
+  creator           User                @relation(fields: [creatorId], references: [id])
+  cooperative       Cooperative         @relation(fields: [cooperativeId], references: [id])
+  type              ProposalType        @default(STANDARD)
+  withdrawalRequest WithdrawalRequest?
+}
+
+model Vote {
+  id          String   @id @default(cuid())
+  userId      String
+  proposalId  String
+  choice      Boolean
+  txHash      String?
+  blockNumber Int?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+
+  @@unique([userId, proposalId])
+}
+
+model LedgerEvent {
+  id            String          @id @default(cuid())
+  type          LedgerEventType
+  payload       Json
+  txHash        String          @unique
+  blockNumber   Int
+  cooperativeId String
+  createdAt     DateTime        @default(now())
+  cooperative   Cooperative     @relation(fields: [cooperativeId], references: [id])
+}
+
+model Payment {
+  id             String          @id @default(cuid())
+  amountXAF      Int
+  userId         String
+  cooperativeId  String
+  status         PaymentStatus   @default(PENDING)
+  provider       PaymentProvider @default(CAMPAY)
+  reference      String          @unique
+  idempotencyKey String          @unique
+  phoneNumber    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  cooperative    Cooperative     @relation(fields: [cooperativeId], references: [id])
+  contribution   Contribution?
+}
+
+model WithdrawalRequest {
+  id                   String                    @id @default(cuid())
+  cooperativeId        String
+  proposalId           String                    @unique
+  amountXAF            Int
+  destinationType      WithdrawalDestinationType
+  recipientPhone       String?
+  recipientOperator    String?
+  recipientBankName    String?
+  recipientBankAccount String?
+  recipientName        String
+  campayReference      String?
+  failureReason        String?
+  status               WithdrawalStatus          @default(PENDING_VOTE)
+  disbursedAt          DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  cooperative          Cooperative               @relation(fields: [cooperativeId], references: [id])
+  proposal             Proposal                  @relation(fields: [proposalId], references: [id])
+}
+
+model PlatformSettings {
+  id                         String   @id @default("singleton")
+  withdrawalThresholdDefault Int      @default(60)
+  withdrawalThresholdMin     Int      @default(50)
+  withdrawalThresholdMax     Int      @default(90)
+  withdrawalQuorumMinVotes   Int      @default(3)
+  maintenanceMode            Boolean  @default(false)
+  platformName               String   @default("CoopEnergie")
+  updatedAt                  DateTime @updatedAt
+  updatedById                String?
+}
+
+model CooperativeSettings {
+  id                  String      @id @default(cuid())
+  cooperativeId       String      @unique
+  withdrawalThreshold Int         @default(60)
+  cooperative         Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  priceXAF      Int
+  billingCycle  BillingCycle   @default(FREE)
+  features      Json           @default("{}")
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id            String             @id @default(cuid())
+  cooperativeId String
+  planId        String
+  status        SubscriptionStatus @default(ACTIVE)
+  expiresAt     DateTime?
+  createdAt     DateTime           @default(now())
+  cooperative   Cooperative        @relation(fields: [cooperativeId], references: [id])
+  plan          Plan               @relation(fields: [planId], references: [id])
+}
+
+model AuditLog {
+  id            String       @id @default(cuid())
+  userId        String?
+  cooperativeId String?
+  action        String
+  entity        String
+  entityId      String?
+  metadata      Json         @default("{}")
+  createdAt     DateTime     @default(now())
+  user          User?        @relation(fields: [userId], references: [id])
+  cooperative   Cooperative? @relation(fields: [cooperativeId], references: [id])
+}
+
+model DeviceToken {
+  id        String         @id @default(cuid())
+  userId    String
+  token     String         @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

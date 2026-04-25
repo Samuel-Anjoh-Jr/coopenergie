@@ -1,0 +1,2726 @@
+
+CoopEnergie — MIABE Hackathon 2026
+
+Implementation Guide
+
+Phase-by-Phase GitHub Copilot Prompt Queue
+From empty repo → full production platform
+
+Starting State
+Empty git repo + apps/web/ (v0 Next.js with mock data)
+End State
+Full production platform: web + NestJS backend + Expo mobile + Celo smart contracts + CamPay payments + CI/CD
+Tool
+GitHub Copilot (agent mode, queued prompts, unmonitored)
+Phases
+10 Phases / ~65 Queued Tasks — complete in order, one at a time
+
+Do not skip phases. Do not reorder tasks within a phase.
+
+How to Use This Guide
+Copilot Agent Mode Setup
+Open GitHub Copilot Chat in VS Code (or your IDE). Switch to Agent mode — not Inline Chat, not Ask mode. Agent mode allows Copilot to create files, run terminal commands, and modify multiple files autonomously without pausing for permission on each step.
+Open VS Code in the root of your monorepo (cd coopenergie).
+Open Copilot Chat panel.
+Select "Agent" from the mode dropdown (not "Ask" or "Edit").
+Paste the first task prompt and press Enter.
+Wait for full completion — watch the terminal and file tree.
+When done, paste the next prompt.
+You can queue all prompts in a session and walk away.
+
+Every prompt in this guide is written to be self-contained. Copilot will always know the full context it needs from the prompt alone — no prior conversation context required between tasks.
+
+CRITICAL: Never run two prompts simultaneously. Always wait for a task to fully complete (no more terminal activity, all files saved) before starting the next. Concurrent edits will corrupt the codebase.
+
+Checking Completion
+A task is complete when:
+No more activity in the Copilot terminal panel
+No error dialogs open
+Any bun install or bun run commands have exited cleanly
+The file tree shows all expected new files
+
+If a Task Fails
+Read the error message in the terminal.
+If it's a dependency conflict: run bun install in the relevant app directory and retry.
+If it's a TypeScript error: re-queue the same prompt with "Fix any TypeScript errors in the files just created." appended.
+If it's a network/timeout: retry the same prompt — Copilot is idempotent for file creation.
+
+Phase Overview
+Phase
+Title
+What Gets Built
+Prerequisite
+0
+Monorepo Foundation
+Root package.json, bun workspaces, Docker, env scripts, clean script
+None — start here
+1
+NestJS Backend Core
+NestJS app, Prisma schema, all DB models, auth module, users module
+Phase 0
+2
+Celo Smart Contracts
+CoopFactory.sol, CooperativeVault.sol, GasRelayer.sol, Hardhat, deploy scripts
+Phase 0
+3
+Blockchain Services
+viem client, gas relayer, vault service, factory service, event listener
+Phases 1 + 2
+4
+REST API Modules
+Cooperatives, memberships, contributions, proposals, votes — all with on-chain integration
+Phase 3
+5
+Invitation System
+Email invites, shareable links, token accept flow, revocation
+Phase 4
+6
+GraphQL Layer
+Apollo Server, schema, all resolvers, PubSub subscriptions
+Phase 4
+7
+CamPay Payments
+Payment initiation, webhook handler, on-chain trigger, idempotency
+Phase 6
+8
+Ledger + Reports
+Ledger GraphQL resolver, report resolver, CSV export endpoint
+Phase 6
+9
+Web App Integration
+Replace all mock data with real Apollo/REST calls, Auth.js → NestJS bridge, all pages wired
+Phases 6 + 7 + 8
+10
+Expo Mobile App
+Full mobile app: auth, dashboard, contributions, proposals, ledger, offline-first, sync engine
+Phase 9
+11
+CI/CD Pipelines
+GitHub Actions: lint, build, preview, staging, production; Railway + Vercel; conditional migrations
+Phase 10
+
+  PHASE 0
+Monorepo Foundation
+Bun workspaces · Docker Compose · Scripts · Environment
+Phase 0 converts the bare repo with apps/web into a proper monorepo. No new features — just infrastructure. The web app is moved into its proper place and the surrounding scaffold is built.
+
+After Phase 0 the repo structure exists. No backend or smart contracts yet — just the skeleton that all future phases will build into.
+
+Task 0.1  Move web app and initialise Bun workspace
+This prompt establishes the root monorepo package.json with Bun workspaces, moves apps/web into place, and creates the folder skeleton.
+  ⬤  COPILOT PROMPT — Task 0.1
+You are working in the root of a CoopEnergie monorepo at the current directory.
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Set up a Bun-managed monorepo from an existing Next.js app.
+ 
+The existing Next.js app is already at apps/web/.
+ 
+1. Create root package.json:
+{
+  "name": "coopenergie",
+  "private": true,
+  "packageManager": "bun@latest",
+  "workspaces": ["apps/*", "packages/*"]
+}
+ 
+2. Create these empty directories (with a .gitkeep inside each):
+- apps/backend/
+- apps/mobile/
+- packages/types/
+- packages/config/
+- packages/graphql-schema/
+- contracts/src/
+- contracts/test/
+- contracts/scripts/
+- infra/docker/
+- scripts/
+ 
+3. Create packages/types/package.json:
+{ "name": "@coopenergie/types", "version": "0.1.0", "main": "index.ts" }
+ 
+4. Create packages/config/package.json:
+{ "name": "@coopenergie/config", "version": "0.1.0" }
+ 
+5. Create packages/graphql-schema/package.json:
+{ "name": "@coopenergie/graphql-schema", "version": "0.1.0", "main": "schema.gql" }
+ 
+6. Create a root .gitignore that covers: node_modules, .env, dist, .next, .expo,
+   build, coverage, *.log, contracts/artifacts, contracts/cache
+ 
+7. Run: bun install
+ 
+Verify: confirm all folders exist and bun install succeeded.
+
+Task 0.2  Docker Compose — PostgreSQL + Redis
+  ⬤  COPILOT PROMPT — Task 0.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the Docker Compose file for local PostgreSQL and Redis.
+ 
+Create file: infra/docker/docker-compose.yml
+ 
+Content:
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15
+    container_name: coopenergie_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: coopenergie
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+ 
+  redis:
+    image: redis:7
+    container_name: coopenergie_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+ 
+volumes:
+  postgres_data:
+  redis_data:
+ 
+Also create a root docker-compose.yml that references infra/docker/docker-compose.yml
+via "include" OR simply copy the content to root docker-compose.yml directly.
+ 
+Verify: the file is valid YAML.
+
+Task 0.3  Environment files
+  ⬤  COPILOT PROMPT — Task 0.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the root environment configuration files.
+ 
+1. Create .env.example at the repo root with these variables and placeholder values:
+ 
+# ── BLOCKCHAIN ────────────────────────────────────────────────
+BLOCKCHAIN_ENABLED=true          # set false to skip on-chain calls in dev
+ 
+# ── DATABASE ──────────────────────────────────────────────────
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/coopenergie
+ 
+# ── REDIS ─────────────────────────────────────────────────────
+REDIS_URL=redis://localhost:6379
+ 
+# ── AUTH ──────────────────────────────────────────────────────
+NEXTAUTH_SECRET=REPLACE_WITH_MIN_32_CHAR_SECRET
+NEXTAUTH_URL=http://localhost:3000
+ 
+# ── BACKEND ───────────────────────────────────────────────────
+API_PORT=4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
+NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
+ 
+# ── CELO ──────────────────────────────────────────────────────
+# Testnet: https://alfajores-forno.celo-testnet.org
+# Mainnet: https://forno.celo.org
+CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+CELO_RELAYER_PRIVATE_KEY=REPLACE_WITH_GENERATED_PRIVATE_KEY
+COOP_FACTORY_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
+GAS_RELAYER_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
+ 
+# ── CELOSCAN ──────────────────────────────────────────────────
+# Testnet: https://alfajores.celoscan.io
+# Mainnet: https://celoscan.io
+NEXT_PUBLIC_CELOSCAN_BASE=https://alfajores.celoscan.io
+NEXT_PUBLIC_CELO_CHAIN=alfajores
+ 
+# ── CAMPAY ────────────────────────────────────────────────────
+# Sandbox: https://demo.campay.net/api
+# Production: https://www.campay.net/api
+CAMPAY_API_KEY=REPLACE_WITH_CAMPAY_KEY
+CAMPAY_WEBHOOK_SECRET=REPLACE_WITH_CAMPAY_WEBHOOK_SECRET
+CAMPAY_BASE_URL=https://demo.campay.net/api
+# CamPay disbursement / transfer API key (may be same as collection key)
+CAMPAY_TRANSFER_API_KEY=REPLACE_WITH_CAMPAY_TRANSFER_KEY
+ 
+# ── AWS S3 ────────────────────────────────────────────────────
+AWS_S3_BUCKET=coopenergie-files
+AWS_ACCESS_KEY=REPLACE
+AWS_SECRET_KEY=REPLACE
+AWS_REGION=eu-west-1
+ 
+# ── FIREBASE ──────────────────────────────────────────────────
+FIREBASE_SERVER_KEY=REPLACE_WITH_FIREBASE_KEY
+ 
+# ── EMAIL (Nodemailer / SMTP) ─────────────────────────────────
+# Use Gmail SMTP, Mailgun, SendGrid, or any SMTP provider
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false          # true for port 465, false for 587
+SMTP_USER=REPLACE_WITH_SMTP_EMAIL
+SMTP_PASS=REPLACE_WITH_SMTP_PASSWORD_OR_APP_PASSWORD
+EMAIL_FROM="CoopEnergie <noreply@coopenergie.cm>"
+ 
+# ── PLATFORM ──────────────────────────────────────────────────
+APP_URL=http://localhost:3000
+ 
+2. Copy .env.example to .env
+3. Ensure .env is in .gitignore
+Task 0.4  Root utility scripts
+  ⬤  COPILOT PROMPT — Task 0.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create 3 utility scripts in the scripts/ folder.
+ 
+--- FILE 1: scripts/sync-env.mjs ---
+Reads the root .env file and copies its content to:
+- apps/web/.env.local
+- apps/backend/.env
+- apps/mobile/.env
+ 
+Use Node.js fs module. If a target directory does not exist yet, skip it with a console.log.
+ 
+--- FILE 2: scripts/dev-with-cleanup.js ---
+Uses child_process to run concurrently:
+- bun run --cwd apps/web dev
+- bun run --cwd apps/backend dev (only if apps/backend/src/main.ts exists)
+- bun run run –cwd apps/mobile dev
+Handles SIGINT/SIGTERM to cleanly kill child processes.
+If apps/backend does not exist yet, just run web only.
+ 
+--- FILE 3: scripts/clean.js ---
+Removes only build artifacts — NOT node_modules.
+Remove these directories if they exist (use rmSync with recursive+force):
+- apps/web/.next
+- apps/web/out
+- apps/backend/dist
+- apps/mobile/.expo
+- contracts/artifacts
+- contracts/cache
+ 
+Then kill running processes:
+try { execSync('pkill -f "bun run"', { stdio: 'ignore' }); } catch {}
+try { execSync('pkill -f "next dev"', { stdio: 'ignore' }); } catch {}
+try { execSync('pkill -f "nest start"', { stdio: 'ignore' }); } catch {}
+console.log('🛑 Stopping all node processes...')
+try {
+  if (process.platform === 'win32') {
+    execSync('taskkill /F /IM node.exe /T 2>nul  exit 0', { shell: true, stdio: 'inherit' })
+    execSync('taskkill /F /IM bun.exe /T 2>nul  exit 0', { shell: true, stdio: 'inherit' })
+  } else {
+    execSync('pkill -f node  true', { shell: true, stdio: 'inherit' })
+    execSync('pkill -f bun  true', { shell: true, stdio: 'inherit' })
+  }
+  console.log('✅ Processes stopped\n')
+} catch {
+  console.log('⚠️  No processes to kill\n')
+}
+ 
+Print "Build artifacts cleared. node_modules preserved." when done.
+
+Task 0.5  Root package.json final scripts
+  ⬤  COPILOT PROMPT — Task 0.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Update the root package.json scripts section.
+ 
+The root package.json already exists (from Task 0.1).
+Update its "scripts" field to exactly this:
+ 
+{
+  "prepare": "husky || true",
+  "env:sync": "node scripts/sync-env.mjs",
+  "dev:web": "bun run env:sync && bun run --cwd apps/web dev",
+  "dev:api": "bun run env:sync && bun run --cwd apps/backend dev",
+  "dev:mobile": "bun run env:sync && bun run --cwd apps/mobile start",
+  "mobile:android": "bun run --cwd apps/mobile android",
+  "db:up": "docker compose up -d postgres redis",
+  "db:down": "docker compose down",
+  "dev": "bun run env:sync && node scripts/dev-with-cleanup.js",
+  "dev:nodb": "bun run env:sync && bun run dev:web && bun run dev:api && bun run dev:mobile",
+  "db:generate": "bunx prisma generate --schema apps/backend/prisma/schema.prisma",
+  "db:push": "bunx prisma db push --schema apps/backend/prisma/schema.prisma",
+  "db:studio": "cd apps/backend && bunx prisma studio",
+  "db:migrate": "bunx prisma migrate dev --schema apps/backend/prisma/schema.prisma",
+  "db:migrate:reset": "bunx prisma migrate reset --schema apps/backend/prisma/schema.prisma",
+  "db:migrate:deploy": "bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma",
+  "db:reset": "bun run db:down && bun run db:up && bun run db:migrate:deploy && bun run db:generate",
+  "db:seed": "cd apps/backend && bun run prisma:seed",
+  "build:web": "bun run --cwd apps/web build",
+  "build:api": "bun run --cwd apps/backend build",
+  "build:mobile": "bun run --cwd apps/mobile build",
+  "build": "bun run build:api && bun run build:web && bun run build:mobile",
+  "lint": "bun run --cwd apps/web lint && bun run --cwd apps/backend lint",
+  "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/backend typecheck",
+  "format": "prettier --write .",
+  "clean": "node scripts/clean.js",
+  "keys": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+  "test": "echo Run tests from app directories"
+}
+ 
+Also add devDependencies to root package.json:
+{ "prettier": "^3.0.0" }
+ 
+Then run: bun install
+
+Task 0.6  Update apps/web for monorepo compatibility
+  ⬤  COPILOT PROMPT — Task 0.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Update the existing apps/web Next.js app so it works properly inside the Bun monorepo
+and is ready for real backend integration.
+ 
+1. Ensure apps/web/package.json has a "name" field: "@coopenergie/web"
+ 
+2. Add these scripts to apps/web/package.json if not present:
+   "typecheck": "tsc --noEmit"
+ 
+3. In apps/web/next.config.ts (or next.config.js), add:
+   - transpilePackages: ['@coopenergie/types', '@coopenergie/graphql-schema']
+   - output: 'standalone' (for Docker compatibility)
+ 
+4. Create apps/web/lib/config.ts:
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql';
+export const GRAPHQL_WS_URL = process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql';
+export const CELOSCAN_BASE = process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://alfajores.celoscan.io';
+export const CELO_CHAIN = process.env.NEXT_PUBLIC_CELO_CHAIN || 'alfajores';
+export const celoScanTx = (hash: string) => `${CELOSCAN_BASE}/tx/${hash}`;
+export const celoScanAddress = (addr: string) => `${CELOSCAN_BASE}/address/${addr}`;
+ 
+5. Run bun install in apps/web to ensure all existing deps are installed.
+ 
+Do NOT modify any UI components, pages, or styles.
+
+  PHASE 1
+NestJS Backend Core
+NestJS · Bun runtime · Prisma ORM · PostgreSQL · All database models
+Phase 1 builds the complete NestJS backend application with all Prisma models. By the end of this phase, the database schema is finalized, migrations can run, and the auth module works.
+
+Run bun run db:up before starting Phase 1 tasks that involve database operations (Tasks 1.4+). Docker Desktop must be running.
+
+Task 1.1  Scaffold NestJS app with Bun runtime
+  ⬤  COPILOT PROMPT — Task 1.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create a production-grade NestJS application in apps/backend using Bun as the runtime.
+ 
+1. From the repo root run:
+   cd apps/backend
+   bun add @nestjs/core @nestjs/common @nestjs/platform-express @nestjs/config
+   bun add @nestjs/jwt @nestjs/passport passport passport-jwt passport-local
+   bun add @nestjs/throttler @nestjs/websockets @nestjs/platform-socket.io
+   bun add @nestjs/graphql @nestjs/apollo graphql apollo-server-express
+   bun add @prisma/client class-validator class-transformer
+   bun add bcryptjs viem helmet cors reflect-metadata rxjs
+   bun add -d @nestjs/cli @nestjs/testing typescript ts-node prisma
+   bun add -d @types/bcryptjs @types/passport-jwt @types/node
+ 
+2. Create apps/backend/package.json with:
+   name: "@coopenergie/backend"
+   scripts:
+     "dev": "nest start --watch"
+     "build": "nest build"
+     "start": "node dist/main"
+     "lint": "eslint src --ext .ts"
+     "typecheck": "tsc --noEmit"
+     "prisma:seed": "bun run src/prisma/seed.ts"
+ 
+3. Create apps/backend/tsconfig.json with standard NestJS TypeScript config:
+   - target: ES2021
+   - module: commonjs
+   - experimentalDecorators: true
+   - emitDecoratorMetadata: true
+   - strict: false (for faster development)
+   - outDir: dist
+ 
+4. Create apps/backend/nest-cli.json:
+   { "collection": "@nestjs/schematics", "sourceRoot": "src" }
+ 
+5. Create apps/backend/src/main.ts:
+   - NestJS bootstrap with:
+     - app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
+     - helmet()
+     - cors({ origin: process.env.NEXTAUTH_URL || 'http://localhost:3000', credentials: true })
+     - app.listen(process.env.API_PORT || 4000)
+     - global prefix: /api/v1 (NOT applied to GraphQL which mounts at /graphql)
+ 
+6. Create apps/backend/src/app.module.ts importing:
+   - ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' })
+   - ThrottlerModule with ttl:60, limit:100
+ 
+Verify: bun run --cwd apps/backend typecheck (no errors expected at this stage)
+
+Task 1.2  Prisma schema — complete production models
+  ⬤  COPILOT PROMPT — Task 1.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the complete Prisma schema for CoopEnergie.
+ 
+Create file: apps/backend/prisma/schema.prisma
+ 
+Content — implement ALL of these models exactly:
+ 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+ 
+generator client {
+  provider = "prisma-client-js"
+}
+ 
+enum Role { PLATFORM_ADMIN COOP_ADMIN MEMBER }
+enum InvitationType { EMAIL LINK }
+enum InvitationStatus { PENDING ACCEPTED REVOKED }
+enum ContributionStatus { PENDING CONFIRMED FAILED }
+enum ProposalStatus { PENDING APPROVED REJECTED }
+enum PaymentStatus { PENDING SUCCESS FAILED }
+enum PaymentProvider { CAMPAY }
+enum LedgerEventType { CONTRIBUTION VOTE PROPOSAL PAYMENT MEMBERSHIP }
+enum SubscriptionStatus { ACTIVE CANCELLED EXPIRED }
+enum BillingCycle { FREE ONE_TIME MONTHLY YEARLY }
+enum DevicePlatform { WEB IOS ANDROID }
+enum WithdrawalStatus { PENDING_VOTE APPROVED REJECTED DISBURSING DISBURSED FAILED }
+enum WithdrawalDestinationType { MTN_MOMO ORANGE_MONEY BANK_TRANSFER }
+enum ProposalType { STANDARD WITHDRAWAL }
+ 
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  celoAddress   String?  @unique
+  celoKeyEncrypted String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  memberships   Membership[]
+  contributions Contribution[]
+  votes         Vote[]
+  auditLogs     AuditLog[]
+  deviceTokens  DeviceToken[]
+   withdrawalPhone    String?
+  withdrawalOperator String?
+  withdrawalBankName String?
+  withdrawalBankAccount String?
+}
+ 
+model Cooperative {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  targetAmountXAF Int
+  vaultAddress    String?
+  celoScanUrl     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  memberships     Membership[]
+  contributions   Contribution[]
+  proposals       Proposal[]
+  ledgerEvents    LedgerEvent[]
+  payments        Payment[]
+  invitations     Invitation[]
+  subscriptions   Subscription[]
+  auditLogs       AuditLog[]
+    settings CooperativeSettings?
+    confirmedBalanceXAF Int @default(0)   // running balance
+    withdrawalRequests  WithdrawalRequest[]
+}
+ 
+model Membership {
+  id            String    @id @default(cuid())
+  userId        String
+  cooperativeId String
+  role          Role      @default(MEMBER)
+  joinedAt      DateTime  @default(now())
+  user          User      @relation(fields:[userId], references:[id], onDelete: Cascade)
+  cooperative   Cooperative @relation(fields:[cooperativeId], references:[id], onDelete: Cascade)
+  @@unique([userId, cooperativeId])
+}
+ 
+model Invitation {
+  id            String           @id @default(cuid())
+  email         String?
+  token         String           @unique @default(cuid())
+  cooperativeId String
+  type          InvitationType   @default(EMAIL)
+  status        InvitationStatus @default(PENDING)
+  expiresAt     DateTime
+  createdAt     DateTime         @default(now())
+  cooperative   Cooperative      @relation(fields:[cooperativeId], references:[id], onDelete: Cascade)
+}
+ 
+model Contribution {
+  id            String             @id @default(cuid())
+  amountXAF     Int
+  userId        String
+  cooperativeId String
+  txHash        String?
+  blockNumber   Int?
+  status        ContributionStatus @default(PENDING)
+  paymentId     String?            @unique
+  createdAt     DateTime           @default(now())
+  user          User               @relation(fields:[userId], references:[id])
+  cooperative   Cooperative        @relation(fields:[cooperativeId], references:[id])
+  payment       Payment?           @relation(fields:[paymentId], references:[id])
+}
+ 
+model Proposal {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  status        ProposalStatus @default(PENDING)
+  cooperativeId String
+  creatorId     String
+  txHash        String?
+  blockNumber   Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  votes         Vote[]
+  cooperative   Cooperative    @relation(fields:[cooperativeId], references:[id])
+    type              ProposalType    @default(STANDARD)
+    withdrawalRequest WithdrawalRequest?
+}
+ 
+model Vote {
+  id          String   @id @default(cuid())
+  userId      String
+  proposalId  String
+  choice      Boolean
+  txHash      String?
+  blockNumber Int?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields:[userId], references:[id])
+  proposal    Proposal @relation(fields:[proposalId], references:[id])
+  @@unique([userId, proposalId])
+}
+ 
+model LedgerEvent {
+  id            String          @id @default(cuid())
+  type          LedgerEventType
+  payload       Json
+  txHash        String          @unique
+  blockNumber   Int
+  cooperativeId String
+  createdAt     DateTime        @default(now())
+  cooperative   Cooperative     @relation(fields:[cooperativeId], references:[id])
+}
+ 
+model Payment {
+  id              String          @id @default(cuid())
+  amountXAF       Int
+  userId          String
+  cooperativeId   String
+  status          PaymentStatus   @default(PENDING)
+  provider        PaymentProvider @default(CAMPAY)
+  reference       String          @unique
+  idempotencyKey  String          @unique
+  phoneNumber     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  cooperative     Cooperative     @relation(fields:[cooperativeId], references:[id])
+  contribution    Contribution?
+}
+
+model WithdrawalRequest {
+  id                    String                  @id @default(cuid())
+  cooperativeId         String
+  proposalId            String                  @unique
+  amountXAF             Int
+  destinationType       WithdrawalDestinationType
+  recipientPhone        String?
+  recipientOperator     String?                 // MTN or ORANGE
+  recipientBankName     String?
+  recipientBankAccount  String?
+  recipientName         String
+  campayReference       String?
+  status                WithdrawalStatus        @default(PENDING_VOTE)
+  disbursedAt           DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  cooperative           Cooperative             @relation(fields:[cooperativeId], references:[id])
+  proposal              Proposal                @relation(fields:[proposalId], references:[id])
+}
+
+model PlatformSettings {
+  id                        String  @id @default("singleton")
+  withdrawalThresholdDefault Int     @default(60)   // percentage
+  withdrawalThresholdMin    Int     @default(50)
+  withdrawalThresholdMax    Int     @default(90)
+  withdrawalQuorumMinVotes  Int     @default(3)
+  maintenanceMode           Boolean @default(false)
+  platformName              String  @default("CoopEnergie")
+  updatedAt                 DateTime @updatedAt
+  updatedById               String?
+}
+ 
+model CooperativeSettings {
+  id                   String      @id @default(cuid())
+  cooperativeId        String      @unique
+  withdrawalThreshold  Int         @default(60)
+  cooperative          Cooperative @relation(fields:[cooperativeId], references:[id], onDelete:Cascade)
+}
+
+ 
+model Plan {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  priceXAF     Int
+  billingCycle BillingCycle  @default(FREE)
+  features     Json          @default("{}")
+  subscriptions Subscription[]
+}
+ 
+model Subscription {
+  id            String             @id @default(cuid())
+  cooperativeId String
+  planId        String
+  status        SubscriptionStatus @default(ACTIVE)
+  expiresAt     DateTime?
+  createdAt     DateTime           @default(now())
+  cooperative   Cooperative        @relation(fields:[cooperativeId], references:[id])
+  plan          Plan               @relation(fields:[planId], references:[id])
+}
+ 
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  cooperativeId String?
+  action        String
+  entity        String
+  entityId      String?
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields:[userId], references:[id])
+  cooperative   Cooperative? @relation(fields:[cooperativeId], references:[id])
+}
+ 
+model DeviceToken {
+  id        String         @id @default(cuid())
+  userId    String
+  token     String         @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields:[userId], references:[id], onDelete: Cascade)
+}
+ 
+After creating the schema, run:
+  cd apps/backend && bunx prisma generate
+This generates the Prisma client.
+
+Task 1.3  Prisma service and database migration
+  ⬤  COPILOT PROMPT — Task 1.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+PREREQUISITE: Docker must be running with PostgreSQL on port 5432.
+ 
+TASK: Create the Prisma service and run the first database migration.
+ 
+1. Create apps/backend/src/prisma/prisma.service.ts:
+   - Extends PrismaClient
+   - Implements OnModuleInit (calls this.$connect())
+   - Implements OnModuleDestroy (calls this.$disconnect())
+   - Exported as PrismaService
+ 
+2. Create apps/backend/src/prisma/prisma.module.ts:
+   - @Global() module
+   - Provides and exports PrismaService
+ 
+3. Import PrismaModule in apps/backend/src/app.module.ts
+ 
+4. Run the migration:
+   cd apps/backend
+   bunx prisma migrate dev --name init --schema prisma/schema.prisma
+ 
+5. Create apps/backend/src/prisma/seed.ts with realistic seed data:
+   - 3 Users with hashed passwords (use bcryptjs, password: "password123")
+     - Jean-Baptiste Akogo (jean@coopenergie.cm)
+     - Marie-Claire Ndoumbe (marie@coopenergie.cm)
+     - Pierre Essomba (pierre@coopenergie.cm)
+   - 1 Cooperative: "Coopérative Solaire Bonaberi", targetAmountXAF: 850000
+   - 3 Memberships (Jean = COOP_ADMIN, others = MEMBER)
+   - 2 Contributions: 50000 FCFA (Jean, status CONFIRMED) and 35000 (Marie, status CONFIRMED)
+   - 1 Proposal: "Installation panneau Bonaberi Phase 1", status PENDING
+   - 1 FREE Plan
+   - 1 Subscription for the cooperative on FREE plan
+   The seed should use prisma.upsert so it is safe to re-run.
+ 
+6. Run the seed:
+   cd apps/backend && bun run prisma:seed
+
+Task 1.4  Auth module — register, login, JWT
+  ⬤  COPILOT PROMPT — Task 1.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Implement the NestJS auth module with complete registration, login, and JWT.
+ 
+Create in apps/backend/src/modules/auth/:
+ 
+1. auth.module.ts — imports PassportModule, JwtModule (secret from env, expiresIn 7d), AuthService, AuthController, JwtStrategy
+2. auth.service.ts:
+   - register(email, password, name): hash password with bcryptjs (rounds:12), create User, return { user, token }
+   - login(email, password): find user, compare hash, throw UnauthorizedException if wrong, return { user, token }
+   - validateUser(email, password): used by passport strategy
+   - generateToken(userId, email): signs JWT with { sub: userId, email }
+3. auth.controller.ts with prefix /auth:
+   - POST /auth/register → body: { email, password, name }
+   - POST /auth/login → body: { email, password }
+   - GET /auth/me → requires @UseGuards(JwtAuthGuard) → returns req.user
+4. jwt.strategy.ts: extends PassportStrategy, validates JWT payload, returns { userId, email }
+5. jwt-auth.guard.ts: extends AuthGuard('jwt')
+6. Create DTOs: RegisterDto, LoginDto (with class-validator decorators)
+7. Create CurrentUser decorator: extracts req.user from request context
+ 
+Import AuthModule in app.module.ts
+ 
+Test by running: bun run --cwd apps/backend dev (should start without errors)
+
+Task 1.5  Users module
+  ⬤  COPILOT PROMPT — Task 1.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the users NestJS module.
+ 
+Create in apps/backend/src/modules/users/:
+ 
+1. users.module.ts
+2. users.service.ts:
+   - findById(id): returns User without passwordHash
+   - findByEmail(email): returns User with passwordHash (for auth)
+   - updateProfile(id, { name, celoAddress? }): updates user
+   - storeCeloKey(id, encryptedKey): stores encrypted celo private key
+   - addDeviceToken(userId, token, platform): upsert DeviceToken
+   - removeDeviceToken(token): deletes DeviceToken
+3. users.controller.ts with prefix /users:
+   - GET /users/me → @UseGuards(JwtAuthGuard) → returns current user profile
+   - PATCH /users/me → @UseGuards(JwtAuthGuard) → update name
+ 
+Import UsersModule in app.module.ts
+
+Task 1.6  Common guards, decorators, and interceptors
+  ⬤  COPILOT PROMPT — Task 1.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create shared common infrastructure for the NestJS backend.
+ 
+Create in apps/backend/src/common/:
+ 
+1. decorators/current-user.decorator.ts — already created in 1.4, confirm it exists
+2. decorators/roles.decorator.ts — @Roles(Role.COOP_ADMIN) etc.
+3. guards/roles.guard.ts — checks req.user.role against @Roles() metadata
+4. guards/cooperative-scope.guard.ts:
+   - Reads cooperativeId from req.params or req.body
+   - Checks the current user has a Membership in that cooperative
+   - Throws ForbiddenException if not a member
+   - Attaches membership to req.membership (role included)
+5. guards/coop-admin.guard.ts — combines JwtAuthGuard + CooperativeScopeGuard + checks role is COOP_ADMIN
+6. interceptors/audit.interceptor.ts:
+   - After successful requests to mutation endpoints, writes an AuditLog entry
+   - Records: action (method+path), entity (derived from route), userId, cooperativeId
+7. Create apps/backend/src/common/index.ts re-exporting all guards and decorators
+ 
+All guards should be injectable (use @Injectable())
+
+  PHASE 2
+Celo Smart Contracts
+Hardhat · Solidity · CoopFactory · CooperativeVault · GasRelayer · Alfajores testnet
+Phase 2 builds and deploys the three smart contracts that form the trust backbone of CoopEnergie. Users never interact with these contracts directly — the backend relayer does it on their behalf.
+
+You will need a funded Alfajores testnet wallet to deploy. Get free testnet CELO from: https://faucet.celo.org — paste your relayer wallet address and receive test CELO within seconds.
+
+Task 2.1  Hardhat project setup
+  ⬤  COPILOT PROMPT — Task 2.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Set up Hardhat in the contracts/ directory for Celo blockchain development.
+ 
+1. Run from repo root:
+   cd contracts
+   bun init -y
+   bun add -d hardhat @nomicfoundation/hardhat-toolbox @nomicfoundation/hardhat-ethers
+   bun add -d @celo/hardhat-plugin hardhat-celo ethers
+   bun add @openzeppelin/contracts
+ 
+2. Create contracts/hardhat.config.ts:
+   - Import hardhat-celo or configure Celo networks manually
+   - Networks:
+     - hardhat: { chainId: 31337 }
+     - alfajores: {
+         url: "https://alfajores-forno.celo-testnet.org",
+         chainId: 44787,
+         accounts: [process.env.CELO_RELAYER_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001"]
+       }
+     - celo: {
+         url: "https://forno.celo.org",
+         chainId: 42220,
+         accounts: [process.env.CELO_RELAYER_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001"]
+       }
+   - solidity: "0.8.24"
+   - paths: { sources: "./src", tests: "./test", artifacts: "./artifacts" }
+ 
+3. Create contracts/package.json:
+   name: "@coopenergie/contracts"
+   scripts:
+     "compile": "hardhat compile"
+     "test": "hardhat test"
+     "deploy:alfajores": "hardhat run scripts/deploy.ts --network alfajores"
+     "deploy:mainnet": "hardhat run scripts/deploy.ts --network celo"
+ 
+4. Run: cd contracts && bun run compile (may fail if no .sol files yet, that is expected)
+ 
+5. Create contracts/src/.gitkeep to ensure the folder is tracked
+
+Task 2.2  GasRelayer.sol — meta-transaction relayer
+  ⬤  COPILOT PROMPT — Task 2.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the GasRelayer.sol smart contract.
+ 
+Create file: contracts/src/GasRelayer.sol
+ 
+This is an EIP-2771 compatible meta-transaction forwarder.
+ 
+Requirements:
+- Owner-controlled: only the contract owner (the platform relayer wallet) can call execute()
+- Nonce tracking: each user address has a nonce to prevent replay attacks
+- Signature verification: verifies that the meta-transaction was signed by the stated 'from' address
+- Expiry: transactions have a deadline timestamp parameter
+- Whitelist: only whitelisted target contracts (CooperativeVault addresses) can be called
+ 
+Interface:
+struct ForwardRequest {
+  address from;
+  address to;
+  uint256 nonce;
+  uint256 deadline;
+  bytes data;
+}
+ 
+function execute(ForwardRequest calldata req, bytes calldata signature) external returns (bool, bytes memory)
+function getNonce(address from) external view returns (uint256)
+function addWhitelisted(address target) external  // onlyOwner
+function removeWhitelisted(address target) external  // onlyOwner
+ 
+Use OpenZeppelin Ownable and ECDSA for the signature verification.
+ 
+After creating: cd contracts && bun run compile — confirm no Solidity errors.
+
+Task 2.3  CooperativeVault.sol — per-cooperative contract
+  ⬤  COPILOT PROMPT — Task 2.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create CooperativeVault.sol — the core per-cooperative smart contract.
+ 
+Create file: contracts/src/CooperativeVault.sol
+ 
+This contract represents one cooperative. It is deployed per cooperative by CoopFactory.
+ 
+Requirements:
+ 
+State variables:
+- string public cooperativeName
+- uint256 public targetAmountXAF
+- address public admin (cooperative admin)
+- address public relayer (gas relayer address — the only one allowed to call on behalf of users)
+- uint256 public totalContributedXAF
+- mapping(address => uint256) public memberContributions
+- uint256 public proposalCount
+- mapping(uint256 => Proposal) public proposals
+- mapping(uint256 => mapping(address => bool)) public hasVoted
+ 
+Structs:
+struct Proposal { uint256 id; string title; string description; uint256 yesVotes; uint256 noVotes; bool resolved; bool approved; uint256 createdAt; }
+ 
+Events (CRITICAL — these are read by the backend event listener):
+event ContributionMade(address indexed member, uint256 amountXAF, uint256 totalXAF, uint256 timestamp)
+event ProposalCreated(uint256 indexed proposalId, address indexed creator, string title, uint256 timestamp)
+event VoteCast(uint256 indexed proposalId, address indexed voter, bool choice, uint256 yesVotes, uint256 noVotes, uint256 timestamp)
+event ProposalResolved(uint256 indexed proposalId, bool approved, uint256 yesVotes, uint256 noVotes)
+event FundsReleased(address indexed recipient, uint256 amountXAF, uint256 indexed proposalId, uint256 timestamp)
+ 
+Functions:
+- constructor(string memory _name, uint256 _target, address _admin, address _relayer)
+- contribute(address member, uint256 amountXAF) external — only callable by relayer or admin — emits ContributionMade
+- createProposal(address creator, string memory title, string memory description) external — only relayer or admin — emits ProposalCreated
+- vote(address voter, uint256 proposalId, bool choice) external — only relayer or admin — requires !hasVoted[proposalId][voter] — emits VoteCast — auto-resolves if quorum reached (>5 votes and clear majority)
+- releaseFunds(address recipient, uint256 amountXAF, uint256 proposalId) external — only admin — proposal must be APPROVED — emits FundsReleased
+- getProposal(uint256 id) external view returns (Proposal memory)
+- getMemberContribution(address member) external view returns (uint256)
+ 
+After creating: cd contracts && bun run compile — must compile successfully.
+
+Task 2.4  CoopFactory.sol — cooperative deployer
+  ⬤  COPILOT PROMPT — Task 2.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create CoopFactory.sol — the factory that deploys CooperativeVault contracts.
+ 
+Create file: contracts/src/CoopFactory.sol
+ 
+Requirements:
+- Ownable (only the platform can deploy new cooperatives)
+- Tracks all deployed vault addresses
+- The relayer address (set at construction) is passed to each new CooperativeVault
+ 
+State:
+- address public relayer
+- address[] public allVaults
+- mapping(address => bool) public isVault
+ 
+Events:
+event CooperativeDeployed(address indexed vault, string name, address indexed admin, uint256 timestamp)
+ 
+Functions:
+- constructor(address _relayer)
+- deployCooperative(string memory name, uint256 targetAmountXAF, address admin) external onlyOwner returns (address vault)
+  - Creates new CooperativeVault(name, targetAmountXAF, admin, relayer)
+  - Adds to allVaults
+  - Marks isVault[vault] = true
+  - Calls GasRelayer.addWhitelisted(vault) — pass GasRelayer address at construction
+  - Emits CooperativeDeployed
+- getAllVaults() external view returns (address[] memory)
+- getVaultCount() external view returns (uint256)
+ 
+Constructor should take both _relayer (GasRelayer contract address) and store it.
+ 
+After creating: cd contracts && bun run compile — all 3 contracts must compile with 0 errors.
+
+Task 2.5  Contract tests
+  ⬤  COPILOT PROMPT — Task 2.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Write Hardhat tests for all three smart contracts.
+ 
+Create file: contracts/test/CoopEnergie.test.ts
+ 
+Write tests using ethers.js (Hardhat built-in) that cover:
+ 
+GasRelayer:
+- Owner can add whitelisted addresses
+- Non-owner cannot call execute
+- Nonce increments after each valid execution
+ 
+CooperativeVault:
+- Only relayer can call contribute, createProposal, vote
+- contribute emits ContributionMade with correct data
+- createProposal emits ProposalCreated
+- vote emits VoteCast
+- double vote is prevented (should revert)
+- proposal resolves automatically at quorum
+- releaseFunds only works on approved proposal and only by admin
+ 
+CoopFactory:
+- deployCooperative creates a new vault
+- emits CooperativeDeployed
+- isVault[newVault] === true
+- getVaultCount increases
+ 
+Run: cd contracts && bun run test
+All tests must pass.
+
+Task 2.6  Deploy script and Alfajores deployment
+  ⬤  COPILOT PROMPT — Task 2.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the deployment script and deploy to Celo Alfajores testnet.
+ 
+1. Create contracts/scripts/deploy.ts:
+   - Deploys GasRelayer first (owner = deployer wallet)
+   - Deploys CoopFactory with gasRelayer address
+   - Calls gasRelayer.transferOwnership(coopFactory.address) so factory can whitelist vaults
+   - Logs: GasRelayer address, CoopFactory address
+   - Writes deployed addresses to contracts/deployed-addresses.json:
+     { "network": "alfajores", "GasRelayer": "0x...", "CoopFactory": "0x...", "deployedAt": "ISO timestamp" }
+ 
+2. Load CELO_RELAYER_PRIVATE_KEY from process.env (dotenv if needed)
+ 
+3. Run the deployment:
+   cd contracts && bun run deploy:alfajores
+ 
+   NOTE: This requires CELO_RELAYER_PRIVATE_KEY to be set in .env AND the wallet
+   to have Alfajores test CELO. If the key is not set, skip the actual run and
+   just confirm the script is syntactically correct.
+ 
+4. After deployment (or as a fallback), update root .env:
+   - COOP_FACTORY_ADDRESS=<deployed address>
+   - GAS_RELAYER_ADDRESS=<deployed address>
+ 
+   If deployment cannot run (no funded wallet), create a placeholder file
+   contracts/DEPLOY_INSTRUCTIONS.md explaining the manual steps.
+
+  PHASE 3
+Blockchain Service Layer
+viem client · Gas Relayer Service · Vault Service · Event Listener
+Phase 3 wires the NestJS backend to the deployed smart contracts. After this phase, the backend can trigger on-chain transactions and listen for events.
+
+Task 3.1  viem client and contract ABIs
+  ⬤  COPILOT PROMPT — Task 3.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Set up the viem blockchain client and contract ABI loading in the NestJS backend.
+ 
+1. In apps/backend: bun add viem
+ 
+2. Create apps/backend/src/blockchain/blockchain.module.ts — @Global() module that provides all blockchain services
+ 
+3. Create apps/backend/src/blockchain/celo-client.ts:
+   - Creates a viem publicClient for Celo Alfajores (or mainnet based on env)
+   - Creates a viem walletClient using the CELO_RELAYER_PRIVATE_KEY account
+   - Exports both clients
+   - Chain config: alfajores from 'viem/chains' or manual chain config
+     { id: 44787, name: 'Celo Alfajores', nativeCurrency: { name:'CELO', symbol:'CELO', decimals:18 },
+       rpcUrls: { default: { http: [process.env.CELO_RPC_URL] } } }
+ 
+4. Create apps/backend/src/blockchain/abis/:
+   - gas-relayer.abi.ts — export the ABI array from contracts/artifacts/src/GasRelayer.sol/GasRelayer.json
+     (If artifacts don't exist yet, copy the ABI manually from the compiled output or use a minimal ABI with just the functions needed)
+   - cooperative-vault.abi.ts — CooperativeVault ABI
+   - coop-factory.abi.ts — CoopFactory ABI
+ 
+   For each ABI file use: import abi from '../../../contracts/artifacts/src/ContractName.sol/ContractName.json'
+   and export the abi.abi array.
+ 
+5. Create apps/backend/src/blockchain/blockchain.constants.ts:
+   export const FACTORY_ADDRESS = process.env.COOP_FACTORY_ADDRESS as `0x${string}`
+   export const RELAYER_ADDRESS = process.env.GAS_RELAYER_ADDRESS as `0x${string}`
+
+Task 3.2  Relayer service — gas-paid meta-transactions
+  ⬤  COPILOT PROMPT — Task 3.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the RelayerService that executes meta-transactions on Celo on behalf of users.
+ 
+Create apps/backend/src/blockchain/relayer.service.ts:
+ 
+This service takes a target vault address, the user's Celo address, and the calldata,
+then submits it via GasRelayer.execute() using the platform's relayer wallet.
+ 
+Methods:
+1. relayContribute(vaultAddress: string, userAddress: string, amountXAF: number):
+   - Encodes CooperativeVault.contribute(userAddress, amountXAF) calldata
+   - Creates a ForwardRequest signed by the relayer wallet
+   - Calls GasRelayer.execute()
+   - Waits for receipt (waitForTransactionReceipt)
+   - Returns { txHash, blockNumber }
+ 
+2. relayCreateProposal(vaultAddress: string, creatorAddress: string, title: string, description: string):
+   - Same pattern as above for createProposal
+ 
+3. relayVote(vaultAddress: string, voterAddress: string, proposalId: number, choice: boolean):
+   - Same pattern for vote
+ 
+4. private buildForwardRequest(to, from, data) — creates the ForwardRequest struct, gets nonce from GasRelayer
+5. private signAndSubmit(request) — signs with relayer private key, submits to GasRelayer
+6. private withRetry(fn, maxAttempts=3) — retries on gas price spike with exponential backoff
+ 
+NOTE: In the ForwardRequest pattern for this implementation, since the relayer IS the signer
+and we control both sides, simplify by having the backend call the vault directly from
+the relayer wallet (simpler than full EIP-2771 at this stage). The vault's modifier should
+accept calls from the relayer address directly.
+ 
+Make the service injectable: @Injectable()
+
+Task 3.3  Factory service and Vault service
+  ⬤  COPILOT PROMPT — Task 3.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create FactoryService and VaultService for interacting with smart contracts.
+ 
+--- FactoryService (apps/backend/src/blockchain/factory.service.ts) ---
+Methods:
+- deployCooperative(name: string, targetAmountXAF: number, adminAddress: string):
+  - Calls CoopFactory.deployCooperative() via walletClient
+  - Waits for receipt
+  - Reads the CooperativeDeployed event log to get the vault address
+  - Returns { vaultAddress, txHash, celoScanUrl }
+ 
+--- VaultService (apps/backend/src/blockchain/vault.service.ts) ---
+Methods:
+- getTotalContributed(vaultAddress: string): reads totalContributedXAF from contract
+- getMemberContribution(vaultAddress: string, memberAddress: string): reads mapping
+- getProposal(vaultAddress: string, proposalId: number): reads proposal struct
+- getProposalCount(vaultAddress: string): reads proposalCount
+- getVaultBalance(vaultAddress: string): reads native balance via publicClient
+ 
+--- Add all to BlockchainModule providers and exports ---
+
+Task 3.4  Event listener service
+  ⬤  COPILOT PROMPT — Task 3.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the EventListenerService that watches Celo for new contract events
+and records them in the Prisma LedgerEvent table.
+ 
+Create apps/backend/src/blockchain/event-listener.service.ts:
+ 
+Implements OnModuleInit — starts polling when the app boots.
+ 
+Method: startListening()
+- Gets all known vaultAddresses from the Cooperative table (where vaultAddress IS NOT NULL)
+- For each vault, calls watchVaultEvents(vaultAddress)
+ 
+Method: watchVaultEvents(vaultAddress: string)
+- Uses viem publicClient.watchContractEvent() to subscribe to:
+  - ContributionMade → createLedgerEvent(type: CONTRIBUTION, payload: {member, amountXAF, totalXAF}, txHash, blockNumber, cooperativeId)
+  - ProposalCreated → createLedgerEvent(type: PROPOSAL, ...)
+  - VoteCast → createLedgerEvent(type: VOTE, ...) AND update Proposal status in DB
+  - FundsReleased → createLedgerEvent(type: PAYMENT, ...)
+ 
+Method: createLedgerEvent(data) — upserts into LedgerEvent (unique on txHash)
+  Also updates corresponding Contribution/Vote/Proposal records with txHash and blockNumber
+ 
+Method: addVaultToWatch(vaultAddress: string, cooperativeId: string)
+  Called when a new cooperative is created — adds it to the active watchers
+ 
+The service should also emit an event via EventEmitter2 when new events arrive,
+so the GraphQL subscription resolver can push to clients.
+ 
+Add bun add @nestjs/event-emitter to apps/backend first.
+Add EventEmitterModule.forRoot() to AppModule.
+
+  PHASE 4
+REST API Modules
+Cooperatives · Memberships · Contributions · Proposals · Votes
+Phase 4 builds the REST write endpoints. Each action records to the database AND triggers an on-chain transaction via the blockchain services from Phase 3.
+
+Task 4.1  Cooperatives module
+  ⬤  COPILOT PROMPT — Task 4.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the cooperatives NestJS module.
+ 
+Create apps/backend/src/modules/cooperatives/:
+ 
+1. cooperatives.service.ts:
+   - create(userId, { name, targetAmountXAF }):
+     a. Generate slug from name (lowercase, replace spaces with -)
+     b. Create Cooperative in DB (no vaultAddress yet)
+     c. Create Membership for creator as COOP_ADMIN
+     d. Call factoryService.deployCooperative(name, targetAmountXAF, user.celoAddress)
+     e. Update Cooperative with vaultAddress and celoScanUrl
+     f. eventListenerService.addVaultToWatch(vaultAddress, cooperativeId)
+     g. Return cooperative with vaultAddress
+   - findByUser(userId): returns all cooperatives the user is a member of
+   - findById(id, userId): validates membership, returns cooperative with member count
+   - getProgress(id): returns { totalCollected, target, percentage }
+ 
+2. cooperatives.controller.ts (prefix: /cooperatives):
+   - POST / → @UseGuards(JwtAuthGuard) → create
+   - GET / → @UseGuards(JwtAuthGuard) → findByUser
+   - GET /:id → @UseGuards(JwtAuthGuard, CooperativeScopeGuard) → findById
+ 
+3. CreateCooperativeDto: { name: string (min 3, max 100), targetAmountXAF: number (min 10000) }
+ 
+Import CooperativesModule in app.module.ts
+
+Task 4.2  Memberships module
+  ⬤  COPILOT PROMPT — Task 4.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the memberships NestJS module.
+ 
+Create apps/backend/src/modules/memberships/:
+ 
+1. memberships.service.ts:
+   - getMembers(cooperativeId): returns all members with their User data and role
+   - removeMember(cooperativeId, targetUserId, requestingUserId):
+     - Validates requester is COOP_ADMIN
+     - Cannot remove the last COOP_ADMIN
+     - Deletes Membership
+   - changeRole(cooperativeId, targetUserId, newRole, requestingUserId):
+     - Only PLATFORM_ADMIN can set PLATFORM_ADMIN
+     - COOP_ADMIN can promote to COOP_ADMIN
+ 
+2. memberships.controller.ts (prefix: /memberships):
+   - GET /cooperative/:cooperativeId → @UseGuards(JwtAuthGuard, CooperativeScopeGuard) → getMembers
+   - DELETE /cooperative/:cooperativeId/user/:userId → CoopAdminGuard → removeMember
+
+Task 4.3  Contributions module with on-chain recording
+  ⬤  COPILOT PROMPT — Task 4.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the contributions module — the most critical write endpoint.
+ 
+Create apps/backend/src/modules/contributions/:
+ 
+1. contributions.service.ts:
+   - create(userId, cooperativeId, amountXAF):
+     a. Validate cooperative exists and user is a member
+     b. Create Contribution record with status PENDING
+     c. Get cooperative.vaultAddress and user.celoAddress
+     d. If vaultAddress exists: call relayerService.relayContribute(vaultAddress, celoAddress, amountXAF)
+        - On success: update contribution with txHash, blockNumber, status CONFIRMED
+        - On failure: update status to FAILED, throw InternalServerErrorException
+     e. If no vaultAddress (hackathon/demo mode): mark CONFIRMED immediately, generate fake txHash
+     f. Emit 'contribution.created' event via EventEmitter2
+     g. Return contribution with txHash
+   - findByCooperative(cooperativeId, userId): returns all contributions for cooperative
+contributions.service.ts — updated condition
+const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
+const vaultReady = !!cooperative.vaultAddress;
+ 
+if (blockchainEnabled && vaultReady) {
+  // Full on-chain path — calls relayerService.relayContribute()
+} else if (blockchainEnabled && !vaultReady) {
+  // Contract not deployed yet — confirm in DB only, log warning
+  this.logger.warn(`Cooperative ${cooperativeId} has no vault address yet`);
+} else {
+  // Demo/dev mode — instant confirm, placeholder TX hash
+  const fakeTx = `0x${createHash('sha256')`
+    `.update(`${cooperativeId}-${userId}-${amountXAF}-${Date.now()}`)`
+    `.digest('hex').slice(0, 64)}`;`,
+
+ 
+2. contributions.controller.ts (prefix: /contributions):
+   - POST / → @UseGuards(JwtAuthGuard) → body: { cooperativeId, amountXAF }
+   - GET /cooperative/:cooperativeId → @UseGuards(JwtAuthGuard, CooperativeScopeGuard)
+ 
+3. CreateContributionDto: { cooperativeId: string, amountXAF: number (min 100) }
+
+Task 4.4  Proposals module
+  ⬤  COPILOT PROMPT — Task 4.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the proposals module.
+ 
+Create apps/backend/src/modules/proposals/:
+ 
+1. proposals.service.ts:
+   - create(userId, cooperativeId, { title, description }):
+     a. Validate user is COOP_ADMIN or MEMBER (any member can propose per SRS FR-04-1)
+     b. Create Proposal in DB with status PENDING
+     c. Call relayerService.relayCreateProposal(vaultAddress, user.celoAddress, title, description)
+     d. Update Proposal with txHash, blockNumber (on-chain proposalId)
+     e. Return proposal
+   - findByCooperative(cooperativeId, status?): returns proposals with vote counts
+   - computeStatus(proposal): yesVotes > noVotes && total > 0 → APPROVED, else REJECTED (only after quorum)
+updated condition
+const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
+const vaultReady = !!cooperative.vaultAddress;
+ 
+if (blockchainEnabled && vaultReady) {
+  // Full on-chain path — calls relayerService.relayContribute()
+} else if (blockchainEnabled && !vaultReady) {
+  // Contract not deployed yet — confirm in DB only, log warning
+  this.logger.warn(`Cooperative ${cooperativeId} has no vault address yet`);
+} else {
+  // Demo/dev mode — instant confirm, placeholder TX hash
+  const fakeTx = `0x${createHash('sha256')`
+    `.update(`${cooperativeId}-${userId}-${amountXAF}-${Date.now()}`)`
+    `.digest('hex').slice(0, 64)}`;`,
+
+ 
+2. proposals.controller.ts (prefix: /proposals):
+   - POST / → @UseGuards(JwtAuthGuard) → create
+   - GET /cooperative/:cooperativeId → @UseGuards(JwtAuthGuard, CooperativeScopeGuard)
+   - GET /:id → @UseGuards(JwtAuthGuard)
+ 
+3. DTOs: CreateProposalDto { cooperativeId, title (min 5), description (min 10) }
+
+Task 4.5  Votes module
+  ⬤  COPILOT PROMPT — Task 4.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the votes module.
+ 
+Create apps/backend/src/modules/votes/:
+ 
+1. votes.service.ts:
+   - cast(userId, proposalId, choice: boolean):
+     a. Find proposal, validate it exists and status is PENDING
+     b. Check no existing vote from this user (@@unique at DB level, but check first for clear error message)
+     c. Get cooperativeId from proposal, validate user is a member
+     d. Create Vote record
+     e. Call relayerService.relayVote(vaultAddress, user.celoAddress, onChainProposalId, choice)
+     f. Update Vote with txHash, blockNumber
+     g. Recompute proposal status based on total votes
+     h. Emit 'vote.cast' event via EventEmitter2
+     i. Return { vote, updatedProposal }
+   - getByProposal(proposalId): returns all votes
+ updated condition
+const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
+const vaultReady = !!cooperative.vaultAddress;
+ 
+if (blockchainEnabled && vaultReady) {
+  // Full on-chain path — calls relayerService.relayContribute()
+} else if (blockchainEnabled && !vaultReady) {
+  // Contract not deployed yet — confirm in DB only, log warning
+  this.logger.warn(`Cooperative ${cooperativeId} has no vault address yet`);
+} else {
+  // Demo/dev mode — instant confirm, placeholder TX hash
+  const fakeTx = `0x${createHash('sha256')`
+    `.update(`${cooperativeId}-${userId}-${amountXAF}-${Date.now()}`)`
+    `.digest('hex').slice(0, 64)}`;`,
+
+2. votes.controller.ts (prefix: /votes):
+   - POST / → @UseGuards(JwtAuthGuard) → body: { proposalId, choice }
+   - GET /proposal/:proposalId → @UseGuards(JwtAuthGuard)
+ 
+3. CastVoteDto: { proposalId: string, choice: boolean }
+Task 4.6  Withdrawal Governance Service
+   ⬤  COPILOT PROMPT — Task 4.6 
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the withdrawal governance module.
+This handles: withdrawal proposal creation, vote eligibility,
+threshold evaluation, and CamPay disbursement triggering.
+ 
+Create apps/backend/src/modules/withdrawals/withdrawals.module.ts
+Create apps/backend/src/modules/withdrawals/withdrawals.service.ts
+Create apps/backend/src/modules/withdrawals/withdrawals.controller.ts
+Create apps/backend/src/modules/withdrawals/disbursement.service.ts
+ 
+--- withdrawals.service.ts ---
+ 
+Method: createWithdrawalProposal(adminUserId, cooperativeId, dto)
+  dto: { amountXAF, reason, destinationType, recipientPhone?,
+         recipientOperator?, recipientBankName?, recipientBankAccount?,
+         recipientName }
+  a. Validate: user is COOP_ADMIN
+  b. Validate: cooperative.confirmedBalanceXAF >= amountXAF (cannot withdraw more than balance)
+  c. Create Proposal { type: WITHDRAWAL, title: `Retrait: ${amountXAF} FCFA`, description: reason }
+  d. Create WithdrawalRequest linked to the proposal
+  e. Call relayerService.relayCreateProposal() on-chain
+  f. Return { proposal, withdrawalRequest }
+ 
+Method: getEligibleVoters(cooperativeId)
+  Returns members who have at least 1 CONFIRMED contribution in this cooperative.
+  Query: memberships JOIN contributions WHERE cooperativeId AND status=CONFIRMED
+  Returns: array of { userId, amountContributed }
+ 
+Method: evaluateWithdrawalThreshold(proposalId)
+  a. Get the proposal's cooperativeId
+  b. Load CooperativeSettings.withdrawalThreshold (or PlatformSettings.withdrawalThresholdDefault)
+  c. Load quorumMin from PlatformSettings.withdrawalQuorumMinVotes
+  d. Count eligible voters via getEligibleVoters()
+  e. Count YES votes from eligible voters only:
+     SELECT count(*) FROM votes WHERE proposalId AND choice=true
+     AND userId IN (SELECT userId FROM eligible voters)
+  f. Count NO votes from eligible voters
+  g. totalEligibleVoted = yesVotes + noVotes
+  h. If totalEligibleVoted < quorumMin: return { approved: false, reason: "quorum not reached" }
+  i. yesPercent = (yesVotes / eligibleVoterCount) * 100
+  j. If yesPercent >= threshold: return { approved: true, yesPercent }
+  k. Else: check if it is mathematically impossible to reach threshold (remaining voters cannot change outcome)
+     If so: return { approved: false, resolved: true }
+  l. Else: return { approved: false, resolved: false } — still collecting votes
+ 
+Method: processWithdrawalOnVote(proposalId)
+  Called after every vote on a WITHDRAWAL proposal:
+  a. Call evaluateWithdrawalThreshold()
+  b. If approved: update Proposal to APPROVED, WithdrawalRequest to APPROVED
+     Then: call disbursementService.disburse(withdrawalRequestId)
+  c. If resolved but not approved: update to REJECTED
+ 
+--- disbursement.service.ts ---
+ 
+Method: disburse(withdrawalRequestId)
+  a. Load WithdrawalRequest with cooperative
+  b. Update status to DISBURSING
+  c. Generate reference: `COOP-WD-${cooperativeId.slice(0,8)}-${Date.now()}`
+  d. Call CamPay Transfer API:
+     POST ${CAMPAY_BASE_URL}/transfer/
+     Headers: Authorization: Token ${CAMPAY_TRANSFER_API_KEY}
+     Body (for MoMo):
+     {
+       "amount": withdrawalRequest.amountXAF.toString(),
+       "currency": "XAF",
+       "to": withdrawalRequest.recipientPhone,
+       "operator": withdrawalRequest.recipientOperator,  // "MTN" or "ORANGE"
+       "description": `Retrait coopérative ${cooperative.name}`,
+       "external_reference": reference
+     }
+  e. On CamPay success:
+     - Update WithdrawalRequest: status=DISBURSED, campayReference, disbursedAt
+     - Decrement cooperative.confirmedBalanceXAF by amountXAF
+     - Call relayerService.relayFundsReleased() on-chain (if BLOCKCHAIN_ENABLED)
+     - Write AuditLog
+     - Publish GraphQL event: withdrawal.disbursed
+  f. On CamPay failure:
+     - Update status=FAILED, failureReason=campayError
+     - Revert Proposal status to PENDING (allow retry vote)
+     - Notify cooperative admin via email
+ 
+Handle CamPay withdrawal webhook too:
+POST /withdrawals/webhook — same signature validation as payment webhook
+Updates withdrawal status based on CamPay async transfer confirmation.
+ 
+--- withdrawals.controller.ts ---
+POST /withdrawals/propose → @UseGuards(JwtAuthGuard) → createWithdrawalProposal
+GET /withdrawals/cooperative/:cooperativeId → @UseGuards(JwtAuthGuard, CooperativeScopeGuard)
+POST /withdrawals/webhook → CamPay signature validation only
+ 
+IMPORTANT: Update votes.service.ts:
+After processing a vote, check if the proposal type === WITHDRAWAL.
+If yes: also call withdrawalsService.processWithdrawalOnVote(proposalId)
+ 
+Import WithdrawalsModule in app.module.ts
+
+Task 4.7 Platform Settings Service
+  ⬤  COPILOT PROMPT — Task 4.7
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the platform settings service and admin endpoints for
+managing withdrawal thresholds.
+ 
+Create apps/backend/src/modules/platform-settings/platform-settings.service.ts
+ 
+Methods:
+ 
+getSettings():
+  Return PlatformSettings record (create with defaults if not exists):
+  prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" }
+  })
+ 
+updateSettings(adminUserId, dto):
+  dto: { withdrawalThresholdDefault?, withdrawalThresholdMin?,
+         withdrawalThresholdMax?, withdrawalQuorumMinVotes?, maintenanceMode? }
+  Validate: thresholdMin <= thresholdDefault <= thresholdMax
+  Validate: quorumMinVotes >= 1
+  Update PlatformSettings
+  Write AuditLog: action="UPDATE_PLATFORM_SETTINGS"
+ 
+getCooperativeThreshold(cooperativeId):
+  Load CooperativeSettings.withdrawalThreshold (or create from platform default)
+  Return: { threshold, source: "cooperative" | "platform_default" }
+ 
+setCooperativeThreshold(adminUserId, cooperativeId, threshold):
+  Validate: threshold >= platformSettings.withdrawalThresholdMin
+  Validate: threshold <= platformSettings.withdrawalThresholdMax
+  Upsert CooperativeSettings { cooperativeId, withdrawalThreshold: threshold }
+  Write AuditLog
+ 
+Add to admin.controller.ts (prefix /admin):
+  GET /admin/settings → getSettings() — PLATFORM_ADMIN only
+  PATCH /admin/settings → updateSettings() — PLATFORM_ADMIN only
+ 
+Add to cooperatives.controller.ts:
+  GET /cooperatives/:id/settings → getCooperativeThreshold() — COOP_ADMIN or PLATFORM_ADMIN
+  PATCH /cooperatives/:id/settings → setCooperativeThreshold() — COOP_ADMIN
+ 
+Import PlatformSettingsModule in app.module.ts
+
+  PHASE 5
+Invitation System
+Email invitations · Shareable link invitations · Token accept flow · Revocation
+Task 5.1  Invitations module — email + link + accept + revoke
+  ⬤  COPILOT PROMPT — Task 5.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the invitation system with real Nodemailer email sending.
+ 
+1. In apps/backend: bun add nodemailer && bun add -d @types/nodemailer
+ 
+2. Create apps/backend/src/mail/mail.service.ts:
+ 
+   Uses Nodemailer with config from env:
+   const transporter = nodemailer.createTransport({
+     host: process.env.SMTP_HOST,
+     port: parseInt(process.env.SMTP_PORT || "587"),
+     secure: process.env.SMTP_SECURE === "true",
+     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+   })
+ 
+   Method: sendInvitationEmail(to, cooperativeName, joinUrl, locale):
+   Sends a bilingual email (based on locale param) with:
+   - Subject (FR): "Vous êtes invité(e) à rejoindre ${cooperativeName}"
+   - Subject (EN): "You are invited to join ${cooperativeName}"
+   - HTML body (professional, green-themed, mobile-friendly):
+     * CoopEnergie logo text header
+     * Cooperative name highlighted
+     * "Join now" button linking to joinUrl
+     * Expiry notice: "This link expires in 72 hours"
+     * Footer: "CoopEnergie — Transparent Solar Cooperatives"
+   - Text fallback for email clients that block HTML
+   - Returns: { messageId } on success
+ 
+   Method: sendWithdrawalApprovalNotification(adminEmail, cooperativeName, amount, txHash):
+   Sends email to cooperative admin confirming withdrawal was disbursed:
+   - Amount in FCFA
+   - TX hash with celoscan.io link
+ 
+   Method: sendWithdrawalFailureNotification(adminEmail, cooperativeName, amount, reason):
+   Sends email notifying that disbursement failed with the reason.
+ 
+   Method: sendVoteNotification(memberEmails, cooperativeName, proposalTitle):
+   Sends bulk notification to all members when a new vote-able proposal is created.
+ 
+   All methods: wrap in try/catch. Log errors but never throw — email failure should
+   never break the core action flow.
+ 
+3. Create apps/backend/src/mail/mail.module.ts:
+   @Global() module providing and exporting MailService.
+ 
+4. Import MailModule in app.module.ts
+ 
+5. Create apps/backend/src/mail/templates/ with HTML template strings:
+   invitation.template.ts — exports buildInvitationHtml(cooperativeName, joinUrl, locale)
+   withdrawal.template.ts — exports buildWithdrawalHtml(cooperativeName, amount, txHash)
+   The HTML should be inline (no external files) — simple table-based layout,
+   green (#1B5E20) primary color, safe for all email clients.
+ 
+6. Update invitations.service.ts:
+ 
+   sendEmailInvite(adminUserId, cooperativeId, email, locale="fr"):
+   - Validate admin is COOP_ADMIN
+   - Create Invitation { email, cooperativeId, type: EMAIL, status: PENDING, expiresAt: now+72h }
+   - Build joinUrl: `${process.env.APP_URL}/${locale}/join/${invitation.token}`
+   - Call mailService.sendInvitationEmail(email, cooperative.name, joinUrl, locale)
+   - Log result (success or failure) — do not throw on email error
+   - Return { invitation, joinUrl, emailSent: boolean }
+ 
+   createShareableLink(adminUserId, cooperativeId, locale="fr"):
+   - Create Invitation { cooperativeId, type: LINK, status: PENDING, expiresAt: now+72h }
+   - Return { token, joinUrl: `${process.env.APP_URL}/${locale}/join/${invitation.token}` }
+   - Note: no email sent — admin copies and shares the URL themselves
+ 
+   acceptInvitation(token, userId):
+   - Find invitation by token
+   - Validate: exists, PENDING, not expired
+   - Check user not already a member
+   - Create Membership(userId, cooperativeId, MEMBER)
+   - Mark ACCEPTED
+   - Return { cooperative, membership }
+ 
+   revokeInvitation(adminUserId, invitationId):
+   - Validate admin is COOP_ADMIN
+   - Mark REVOKED
+ 
+   getPendingInvitations(cooperativeId): returns PENDING invitations
+ 
+Controller (prefix /invitations):
+  POST /email → body: { cooperativeId, email, locale? }
+  POST /link → body: { cooperativeId, locale? }
+  POST /accept → body: { token }
+  DELETE /:id → revoke
+  GET /cooperative/:cooperativeId → list pending
+  PHASE 6
+GraphQL Layer
+Apollo Server · Schema · All resolvers · PubSub subscriptions · Real-time
+Phase 6 adds the GraphQL read layer on top of the existing NestJS modules. REST handles all writes; GraphQL handles all reads and real-time subscriptions.
+
+Task 6.1  Apollo Server and GraphQL module setup
+  ⬤  COPILOT PROMPT — Task 6.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Configure Apollo Server with GraphQL subscriptions in the NestJS backend.
+ 
+1. In apps/backend: bun add graphql-subscriptions graphql-ws ws
+ 
+2. Update apps/backend/src/app.module.ts to import GraphQLModule:
+   GraphQLModule.forRoot<ApolloDriverConfig>({
+     driver: ApolloDriver,
+     autoSchemaFile: true,        // code-first approach
+     subscriptions: {
+       'graphql-ws': true,
+       'subscriptions-transport-ws': true
+     },
+     playground: true,
+     context: ({ req }) => ({ req }),
+   })
+ 
+3. Create apps/backend/src/graphql/pubsub.module.ts:
+   - @Global() module
+   - Provides PubSub from graphql-subscriptions as PUBSUB injection token
+   - Exports PUBSUB token
+ 
+4. Import PubSubModule in app.module.ts
+ 
+5. Define base GraphQL types in apps/backend/src/graphql/types/:
+ 
+   Create cooperative.type.ts with @ObjectType():
+   - CooperativeType: id, name, slug, targetAmountXAF, vaultAddress, celoScanUrl, createdAt
+   - Extended with computed fields: progress (Float), totalCollected (Int), memberCount (Int)
+ 
+   Create contribution.type.ts:
+   - ContributionType: id, amountXAF, txHash, blockNumber, status, createdAt, userName
+ 
+   Create proposal.type.ts:
+   - ProposalType: id, title, description, status, txHash, yesVotes, noVotes, createdAt
+ 
+   Create vote.type.ts:
+   - VoteType: id, choice, txHash, blockNumber, createdAt, userName
+ 
+   Create ledger-event.type.ts:
+   - LedgerEventType: id, type, payload (GraphQL JSON scalar), txHash, blockNumber, celoScanUrl, createdAt
+ 
+   Create member.type.ts:
+   - MemberType: id, name, email, role, joinedAt, totalContributed
+ 
+6. Install graphql-scalars for JSON scalar: bun add graphql-scalars
+   Register GraphQLJSON scalar in app module
+
+Task 6.2  GraphQL resolvers — all queries
+  ⬤  COPILOT PROMPT — Task 6.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create all GraphQL query resolvers.
+ 
+Create apps/backend/src/graphql/resolvers/:
+ 
+1. cooperative.resolver.ts — @Resolver(CooperativeType):
+   - @Query(() => [CooperativeType]) myCooperatives(@CurrentUser() user): list user cooperatives
+   - @Query(() => CooperativeType) cooperative(@Args('id') id: string, @CurrentUser() user): single cooperative
+   - @ResolveField('progress') progress(@Parent() coop): (totalCollected/targetAmount)*100
+   - @ResolveField('totalCollected') totalCollected(@Parent() coop): sum of CONFIRMED contributions
+   - @ResolveField('memberCount') memberCount(@Parent() coop): count memberships
+   - @ResolveField('members') members(@Parent() coop): [MemberType] — member list with roles
+   - @ResolveField('recentActivity') recentActivity(@Parent() coop): last 10 ledger events
+ 
+2. contribution.resolver.ts — @Resolver(ContributionType):
+   - @Query(() => [ContributionType]) contributions(@Args('cooperativeId') cooperativeId: string, @CurrentUser() user)
+ 
+3. proposal.resolver.ts — @Resolver(ProposalType):
+   - @Query(() => [ProposalType]) proposals(@Args('cooperativeId') cooperativeId: string, @Args('status', { nullable: true }) status: string, @CurrentUser() user)
+   - @Query(() => ProposalType) proposal(@Args('id') id: string, @CurrentUser() user)
+   - @ResolveField('yesVotes') yesVotes(@Parent() proposal): count yes votes
+   - @ResolveField('noVotes') noVotes(@Parent() proposal): count no votes
+ 
+4. ledger.resolver.ts — @Resolver():
+   - @Query(() => [LedgerEventType]) ledger(@Args('cooperativeId') cooperativeId, @Args('type', { nullable:true }) type, @Args('limit', { nullable:true }) limit, @Args('offset', { nullable:true }) offset, @CurrentUser() user)
+   - Add celoScanUrl computed field: `${CELOSCAN_BASE}/tx/${event.txHash}`
+ 
+5. report.resolver.ts — @Resolver():
+   - @Query(() => ReportType) report(@Args('cooperativeId') cooperativeId, @CurrentUser() user)
+   - ReportType: cooperative name, wallet address, totalCollected, targetAmount, completionPercent, estimatedMonthsToGoal (based on avg monthly contributions), totalProposals, approvedProposals, rejectedProposals, generatedAt
+ 
+All resolvers must use @UseGuards(GqlJwtAuthGuard) — create a GqlJwtAuthGuard that works with GraphQL context (not HTTP request).
+ 
+Create apps/backend/src/auth/gql-jwt.guard.ts that extends AuthGuard('jwt') and overrides getRequest() to use context.req
+
+Task 6.3  GraphQL subscriptions
+  ⬤  COPILOT PROMPT — Task 6.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create GraphQL subscription resolvers for real-time events.
+ 
+Create apps/backend/src/graphql/resolvers/subscription.resolver.ts:
+ 
+Inject the PubSub instance using @Inject(PUBSUB).
+ 
+Subscriptions:
+ 
+1. onContribution(cooperativeId: string): Subscription<ContributionType>
+   - asyncIterator: `contribution.created.${cooperativeId}`
+   - filter: event.cooperativeId === cooperativeId
+ 
+2. onVote(cooperativeId: string): Subscription — wraps VoteType + updated proposal
+   - asyncIterator: `vote.cast.${cooperativeId}`
+ 
+3. onProposal(cooperativeId: string): Subscription<ProposalType>
+   - asyncIterator: `proposal.created.${cooperativeId}`
+ 
+4. onPayment(cooperativeId: string): Subscription
+   - asyncIterator: `payment.updated.${cooperativeId}`
+ 
+Update contributions.service.ts to publish:
+  pubSub.publish(`contribution.created.${cooperativeId}`, { onContribution: contribution })
+ 
+Update votes.service.ts to publish:
+  pubSub.publish(`vote.cast.${cooperativeId}`, { onVote: { vote, proposal } })
+ 
+Update proposals.service.ts to publish:
+  pubSub.publish(`proposal.created.${cooperativeId}`, { onProposal: proposal })
+Task 6.4 GraphQL Withdrawal Types & Resolvers
+  ⬤  COPILOT PROMPT — Task 6.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add GraphQL types and resolvers for withdrawals and platform settings.
+ 
+1. Create apps/backend/src/graphql/types/withdrawal.type.ts:
+   @ObjectType() WithdrawalRequestType:
+   id, amountXAF, destinationType, recipientName, status, disbursedAt,
+   campayReference, createdAt
+   celoTxUrl (computed: celoscan link if txHash exists)
+ 
+   @ObjectType() PlatformSettingsType:
+   withdrawalThresholdDefault, withdrawalThresholdMin, withdrawalThresholdMax,
+   withdrawalQuorumMinVotes, maintenanceMode
+ 
+   @ObjectType() CooperativeSettingsType:
+   cooperativeId, withdrawalThreshold
+ 
+   @ObjectType() WithdrawalEligibilityType:
+   canVote (boolean), reason (string), eligibleVoterCount (int),
+   currentYesVotes (int), currentNoVotes (int), threshold (int),
+   yesPercent (float), quorumReached (boolean)
+ 
+2. Add to proposal.type.ts:
+   type: String (STANDARD | WITHDRAWAL)
+   withdrawalRequest: WithdrawalRequestType (nullable)
+ 
+3. Create apps/backend/src/graphql/resolvers/withdrawal.resolver.ts:
+ 
+   @Query(() => [WithdrawalRequestType])
+   withdrawals(@Args("cooperativeId") cooperativeId, @CurrentUser() user):
+   Returns all withdrawal requests for a cooperative
+ 
+   @Query(() => WithdrawalEligibilityType)
+   withdrawalEligibility(@Args("proposalId") proposalId, @CurrentUser() user):
+   Returns current vote tally for a withdrawal proposal including threshold check
+ 
+   @Query(() => PlatformSettingsType)
+   platformSettings():  # PLATFORM_ADMIN only
+   Returns current platform settings
+ 
+   @Query(() => CooperativeSettingsType)
+   cooperativeSettings(@Args("cooperativeId") cooperativeId, @CurrentUser() user):
+   Returns threshold setting for a specific cooperative
+ 
+4. Add withdrawal subscription:
+   @Subscription(() => WithdrawalRequestType)
+   onWithdrawal(@Args("cooperativeId") cooperativeId):
+   asyncIterator: `withdrawal.disbursed.${cooperativeId}`
+ 
+5. Update disbursement.service.ts to publish:
+   pubSub.publish(`withdrawal.disbursed.${cooperativeId}`, { onWithdrawal: withdrawalRequest })
+
+  PHASE 7
+CamPay Payment Integration
+MTN / Orange Mobile Money · Webhook · On-chain trigger · Idempotency
+Task 7.1  Payments module — full CamPay integration
+  ⬤  COPILOT PROMPT — Task 7.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the complete CamPay Mobile Money payment integration.
+ 
+Create apps/backend/src/modules/payments/:
+ 
+1. campay.service.ts — wrapper around CamPay API:
+   - initiatePayment(amount: number, currency: string, from: string, description: string, externalRef: string):
+     - POST to ${CAMPAY_BASE_URL}/collect/
+     - Headers: Authorization: Token ${CAMPAY_API_KEY}
+     - Body: { amount, currency: 'XAF', from (phone), description, external_reference: externalRef }
+     - Returns CamPay response with status and reference
+   - checkStatus(reference: string): GET ${CAMPAY_BASE_URL}/transaction/${reference}/
+   - verifyWebhookSignature(payload: string, signature: string): HMAC-SHA256 validation
+ 
+2. payments.service.ts:
+   - initiate(userId, cooperativeId, amountXAF, phoneNumber):
+     a. Generate idempotencyKey: uuid
+     b. Generate reference: `COOP-${cooperativeId.slice(0,8)}-${Date.now()}`
+     c. Create Payment record (status PENDING)
+     d. Call campayService.initiatePayment()
+     e. Return { paymentId, reference, status: 'PENDING', message: 'Confirm on your phone' }
+ 
+   - handleWebhook(payload, signature):
+     a. Verify signature — throw if invalid
+     b. Find Payment by reference
+     c. If already SUCCESS: return (idempotent)
+     d. If CamPay status === 'SUCCESSFUL':
+        - Update Payment status to SUCCESS
+        - Call contributionsService.create() with paymentId
+        - Publish payment.updated event
+     e. If CamPay status === 'FAILED': update Payment to FAILED, publish event
+ 
+3. payments.controller.ts (prefix: /payments):
+   - POST /initiate → @UseGuards(JwtAuthGuard) → body: { cooperativeId, amountXAF, phoneNumber }
+   - POST /webhook → NO auth guard — uses signature validation only
+     Note: webhook endpoint is NOT under /api/v1 prefix — use @Controller('payments/webhook') with raw body
+ 
+4. Add raw body middleware for webhook route in main.ts:
+   app.use('/payments/webhook', express.raw({ type: 'application/json' }))
+
+  PHASE 8
+Ledger + Reports + CSV
+Ledger module · Report generation · CSV export endpoint
+Task 8.1  Ledger module and admin module
+  ⬤  COPILOT PROMPT — Task 8.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the ledger module and admin module.
+ 
+--- LEDGER MODULE (apps/backend/src/modules/ledger/) ---
+ 
+ledger.service.ts:
+- findByCooperative(cooperativeId, { type?, limit?, offset? }):
+  Returns LedgerEvents filtered by cooperative, optionally filtered by type
+  Adds celoScanUrl to each event: `${process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://alfajores.celoscan.io'}/tx/${event.txHash}`
+- getStats(cooperativeId): returns { totalTransactions, blockCount (distinct blockNumbers), verifiedCount (all), modificationsCount: 0 }
+ 
+No REST controller — all queries via GraphQL (already handled by ledger.resolver.ts from Phase 6).
+ 
+--- ADMIN MODULE (apps/backend/src/modules/admin/) ---
+ 
+admin.service.ts:
+- getPlatformMetrics(): { totalCooperatives, totalUsers, totalContributionsXAF, totalPayments, activeSubscriptions }
+- getAllCooperatives(page, limit): paginated list for platform admin
+- suspendUser(userId): sets a suspended flag (add suspended: Boolean @default(false) to User model if not present, run migration)
+ 
+admin.controller.ts (prefix: /admin):
+- GET /metrics → @UseGuards(JwtAuthGuard, PlatformAdminGuard)
+- GET /cooperatives → @UseGuards(JwtAuthGuard, PlatformAdminGuard)
+ 
+Create PlatformAdminGuard: checks req.user is PLATFORM_ADMIN
+
+Task 8.2  CSV report export endpoint
+  ⬤  COPILOT PROMPT — Task 8.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the CSV report export endpoint.
+ 
+Add to apps/backend/src/modules/reports/:
+ 
+reports.service.ts:
+- generateReport(cooperativeId, userId, locale: 'fr'|'en' = 'fr'):
+  Returns a structured report object with all financial and governance data
+ 
+- generateCsv(cooperativeId, userId, locale):
+  Builds a UTF-8 BOM CSV string with this structure:
+  
+  Row 1-5: Metadata section
+  Section,Catégorie/Category,Indicateur/Metric,Valeur/Value,Unité/Unit,Notes
+  Métadonnées,Coopérative,Nom,[cooperative.name],,
+  Métadonnées,Rapport,Date générée,[ISO date],,
+  Métadonnées,Blockchain,Adresse portefeuille,[cooperative.vaultAddress],CeloScan,[celoScanUrl]
+  Métadonnées,Langue,Locale,[locale],,
+  
+  Then financial rows and governance rows (localized based on locale param)
+  
+  Include UTF-8 BOM: '﻿' at start of string
+ 
+reports.controller.ts (prefix: /reports):
+- GET /cooperative/:cooperativeId/csv?locale=fr → @UseGuards(JwtAuthGuard, CooperativeScopeGuard)
+  - Sets response headers: Content-Type: text/csv; charset=utf-8, Content-Disposition: attachment; filename=coopenergie-rapport-YYYY-MM-DD.csv
+  - Returns the CSV string
+ 
+Import ReportsModule in app.module.ts
+
+  PHASE 9
+Web App Integration
+Replace mock data · Auth.js → NestJS · Apollo Client · All pages wired
+Phase 9 connects the existing apps/web frontend to the real backend. All mock data in lib/mock/ is replaced by API calls. The UI stays exactly the same — only the data layer changes.
+
+Start with the backend running (bun run dev:api) before testing the web integration. The backend must be seeded (bun run db:seed) first.
+
+Task 9.1  Install dependencies and setup Apollo Client
+  ⬤  COPILOT PROMPT — Task 9.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Set up Apollo Client and real auth dependencies in apps/web.
+ 
+1. Run in apps/web:
+   bun add @apollo/client graphql graphql-ws
+   bun add next-auth@latest
+   bun add qrcode.react
+   bun add -d @types/qrcode.react
+ 
+2. Create apps/web/lib/apollo/client.ts:
+   - ApolloClient with InMemoryCache
+   - httpLink pointing to GRAPHQL_URL
+   - wsLink for subscriptions using graphql-ws
+   - splitLink: subscriptions go over wsLink, queries/mutations over httpLink
+   - Export: apolloClient (singleton)
+ 
+3. Create apps/web/lib/apollo/provider.tsx:
+   - ApolloProvider wrapping children with the apolloClient
+   - Must be a Client Component ('use client')
+ 
+4. Wrap the root layout (apps/web/app/layout.tsx) with ApolloProvider
+ 
+5. Create apps/web/lib/auth.ts — Auth.js configuration:
+   - CredentialsProvider that calls POST ${API_URL}/api/v1/auth/login
+   - On success: stores { user, token } in session
+   - session.user includes: id, email, name, token (JWT for backend calls)
+   - Export: authOptions, { handlers, auth, signIn, signOut } from NextAuth(authOptions)
+ 
+6. Create apps/web/app/api/auth/[...nextauth]/route.ts exporting { GET, POST } from handlers
+ 
+7. Create apps/web/lib/apollo/authenticated-client.ts:
+   - Creates an Apollo Client that injects the JWT token from the session into every request
+   - Used in server components for authenticated queries
+   - Uses session from next-auth for the token
+
+Task 9.2  Replace mock auth with real Auth.js
+  ⬤  COPILOT PROMPT — Task 9.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace the mock authentication system with real Auth.js credentials.
+ 
+1. Update apps/web/app/[locale]/(marketing)/login/page.tsx (or wherever the login page is):
+   - Remove mock user selector dropdown
+   - Add proper email + password form fields
+   - On submit: call signIn('credentials', { email, password, redirect: false })
+   - Show error toast if signIn returns error
+   - On success: router.push('/${locale}/dashboard')
+   - Remove demo credentials displayed: jean@coopenergie.cm / password123
+ 
+2. Update the dashboard layout:
+   - Use session from next-auth (useSession or getServerSession) to check authentication
+   - If no session: redirect to /login
+   - Display actual user name from session (not mock data)
+ 
+3. Update Navbar:
+   - Show real user name from session
+   - Add sign out button that calls signOut({ callbackUrl: '/login' })
+   - Remove any mock user state
+ 
+4. Delete or archive (rename to .bak) the following mock files:
+   - apps/web/lib/mock/data.ts → apps/web/lib/mock/data.ts.bak
+   - apps/web/lib/mock/blockchain.ts → apps/web/lib/mock/blockchain.ts.bak
+   - apps/web/lib/mock/auth.ts → apps/web/lib/mock/auth.ts.bak (if exists)
+ 
+   Do NOT delete them outright — rename so they can be referenced.
+ 
+5. Create apps/web/lib/rest-client.ts:
+   A typed fetch wrapper that:
+   - Reads the JWT from session
+   - Sets Authorization: Bearer ${token} header
+   - Sets Content-Type: application/json
+   - Parses response and throws on error
+   Exports: restClient.post(path, body), restClient.get(path)
+
+Task 9.3  Wire dashboard overview to GraphQL
+  ⬤  COPILOT PROMPT — Task 9.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace the mock dashboard overview with real GraphQL data.
+ 
+1. Create apps/web/lib/graphql/queries/cooperative.ts:
+   Define all GraphQL queries for cooperatives using gql tag:
+   - GET_MY_COOPERATIVES
+   - GET_COOPERATIVE_DETAIL (with progress, totalCollected, members, recentActivity)
+   - GET_COOPERATIVE_REPORT
+ 
+2. Create apps/web/lib/graphql/subscriptions/cooperative.ts:
+   - SUBSCRIPTION_ON_CONTRIBUTION
+   - SUBSCRIPTION_ON_VOTE
+   - SUBSCRIPTION_ON_PROPOSAL
+ 
+3. Update the dashboard overview page (apps/web/app/[locale]/(dashboard)/dashboard/page.tsx):
+   - Remove all mock data imports
+   - Use useQuery(GET_COOPERATIVE_DETAIL, { variables: { id: cooperativeId } })
+   - Derive cooperativeId from session (or from first cooperative in user list)
+   - Wire real data to: cooperative name, targetAmount, totalCollected, progress %, member count
+   - Wire recentActivity to the activity feed
+   - Display vaultAddress with link to celoscan.io
+   - Add QR code for vaultAddress using qrcode.react
+   - Use useSubscription for live updates on new contributions/votes
+   - Keep all existing UI components — only change the data source
+
+Task 9.4  Wire contributions page to REST + GraphQL
+  ⬤  COPILOT PROMPT — Task 9.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace contributions mock data with real API calls.
+ 
+1. Create apps/web/lib/graphql/queries/contributions.ts:
+   - GET_CONTRIBUTIONS query
+ 
+2. Update the contributions page (apps/web/app/[locale]/(dashboard)/dashboard/contributions/page.tsx):
+   - Remove all mock data and mock functions
+   - Use useQuery(GET_CONTRIBUTIONS, { variables: { cooperativeId } }) for the list
+   - Display: member name, amount (FCFA formatted), TX hash (truncated with copy + celoscan link), date
+   - For the "Add Contribution" form submit:
+     a. Call restClient.post('/contributions', { cooperativeId, amountXAF: amount })
+     b. Show pending state in button
+     c. On success: show toast with TX hash, refetch contributions query
+     d. On error: show error toast
+   - Remove user selector — use logged-in user automatically
+   - Subscription: useSubscription(SUBSCRIPTION_ON_CONTRIBUTION) to auto-refresh list
+
+Task 9.5  Wire proposals and voting to real API
+  ⬤  COPILOT PROMPT — Task 9.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace proposals and voting mock data with real API calls.
+ 
+1. Create apps/web/lib/graphql/queries/proposals.ts:
+   - GET_PROPOSALS query
+ 
+2. Update the proposals page (apps/web/app/[locale]/(dashboard)/dashboard/proposals/page.tsx):
+   - Remove all mock data
+   - Use useQuery(GET_PROPOSALS, { variables: { cooperativeId } })
+   - Display: title, description, status, yesVotes, noVotes, TX hash with celoscan link
+   - Vote YES button: POST /votes { proposalId, choice: true } via restClient
+   - Vote NO button: POST /votes { proposalId, choice: false } via restClient
+   - After vote: show toast with TX hash, refetch proposals
+   - Create Proposal form: POST /proposals { cooperativeId, title, description } via restClient
+   - Disable vote buttons for proposals the user already voted on (check from proposal data)
+   - Use useSubscription(SUBSCRIPTION_ON_VOTE) for live vote count updates
+
+Task 9.6  Wire ledger page to real blockchain data
+  ⬤  COPILOT PROMPT — Task 9.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace the simulated ledger with real on-chain data.
+ 
+1. Create apps/web/lib/graphql/queries/ledger.ts:
+   - GET_LEDGER query with variables: cooperativeId, type (optional), limit, offset
+ 
+2. Update the ledger page (apps/web/app/[locale]/(dashboard)/dashboard/ledger/page.tsx):
+   - Remove all mock blockchain data
+   - Use useQuery(GET_LEDGER, { variables: { cooperativeId } })
+   - Display community wallet address at the top with:
+     - Full address
+     - Copy button
+     - QR code (qrcode.react)
+     - "Verify on CeloScan" link opening celoscan.io/address/{vaultAddress}
+   - For each ledger entry:
+     - Event type badge
+     - Real timestamp
+     - Payload summary
+     - TX hash (truncated) with copy button
+     - "Verified on Celo" badge linking to celoscan.io/tx/{txHash}
+     - Real block number
+   - Filter buttons use the 'type' variable in the GraphQL query
+   - Add "How to verify on CeloScan" expandable section with step-by-step instructions
+   - Stats footer: real totalTransactions, blockCount, all verified (always true), modifications = 0
+
+Task 9.7  Wire report page with real data and CSV download
+  ⬤  COPILOT PROMPT — Task 9.7
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Replace the report mock data with real GraphQL data and real CSV download.
+ 
+1. Create apps/web/lib/graphql/queries/report.ts:
+   - GET_REPORT query
+ 
+2. Update the report page (apps/web/app/[locale]/(dashboard)/dashboard/report/page.tsx):
+   - Remove all mock report data
+   - Use useQuery(GET_REPORT, { variables: { cooperativeId } })
+   - Display: cooperative name, wallet address with celoscan link, totalCollected, targetAmount, 
+     completionPercent, estimatedMonthsToGoal, approvedProposals, rejectedProposals, generatedAt
+   - "Download Report" button:
+     - On click: fetch /api/v1/reports/cooperative/${cooperativeId}/csv?locale=${locale}
+     - Trigger browser file download from the response
+     - Show loading state during download
+Task 9.8 Web App Withdrawal UI
+  ⬤  COPILOT PROMPT — Task 9.8
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add withdrawal governance UI to the web app.
+ 
+--- 1. Withdrawal Proposal Modal (in proposals page) ---
+ 
+Update apps/web/app/[locale]/(dashboard)/dashboard/proposals/page.tsx:
+ 
+Add a second button for COOP_ADMIN users: "Proposer un retrait / Propose Withdrawal"
+This opens a different modal with these fields:
+  - Amount in FCFA (number input, validated against cooperative balance)
+  - Reason/Description (textarea)
+  - Destination type: select → MTN MoMo | Orange Money | Virement bancaire
+  - If MTN or Orange: phone number input (format: 6XXXXXXXX)
+  - If MTN or Orange: operator is auto-set from selection
+  - If bank: bank name, account number, account holder name
+  - Recipient name (auto-filled from user profile but editable)
+ 
+On submit: POST /withdrawals/propose { amountXAF, reason, destinationType,
+  recipientPhone, recipientOperator, recipientBankName,
+  recipientBankAccount, recipientName, cooperativeId }
+ 
+Show toast: "Withdrawal proposal created. Members can now vote."
+ 
+--- 2. Proposal cards — show withdrawal badge ---
+ 
+For proposals where type === "WITHDRAWAL":
+  - Show an orange badge: "RETRAIT" / "WITHDRAWAL"
+  - Show the amount: "50,000 FCFA"
+  - Show destination type icon (phone or bank icon)
+  - Show withdrawal eligibility widget:
+    useQuery(GET_WITHDRAWAL_ELIGIBILITY, { variables: { proposalId } })
+    Display: X/Y eligible members voted YES, threshold: Z%
+    Show a second progress bar in orange showing withdrawal vote progress
+    When approved: show green "Disbursement initiated" badge
+    When disbursed: show green "Fonds transférés / Funds transferred" badge
+ 
+--- 3. Voting restriction for withdrawal proposals ---
+ 
+Before showing vote buttons on WITHDRAWAL proposals:
+  Check if current user is an eligible voter (has CONFIRMED contribution)
+  If not eligible: show greyed-out buttons with tooltip:
+    "Vous devez avoir effectué au moins une cotisation confirmée pour voter sur les retraits."
+    "You must have at least one confirmed contribution to vote on withdrawals."
+ 
+--- 4. Admin Settings Panel (new page) ---
+ 
+Create apps/web/app/[locale]/(dashboard)/dashboard/settings/page.tsx:
+ 
+Two sections:
+ 
+Section A: Cooperative Settings (visible to COOP_ADMIN)
+  - Current withdrawal threshold for this cooperative
+  - Slider or number input to change it (within platform min/max)
+  - Save button: PATCH /cooperatives/:id/settings { withdrawalThreshold }
+ 
+Section B: Platform Settings (visible only to PLATFORM_ADMIN)
+  - Global threshold default (number input)
+  - Threshold min and max (range)
+  - Quorum minimum votes
+  - Maintenance mode toggle
+  - Save button: PATCH /admin/settings
+ 
+Add "Paramètres / Settings" link to the dashboard sidebar.
+ 
+--- 5. User profile — withdrawal destination ---
+ 
+Create apps/web/app/[locale]/(dashboard)/dashboard/profile/page.tsx:
+ 
+Fields:
+  - Name (editable)
+  - Email (read-only)
+  - Preferred withdrawal method: MTN MoMo | Orange Money | Bank
+  - If MoMo: phone number
+  - If bank: bank name, account number
+ 
+Save: PATCH /users/me with new profile fields
+Add "Profil" link to sidebar.
+Task 9.9 — Web Push Notifications (Next.js)
+Insert after Task 9.7 in the original Implementation Guide.
+  ⬤  COPILOT PROMPT — Task 9.9
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add web push notification support to the Next.js app.
+ 
+1. Install in apps/web:
+   bun add firebase
+ 
+2. Create apps/web/lib/firebase/client.ts:
+ 
+   import { initializeApp, getApps } from "firebase/app"
+   import { getMessaging, getToken, onMessage } from "firebase/messaging"
+ 
+   const firebaseConfig = {
+     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+   }
+ 
+   export const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]
+ 
+   export async function requestNotificationPermission(): Promise<string | null> {
+     if (typeof window === "undefined") return null
+     if (!("Notification" in window)) return null
+     const permission = await Notification.requestPermission()
+     if (permission !== "granted") return null
+     const messaging = getMessaging(app)
+     const token = await getToken(messaging, {
+       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+       serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
+     })
+     return token
+   }
+ 
+   export function onForegroundMessage(callback: (payload: any) => void) {
+     if (typeof window === "undefined") return () => {}
+     const messaging = getMessaging(app)
+     return onMessage(messaging, callback)
+   }
+ 
+3. Create apps/web/public/firebase-messaging-sw.js:
+   (Service worker for background push notifications)
+ 
+   importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js")
+   importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js")
+ 
+   firebase.initializeApp({
+     apiKey: "NEXT_PUBLIC_FIREBASE_API_KEY_PLACEHOLDER",  // will be injected
+     projectId: "NEXT_PUBLIC_FIREBASE_PROJECT_ID_PLACEHOLDER",
+     messagingSenderId: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_PLACEHOLDER",
+     appId: "NEXT_PUBLIC_FIREBASE_APP_ID_PLACEHOLDER",
+   })
+ 
+   const messaging = firebase.messaging()
+ 
+   messaging.onBackgroundMessage((payload) => {
+     const { title, body } = payload.notification
+     self.registration.showNotification(title, {
+       body,
+       icon: "/icons/icon-192x192.png",
+       badge: "/icons/icon-72x72.png",
+       data: payload.data,
+     })
+   })
+ 
+   NOTE: For production, generate this file dynamically via a Next.js API route
+   (GET /api/firebase-messaging-sw.js) that injects the actual env var values.
+   This avoids hardcoding config in a static file.
+ 
+   Create apps/web/app/api/firebase-messaging-sw/route.ts that returns the
+   service worker JS with env vars interpolated.
+ 
+4. Create apps/web/lib/firebase/use-notifications.ts:
+   A React hook that:
+   a. On mount: registers service worker at /api/firebase-messaging-sw
+   b. Calls requestNotificationPermission()
+   c. On success: calls POST /api/v1/users/device-token { token, platform: "WEB" }
+   d. Sets up onForegroundMessage to show toast notifications
+   e. On unmount: calls DELETE /api/v1/users/device-token { token }
+   f. Returns: { notificationsEnabled, requestPermission }
+ 
+5. Add the useNotifications hook to the dashboard layout:
+   In apps/web/app/[locale]/(dashboard)/layout.tsx:
+   Import and call useNotifications() at the top level.
+   Wrap in a "use client" component.
+ 
+6. Add a notification permission banner to the dashboard:
+   Show a soft banner at the top of the dashboard if notificationsEnabled is false:
+   "Activez les notifications pour être informé des cotisations et votes en temps réel"
+   With a button: "Activer les notifications"
+   On click: calls requestPermission() from the hook.
+   Dismiss button that sets a localStorage flag to never show again.
+
+  PHASE 10
+Expo Mobile App
+All screens · Auth · Offline-first · Sync engine · Subscriptions
+Phase 10 is the largest phase. Each task is strictly scoped. Do not run Phase 10 tasks until the web integration (Phase 9) is confirmed working.
+
+Task 10.1  Expo project scaffold and dependencies
+  ⬤  COPILOT PROMPT — Task 10.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the Expo mobile application scaffold in apps/mobile.
+ 
+1. From the repo root:
+   cd apps/mobile
+   bun add expo@latest
+   bun add expo-router expo-status-bar expo-font
+   bun add react-native react-native-safe-area-context react-native-screens
+   bun add @expo/vector-icons
+   bun add nativewind tailwindcss
+   bun add @apollo/client graphql graphql-ws
+   bun add react-native-mmkv
+   bun add expo-sqlite
+   bun add expo-network
+   bun add expo-clipboard
+   bun add react-native-qrcode-svg
+   bun add -d @types/react @types/react-native typescript
+ 
+2. Create apps/mobile/package.json with:
+   name: "@coopenergie/mobile"
+   main: "expo-router/entry"
+   scripts: "start": "expo start", "android": "expo run:android", "ios": "expo run:ios", "build": "eas build"
+ 
+3. Create apps/mobile/app.json with Expo config:
+   name: "CoopEnergie", slug: "coopenergie", version: "1.0.0", orientation: portrait
+   icon, splash, and theme green (#1B5E20)
+ 
+4. Create apps/mobile/tailwind.config.js for NativeWind:
+   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"]
+ 
+5. Create apps/mobile/babel.config.js with nativewind/babel preset
+ 
+6. Create root folder structure:
+   apps/mobile/app/_layout.tsx (root layout with SafeAreaProvider)
+   apps/mobile/app/(auth)/ (login, register screens)
+   apps/mobile/app/(dashboard)/ (main screens)
+   apps/mobile/components/ (shared components)
+   apps/mobile/lib/ (api, graphql, offline, sync)
+
+Task 10.2  Mobile API client and Apollo setup
+  ⬤  COPILOT PROMPT — Task 10.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the mobile API client, Apollo Client, and auth token management.
+ 
+1. Create apps/mobile/lib/storage.ts:
+   Using react-native-mmkv:
+   export const storage = new MMKV()
+   export const tokenStorage = { get: () => storage.getString('auth_token'), set: (t) => storage.set('auth_token', t), clear: () => storage.delete('auth_token') }
+   export const cooperativeStorage = { get: () => storage.getString('active_cooperative'), set: (id) => storage.set('active_cooperative', id) }
+ 
+2. Create apps/mobile/lib/api.ts:
+   REST client that reads token from tokenStorage and attaches Authorization header.
+   Functions: api.post(path, body), api.get(path), api.delete(path)
+   Base URL from constants (NEXT_PUBLIC_API_URL)
+ 
+3. Create apps/mobile/lib/apollo.ts:
+   Apollo Client with httpLink + wsLink (same pattern as web)
+   Auth link that injects token from tokenStorage
+   
+4. Create apps/mobile/lib/auth.ts:
+   - login(email, password): calls POST /auth/login, stores token, stores user in MMKV
+   - logout(): clears all MMKV storage
+   - getUser(): returns stored user from MMKV
+   - isAuthenticated(): checks token exists
+ 
+5. Create apps/mobile/lib/constants.ts:
+   API_URL, GRAPHQL_URL, GRAPHQL_WS_URL, CELOSCAN_BASE from process.env or hardcoded for dev
+
+Task 10.3  Auth screens — login and register
+  ⬤  COPILOT PROMPT — Task 10.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the mobile auth screens.
+ 
+1. Create apps/mobile/app/(auth)/_layout.tsx — stack navigator for auth screens
+ 
+2. Create apps/mobile/app/(auth)/login.tsx:
+   - Email and password inputs (styled with NativeWind in CoopEnergie green theme)
+   - "Connexion" / "Login" button
+   - On submit: call auth.login(email, password)
+   - On success: router.replace('/(dashboard)/dashboard')
+   - On error: Alert with error message
+   - Demo credentials NOT shown at bottom of screen
+   - Link to register screen
+ 
+3. Create apps/mobile/app/(auth)/register.tsx:
+   - Name, email, password inputs
+   - On submit: call api.post('/auth/register', { name, email, password })
+   - Auto-login after register
+   - Link back to login
+ 
+4. Create apps/mobile/app/(auth)/join.tsx:
+   - Accepts token param from deep link
+   - If logged in: auto-calls POST /invitations/accept { token }, then redirect to dashboard
+   - If not logged in: redirect to register with token stored in MMKV, then auto-accept after register
+
+Task 10.4  Mobile dashboard screens
+  ⬤  COPILOT PROMPT — Task 10.4
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create all five main mobile dashboard screens.
+ 
+Create a tab navigator at apps/mobile/app/(dashboard)/_layout.tsx:
+Tabs: Dashboard, Contributions, Proposals, Ledger, Report
+Tab icons from @expo/vector-icons (MaterialIcons or Ionicons)
+ 
+--- Screen 1: apps/mobile/app/(dashboard)/dashboard.tsx ---
+- Cooperative name, targetAmount, totalCollected (from GraphQL)
+- Progress bar (View with percentage width)
+- Wallet address with copy button and "Voir sur CeloScan" link (opens browser)
+- Member count, recent activity list
+- Subscribe to live updates via useSubscription
+ 
+--- Screen 2: apps/mobile/app/(dashboard)/contributions.tsx ---
+- FlatList of contributions: name, amount, TX hash (truncated), date
+- "Cotiser" / "Contribute" button → modal with amount input
+- On submit: POST /contributions { cooperativeId, amountXAF }
+- Show TX hash in success alert with option to open CeloScan
+ 
+--- Screen 3: apps/mobile/app/(dashboard)/proposals.tsx ---
+- FlatList of proposals with status, vote counts, TX hash
+- Vote YES/NO buttons (disabled if already voted)
+- "Créer une proposition" button → modal with title + description
+- On vote: POST /votes { proposalId, choice }
+ 
+--- Screen 4: apps/mobile/app/(dashboard)/ledger.tsx ---
+- Wallet address at top with CeloScan link
+- FlatList of ledger events: type badge, TX hash, block number, timestamp
+- Filter bar: All, Contributions, Votes, Proposals
+- Each item has "Vérifier sur CeloScan" link
+ 
+--- Screen 5: apps/mobile/app/(dashboard)/report.tsx ---
+- Report data from GraphQL
+- Key metrics in cards
+- "Télécharger CSV" → calls report CSV endpoint, saves to device or shares via Share API
+ 
+All screens must check authentication. If no token: redirect to login.
+All screens use NativeWind classes for styling in green theme.
+
+Task 10.5  Offline storage and sync engine
+  ⬤  COPILOT PROMPT — Task 10.5
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Implement the offline-first architecture for the mobile app.
+ 
+1. Create apps/mobile/lib/offline/db.ts:
+   Using expo-sqlite:
+   - openDatabase('coopenergie.db')
+   - createTables(): contributions, proposals, ledger_events tables (id, data JSON, cached_at)
+   - saveContributions(cooperativeId, items): upsert into local table
+   - getContributions(cooperativeId): read from local table
+   - saveProposals, getProposals, saveLedger, getLedger: same pattern
+ 
+2. Create apps/mobile/lib/offline/action-queue.ts:
+   Using MMKV:
+   - enqueue(action: { type: string, payload: object, idempotencyKey: string, attemptCount: number }): add to queue array
+   - getQueue(): returns all pending actions
+   - dequeue(idempotencyKey): remove completed action
+   - incrementAttempts(idempotencyKey): update retry count
+ 
+3. Create apps/mobile/lib/sync/sync-engine.ts:
+   - processQueue(): iterates action queue, submits each action via api.post with idempotency header
+   - Exponential backoff: wait 1s, 2s, 4s, 8s between retries; max 5 retries then mark failed
+   - On success: dequeue action, update local cache
+   - startSync(): called on app foreground / network restore
+ 
+4. Create apps/mobile/lib/offline/network-monitor.ts:
+   Using expo-network:
+   - useNetworkStatus() hook: returns isOnline boolean
+   - On restore to online: calls syncEngine.processQueue()
+ 
+5. Update each dashboard screen to:
+   - Load from local DB first (instant display)
+   - Fetch from GraphQL in background (refresh)
+   - Save fresh data to local DB after fetch
+   - If offline: show banner, disable submit buttons, enqueue actions instead
+Task 10.6 — Mobile Push Notifications (Expo)
+Insert after Task 10.5 in the original Implementation Guide.
+  ⬤  COPILOT PROMPT — Task 10.6
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Add push notification support to the Expo mobile app.
+ 
+Expo managed workflow uses Expo Push Notification Service which handles
+FCM (Android) and APNs (iOS) automatically. No raw FCM or APNs credentials
+are needed in the app code.
+ 
+1. Install in apps/mobile:
+   bun add expo-notifications expo-device expo-constants
+ 
+2. Update apps/mobile/app.json:
+   Add to "expo" section:
+   "plugins": [
+     ["expo-notifications", {
+       "icon": "./assets/icon.png",
+       "color": "#1B5E20",
+       "sounds": []
+     }]
+   ]
+ 
+3. Create apps/mobile/lib/notifications/push-token.ts:
+ 
+   import * as Notifications from "expo-notifications"
+   import * as Device from "expo-device"
+   import Constants from "expo-constants"
+ 
+   export async function registerForPushNotifications(): Promise<string | null> {
+     if (!Device.isDevice) {
+       console.warn("Push notifications only work on physical devices")
+       return null
+     }
+ 
+     const { status: existingStatus } = await Notifications.getPermissionsAsync()
+     let finalStatus = existingStatus
+ 
+     if (existingStatus !== "granted") {
+       const { status } = await Notifications.requestPermissionsAsync()
+       finalStatus = status
+     }
+ 
+     if (finalStatus !== "granted") return null
+ 
+     const projectId = Constants.expoConfig?.extra?.eas?.projectId
+     const token = await Notifications.getExpoPushTokenAsync({ projectId })
+     return token.data  // format: ExponentPushToken[xxxxxxxx]
+   }
+ 
+   export function configurePushHandlers() {
+     // How to handle notifications while app is in foreground
+     Notifications.setNotificationHandler({
+       handleNotification: async () => ({
+         shouldShowAlert: true,
+         shouldPlaySound: true,
+         shouldSetBadge: true,
+       }),
+     })
+   }
+ 
+4. Create apps/mobile/lib/notifications/use-push-notifications.ts:
+   A hook that:
+   a. Calls configurePushHandlers() once on mount
+   b. Calls registerForPushNotifications()
+   c. On success: calls POST /users/device-token { token, platform: "IOS" or "ANDROID" }
+      Determine platform: Platform.OS === "ios" ? "IOS" : "ANDROID"
+   d. Stores the token in MMKV ("push_token")
+   e. Sets up notification response handler:
+      Notifications.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data
+        if (data.type === "CONTRIBUTION") router.push("/(dashboard)/contributions")
+        if (data.type === "PROPOSAL") router.push("/(dashboard)/proposals")
+        if (data.type === "WITHDRAWAL") router.push("/(dashboard)/proposals")
+      })
+   f. Returns { pushToken, notificationsEnabled }
+ 
+5. Call usePushNotifications() in the root dashboard layout:
+   apps/mobile/app/(dashboard)/_layout.tsx
+   Import and call the hook at the top level of the layout component.
+ 
+6. On logout (in auth.ts logout function):
+   const pushToken = storage.getString("push_token")
+   if (pushToken) {
+     await api.delete("/users/device-token", { token: pushToken })
+     storage.delete("push_token")
+   }
+ 
+7. Update apps/mobile/app.json with EAS project ID:
+   "extra": { "eas": { "projectId": "YOUR_EAS_PROJECT_ID" } }
+ 
+   To get EAS project ID:
+   bun add -g eas-cli
+   eas login
+   eas build:configure
+   (This generates the projectId and updates app.json automatically)
+  PHASE 11
+CI/CD Pipelines
+GitHub Actions · Vercel · Railway · EAS · Conditional migrations
+Task 11.1  GitHub Actions — PR validation
+  ⬤  COPILOT PROMPT — Task 11.1
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create the PR validation GitHub Actions workflow.
+ 
+Create .github/workflows/pr-validation.yml:
+ 
+Trigger: pull_request to any branch
+ 
+Jobs:
+1. lint-and-typecheck:
+   - runs-on: ubuntu-latest
+   - Setup: actions/checkout, oven-sh/setup-bun@v1
+   - Install: bun install
+   - Run: bun lint (web + backend)
+   - Run: bun typecheck (web + backend)
+ 
+2. build:
+   - runs-on: ubuntu-latest
+   - Setup: checkout + bun
+   - Install: bun install
+   - Build web: bun run build:web (needs NEXTAUTH_SECRET, NEXTAUTH_URL, DATABASE_URL as dummy env vars)
+   - Build backend: bun run build:api
+ 
+3. compile-contracts:
+   - runs-on: ubuntu-latest
+   - Setup: checkout + bun
+   - Install: cd contracts && bun install
+   - Run: cd contracts && bun run compile
+ 
+4. preview-deploy (depends on: build):
+   - Uses vercel/action to deploy apps/web to Vercel Preview
+   - Requires secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+
+Task 11.2  GitHub Actions — staging and production deploy
+  ⬤  COPILOT PROMPT — Task 11.2
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create staging and production deployment workflows.
+ 
+--- FILE 1: .github/workflows/deploy-staging.yml ---
+Trigger: push to develop branch
+ 
+Jobs:
+1. validate: (reuse lint + typecheck from pr-validation)
+2. deploy-backend-staging:
+   - Build Docker image from apps/backend/Dockerfile
+   - Push to Railway staging service via Railway CLI
+   - Run: bunx prisma migrate deploy if schema or migrations changed
+     Condition: contains(github.event.commits[*].modified, 'apps/backend/prisma/')
+3. deploy-web-staging:
+   - Deploy to Vercel staging alias
+ 
+--- FILE 2: .github/workflows/deploy-production.yml ---
+Trigger: push to main branch
+ 
+Jobs:
+1. validate: lint + typecheck
+2. deploy-contracts (conditional):
+   Condition: contains(github.event.commits[*].modified, 'contracts/')
+   - cd contracts && bun run deploy:mainnet
+   - Uses secret: CELO_RELAYER_PRIVATE_KEY
+3. deploy-backend:
+   - Railway CLI deploy to production service
+   - Conditional migration: if schema.prisma or migrations/ changed
+     run: bunx prisma migrate deploy
+4. deploy-web:
+   - Vercel production deploy (--prod flag)
+5. notify-success:
+   - Echo deployment summary to GitHub step summary
+ 
+--- FILE 3: .github/workflows/manual-seed.yml ---
+Trigger: workflow_dispatch
+Jobs:
+1. seed:
+   - Railway CLI: execute seed command in production container
+   - Requires manual confirmation input: "type CONFIRM to proceed"
+
+Task 11.3  Railway and Vercel configuration files
+  ⬤  COPILOT PROMPT — Task 11.3
+Do everything autonomously. Do not ask for confirmation.
+ 
+TASK: Create Railway and Vercel configuration files.
+ 
+--- apps/backend/Dockerfile ---
+FROM oven/bun:1 AS base
+WORKDIR /app
+COPY package.json bun.lockb ./
+COPY apps/backend/package.json apps/backend/
+COPY apps/backend/prisma apps/backend/prisma
+RUN bun install --production
+COPY apps/backend/src apps/backend/src
+COPY apps/backend/tsconfig.json apps/backend/
+WORKDIR /app/apps/backend
+RUN bunx prisma generate
+RUN bun build src/main.ts --target bun --outdir dist
+EXPOSE 4000
+CMD ["bun", "run", "dist/main.js"]
+ 
+--- apps/backend/railway.toml ---
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/backend/Dockerfile"
+[deploy]
+startCommand = "bun run start"
+healthcheckPath = "/api/v1/health"
+restartPolicyType = "ON_FAILURE"
+ 
+--- Add health check endpoint ---
+Add to apps/backend/src/app.module.ts a simple HealthController:
+GET /api/v1/health → returns { status: 'ok', timestamp: new Date() }
+ 
+--- apps/web/vercel.json ---
+{
+  "buildCommand": "bun run --cwd ../.. build:web",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "installCommand": "bun install",
+  "env": {
+    "NEXTAUTH_URL": "@nextauth_url",
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "NEXT_PUBLIC_API_URL": "@api_url",
+    "NEXT_PUBLIC_GRAPHQL_URL": "@graphql_url",
+    "NEXT_PUBLIC_CELOSCAN_BASE": "@celoscan_base"
+  }
+}
+ 
+--- EAS configuration ---
+Create apps/mobile/eas.json:
+{
+  "cli": { "version": ">= 5.0.0" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal" },
+    "staging": { "distribution": "internal", "env": { "EXPO_PUBLIC_API_URL": "https://staging-api.coopenergie.cm" } },
+    "production": { "distribution": "store", "env": { "EXPO_PUBLIC_API_URL": "https://api.coopenergie.cm" } }
+  },
+  "submit": {
+    "production": {}
+  }
+}
+
+
+Final Verification Checklist
+After all 11 phases are complete, verify each item:
+Backend Verification
+bun run dev:api starts without errors
+GET http://localhost:4000/api/v1/health returns { status: ok }
+POST /api/v1/auth/login with seed credentials returns JWT
+GraphQL playground at http://localhost:4000/graphql is accessible
+Database has all tables (bun run db:studio)
+Smart contracts deployed to Alfajores (verify at alfajores.celoscan.io/address/{coopFactory})
+Web Verification
+bun run dev:web starts without errors at localhost:3000/fr
+Login page works with seed credentials
+Dashboard shows real data from GraphQL
+Adding a contribution records on-chain and shows TX hash with celoscan.io link
+Voting records on-chain and shows TX hash
+Ledger page shows real Celo transactions
+CSV download generates properly formatted French/English file
+Mobile Verification
+expo start runs in apps/mobile
+Login works on Expo Go
+Dashboard shows real data
+Offline mode shows cached data with "pending" badge
+Reconnecting syncs queued actions
+CI/CD Verification
+Pushing a PR triggers pr-validation.yml and shows Vercel preview URL
+Merging to main triggers deploy-production.yml
+Conditional migration only runs when prisma files change
+
+— All phases complete → CoopEnergie is live on Celo —
