@@ -207,6 +207,15 @@ const translations = {
       heroTextLine2: "the strength of the collective.",
       heroDescription:
         "Join a transparent solar cooperative and light up your future today.",
+      signup: "Sign Up",
+      signupDescription: "Join our solar energy cooperative",
+      fullNameLabel: "Full Name",
+      fullNamePlaceholder: "Your full name",
+      confirmPassword: "Confirm Password",
+      confirmPasswordPlaceholder: "Confirm your password",
+      or: "Or",
+      noAccount: "No account?",
+      alreadyHaveAccount: "Already have an account?",
       processingInvitation: "Processing your invitation...",
       withdrawalCreatedMessage:
         "Withdrawal proposal created. Members can now vote.",
@@ -682,6 +691,15 @@ const translations = {
       heroTextLine2: "la force du collectif.",
       heroDescription:
         "Rejoignez une cooperative solaire transparente et illuminez votre avenir des aujourd'hui.",
+      signup: "S'inscrire",
+      signupDescription: "Rejoignez notre cooperative d'energie solaire",
+      fullNameLabel: "Nom complet",
+      fullNamePlaceholder: "Votre nom complet",
+      confirmPassword: "Confirmer le mot de passe",
+      confirmPasswordPlaceholder: "Confirmez votre mot de passe",
+      or: "Ou",
+      noAccount: "Pas de compte ?",
+      alreadyHaveAccount: "Vous avez deja un compte ?",
       processingInvitation: "Traitement de votre invitation...",
       withdrawalCreatedMessage:
         "Proposition de retrait creee. Les membres peuvent maintenant voter.",
