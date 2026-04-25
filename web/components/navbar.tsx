@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Locale, useTranslations } from "@/lib/translations";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -21,8 +21,20 @@ interface NavbarProps {
 export default function Navbar({ locale }: NavbarProps) {
   const t = useTranslations(locale);
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  const isLandingPage = pathname === `/${locale}` || pathname === `/${locale}/`;
+
+  const landingNavItems = [
+    { href: "#vision", label: t("navbar.navVision") },
+    { href: "#problem", label: t("navbar.navProblem") },
+    { href: "#solution", label: t("navbar.navSolution") },
+    { href: "#how-it-works", label: t("navbar.navHowItWorks") },
+    { href: "#features", label: t("navbar.navFeatures") },
+    { href: "#community", label: t("navbar.navCommunity") },
+  ];
 
   const handleLocaleToggle = () => {
     const newLocale = locale === "en" ? "fr" : "en";
@@ -51,19 +63,33 @@ export default function Navbar({ locale }: NavbarProps) {
           </Link>
 
           {/* Desktop nav links - hidden on mobile */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link
-              href={`/${locale}`}
-              className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:translate-y-[-2px]"
-            >
-              {t("navbar.home")}
-            </Link>
-            <Link
-              href={`/${locale}/dashboard`}
-              className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:translate-y-[-2px]"
-            >
-              {t("navbar.dashboard")}
-            </Link>
+          <div className="hidden md:flex items-center gap-6">
+            {isLandingPage ? (
+              landingNavItems.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-all duration-300 hover:translate-y-[-2px] whitespace-nowrap"
+                >
+                  {item.label}
+                </a>
+              ))
+            ) : (
+              <>
+                <Link
+                  href={`/${locale}`}
+                  className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:translate-y-[-2px]"
+                >
+                  {t("navbar.home")}
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard`}
+                  className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:translate-y-[-2px]"
+                >
+                  {t("navbar.dashboard")}
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Right side controls - always visible, touch-friendly sizes */}

@@ -54,6 +54,12 @@ const translations = {
       dashboard: "Dashboard",
       en: "EN",
       fr: "FR",
+      navVision: "Vision",
+      navProblem: "Problem",
+      navSolution: "Solution",
+      navHowItWorks: "How It Works",
+      navFeatures: "Features",
+      navCommunity: "Community",
     },
     homepage: {
       hero: {
@@ -288,6 +294,12 @@ const translations = {
       dashboard: "Tableau de bord",
       en: "EN",
       fr: "FR",
+      navVision: "Vision",
+      navProblem: "Problème",
+      navSolution: "Solution",
+      navHowItWorks: "Comment ça marche",
+      navFeatures: "Fonctionnalités",
+      navCommunity: "Communauté",
     },
     homepage: {
       hero: {

@@ -131,7 +131,7 @@ export default function Homepage() {
       </section>
 
       {/* Vision-Mission Section */}
-      <section className="py-24 bg-nuit-dark relative overflow-hidden border-t border-white/5">
+      <section id="vision" className="py-24 bg-nuit-dark relative overflow-hidden border-t border-white/5">
             {/* Subtle background glow */}
             <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-soleil/5 rounded-full blur-[120px] -translate-y-1/2 pointer-events-none"></div>
             
@@ -177,7 +177,7 @@ export default function Homepage() {
       </section>
 
       {/* Problem Section */}
-      <section className="py-20 md:py-32 bg-muted/30">
+      <section id="problem" className="py-20 md:py-32 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
@@ -221,7 +221,7 @@ export default function Homepage() {
       </section>
 
       {/* Solution Section */}
-      <section className="py-20 md:py-32">
+      <section id="solution" className="py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative order-last lg:order-first">
@@ -265,7 +265,7 @@ export default function Homepage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 md:py-32 bg-muted/30">
+      <section id="how-it-works" className="py-20 md:py-32 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">
@@ -300,7 +300,7 @@ export default function Homepage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 md:py-32">
+      <section id="features" className="py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">
@@ -340,7 +340,7 @@ export default function Homepage() {
       </section>
 
       {/* Community Section */}
-      <section className="py-20 md:py-32 bg-muted/30">
+      <section id="community" className="py-20 md:py-32 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
