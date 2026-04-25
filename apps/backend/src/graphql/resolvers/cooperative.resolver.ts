@@ -16,6 +16,7 @@ import { CooperativesService } from "../../modules/cooperatives/cooperatives.ser
 import { MembershipsService } from "../../modules/memberships/memberships.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CooperativeType } from "../types/cooperative.type";
+import { CooperativeMembershipType } from "../types/cooperative-membership.type";
 import { LedgerEventType } from "../types/ledger-event.type";
 import { MemberType } from "../types/member.type";
 
@@ -102,6 +103,26 @@ export class CooperativeResolver {
       joinedAt: member.joinedAt,
       totalContributed: totalsByUserId.get(member.userId) ?? 0,
     }));
+  }
+
+  @ResolveField("membership", () => CooperativeMembershipType, {
+    nullable: true,
+  })
+  membership(
+    @Parent() coop: { id: string },
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.prisma.membership.findUnique({
+      where: {
+        userId_cooperativeId: {
+          userId: user.userId,
+          cooperativeId: coop.id,
+        },
+      },
+      select: {
+        role: true,
+      },
+    });
   }
 
   @ResolveField("recentActivity", () => [LedgerEventType])

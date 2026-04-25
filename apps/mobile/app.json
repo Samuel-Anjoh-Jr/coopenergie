@@ -47,7 +47,9 @@
           ]
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-asset",
+      "expo-font"
     ],
     "scheme": "coopenergie",
     "extra": {

@@ -1,4 +1,5 @@
 import { Field, Float, Int, ObjectType } from "@nestjs/graphql";
+import { CooperativeMembershipType } from "./cooperative-membership.type";
 import { LedgerEventType } from "./ledger-event.type";
 import { MemberType } from "./member.type";
 
@@ -36,6 +37,9 @@ export class CooperativeType {
 
   @Field(() => [MemberType], { nullable: "itemsAndList" })
   members?: MemberType[];
+
+  @Field(() => CooperativeMembershipType, { nullable: true })
+  membership?: CooperativeMembershipType | null;
 
   @Field(() => [LedgerEventType], { nullable: "itemsAndList" })
   recentActivity?: LedgerEventType[];

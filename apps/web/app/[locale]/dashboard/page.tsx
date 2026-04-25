@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
-import { Activity, TrendingUp, Users, Wallet } from "lucide-react";
+import { Activity, Building2, TrendingUp, Users, Wallet } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
+import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { CELOSCAN_BASE } from "@/lib/config";
 import {
   GET_COOPERATIVE_DETAIL,
@@ -20,6 +25,7 @@ import {
   SUBSCRIPTION_ON_PROPOSAL,
   SUBSCRIPTION_ON_VOTE,
 } from "@/lib/graphql/subscriptions/cooperative";
+import { restClient } from "@/lib/rest-client";
 import { getTranslations, type Locale } from "@/lib/translations";
 
 type ActivityItem = {
@@ -64,6 +70,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     null,
   );
   const [recentSubscriptionTick, setRecentSubscriptionTick] = useState(0);
+  const [coopName, setCoopName] = useState("");
+  const [coopTarget, setCoopTarget] = useState("");
+  const [isCreatingCoop, setIsCreatingCoop] = useState(false);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -72,7 +81,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const t = getTranslations(locale);
 
-  const { data: myCooperativesData, loading: loadingMyCooperatives } =
+  const { data: myCooperativesData, loading: loadingMyCooperatives, refetch: refetchMyCooperatives } =
     useQuery(GET_MY_COOPERATIVES);
 
   useEffect(() => {
@@ -204,6 +213,31 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const loadingOverview = loadingMyCooperatives || loadingDetail;
 
+  const hasNoCooperative =
+    !loadingMyCooperatives &&
+    myCooperativesData?.myCooperatives?.length === 0;
+
+  const handleCreateCooperative = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetXAF = parseInt(coopTarget, 10);
+    if (!coopName.trim() || isNaN(targetXAF) || targetXAF <= 0) return;
+    setIsCreatingCoop(true);
+    try {
+      await restClient.post("/cooperatives", {
+        name: coopName.trim(),
+        targetAmountXAF: targetXAF,
+      });
+      toast.success(t.toasts.cooperativeCreated);
+      setCoopName("");
+      setCoopTarget("");
+      await refetchMyCooperatives();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create cooperative.");
+    } finally {
+      setIsCreatingCoop(false);
+    }
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 px-4 md:px-0">
       <div className="space-y-3 md:space-y-4 animate-in slide-in-from-top-4 duration-700">
@@ -215,6 +249,64 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         </p>
       </div>
 
+      {hasNoCooperative && (
+        <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 border-primary/30">
+          <CardHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Building2 className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="text-xl text-gradient">
+                {t.createCooperative.title}
+              </CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t.createCooperative.description}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={(e) => void handleCreateCooperative(e)} className="space-y-4 max-w-md">
+              <div className="space-y-1.5">
+                <Label htmlFor="coop-name">{t.createCooperative.nameLabel}</Label>
+                <Input
+                  id="coop-name"
+                  value={coopName}
+                  onChange={(e) => setCoopName(e.target.value)}
+                  placeholder={t.createCooperative.namePlaceholder}
+                  disabled={isCreatingCoop}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="coop-target">{t.createCooperative.targetLabel}</Label>
+                <Input
+                  id="coop-target"
+                  type="number"
+                  min="1"
+                  value={coopTarget}
+                  onChange={(e) => setCoopTarget(e.target.value)}
+                  placeholder={t.createCooperative.targetPlaceholder}
+                  disabled={isCreatingCoop}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={isCreatingCoop || !coopName.trim() || !coopTarget}>
+                {isCreatingCoop ? (
+                  <>
+                    <Spinner className="mr-2" />
+                    {t.createCooperative.submitting}
+                  </>
+                ) : (
+                  t.createCooperative.submit
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasNoCooperative && (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift">
           <CardContent className="p-4 md:p-6">
@@ -416,6 +508,8 @@ export default function DashboardPage({ params }: DashboardPageProps) {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

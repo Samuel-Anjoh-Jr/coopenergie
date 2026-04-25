@@ -9,6 +9,9 @@ export const GET_MY_COOPERATIVES = gql`
       targetAmountXAF
       vaultAddress
       createdAt
+      membership {
+        role
+      }
     }
   }
 `;

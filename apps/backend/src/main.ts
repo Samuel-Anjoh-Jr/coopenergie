@@ -94,7 +94,9 @@ async function bootstrap() {
       let endpointName = "unknown";
 
       // Extract meaningful endpoint name
-      if (pathSegments.length >= 3) {
+      if (pathSegments[0] === "graphql") {
+        endpointName = "graphql";
+      } else if (pathSegments.length >= 3) {
         // Remove 'api' and 'v1' prefixes if present
         const relevantSegments = pathSegments.slice(
           pathSegments[0] === "api" ? 2 : 1,

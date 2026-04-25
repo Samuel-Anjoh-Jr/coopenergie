@@ -190,13 +190,25 @@ export class MembershipsService {
           "Only cooperative admins can promote a member to COOP_ADMIN.",
         );
       }
-    } else if (
-      requestingMembership.role !== Role.COOP_ADMIN &&
-      requestingMembership.role !== Role.PLATFORM_ADMIN
-    ) {
-      throw new ForbiddenException(
-        "Only cooperative admins can change member roles.",
-      );
+    } else {
+      // newRole is MEMBER — demoting
+      if (
+        requestingMembership.role !== Role.COOP_ADMIN &&
+        requestingMembership.role !== Role.PLATFORM_ADMIN
+      ) {
+        throw new ForbiddenException(
+          "Only cooperative admins can change member roles.",
+        );
+      }
+      // COOP_ADMIN cannot demote another COOP_ADMIN — only PLATFORM_ADMIN can
+      if (
+        targetMembership.role === Role.COOP_ADMIN &&
+        requestingMembership.role !== Role.PLATFORM_ADMIN
+      ) {
+        throw new ForbiddenException(
+          "Only platform admins can demote a cooperative admin.",
+        );
+      }
     }
 
     if (

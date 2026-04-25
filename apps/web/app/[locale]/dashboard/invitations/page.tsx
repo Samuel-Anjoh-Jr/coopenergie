@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useQuery } from "@apollo/client";
-import { Copy, Mail, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Mail, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -22,11 +22,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
+import { GET_COOPERATIVE_DETAIL, GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
 type UserRole = "MEMBER" | "COOP_ADMIN" | "PLATFORM_ADMIN";
+
+type Member = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
 
 type Invitation = {
   id: string;
@@ -74,6 +81,16 @@ export default function InvitationsPage() {
     "MEMBER";
 
   const [items, setItems] = useState<Invitation[]>([]);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+
+  const { data: cooperativeDetailData, refetch: refetchCoopDetail } = useQuery(
+    GET_COOPERATIVE_DETAIL,
+    {
+      variables: { id: cooperativeId },
+      skip: !cooperativeId || userRole !== "COOP_ADMIN",
+    },
+  );
+  const members: Member[] = cooperativeDetailData?.cooperative?.members ?? [];
 
   const loadPendingInvitations = async () => {
     if (!cooperativeId || userRole !== "COOP_ADMIN") {
@@ -172,6 +189,25 @@ export default function InvitationsPage() {
       );
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const handlePromoteToAdmin = async (userId: string) => {
+    if (!cooperativeId) return;
+    setPromotingId(userId);
+    try {
+      await restClient.patch(
+        `/memberships/cooperative/${cooperativeId}/user/${userId}/role`,
+        { role: "COOP_ADMIN" },
+      );
+      toast.success(t("toasts.memberPromoted"));
+      await refetchCoopDetail();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("errors.unknownError"),
+      );
+    } finally {
+      setPromotingId(null);
     }
   };
 
@@ -345,6 +381,73 @@ export default function InvitationsPage() {
                         )}
                         {t("invitations.revoke")}
                       </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            {t("invitations.membersTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("invitations.noPending")}
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("common.name") || "Name"}</TableHead>
+                  <TableHead>{t("common.email")}</TableHead>
+                  <TableHead>{t("common.role") || "Role"}</TableHead>
+                  <TableHead className="text-right">
+                    {t("invitations.actions")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">{member.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {member.email}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={member.role === "COOP_ADMIN" ? "default" : "outline"}
+                      >
+                        {member.role === "COOP_ADMIN"
+                          ? t("invitations.roleAdmin")
+                          : t("invitations.roleMember")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {member.role === "MEMBER" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handlePromoteToAdmin(member.id)}
+                          disabled={promotingId === member.id}
+                        >
+                          {promotingId === member.id ? (
+                            <Spinner className="mr-2" />
+                          ) : (
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                          )}
+                          {promotingId === member.id
+                            ? t("invitations.promoting")
+                            : t("invitations.promoteToAdmin")}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
