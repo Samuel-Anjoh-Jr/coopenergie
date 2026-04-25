@@ -106,7 +106,7 @@ export class FactoryService {
   private buildCeloScanUrl(txHash: `0x${string}`): string {
     const baseUrl =
       process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
-      "https://alfajores.celoscan.io";
+      "https://celo-sepolia.blockscout.com";
 
     return `${baseUrl.replace(/\/+$/, "")}/tx/${txHash}`;
   }

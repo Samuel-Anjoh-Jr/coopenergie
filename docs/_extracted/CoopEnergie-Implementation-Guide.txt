@@ -222,18 +222,18 @@ NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
 NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
  
 # ── CELO ──────────────────────────────────────────────────────
-# Testnet: https://alfajores-forno.celo-testnet.org
+# Testnet: https://forno.celo-sepolia.celo-testnet.org
 # Mainnet: https://forno.celo.org
-CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+CELO_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 CELO_RELAYER_PRIVATE_KEY=REPLACE_WITH_GENERATED_PRIVATE_KEY
 COOP_FACTORY_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
 GAS_RELAYER_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
  
 # ── CELOSCAN ──────────────────────────────────────────────────
-# Testnet: https://alfajores.celoscan.io
+# Testnet: https://celo-sepolia.blockscout.com
 # Mainnet: https://celoscan.io
-NEXT_PUBLIC_CELOSCAN_BASE=https://alfajores.celoscan.io
-NEXT_PUBLIC_CELO_CHAIN=alfajores
+NEXT_PUBLIC_CELOSCAN_BASE=https://celo-sepolia.blockscout.com
+NEXT_PUBLIC_CELO_CHAIN=celoSepolia
  
 # ── CAMPAY ────────────────────────────────────────────────────
 # Sandbox: https://demo.campay.net/api
@@ -384,8 +384,8 @@ and is ready for real backend integration.
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 export const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql';
 export const GRAPHQL_WS_URL = process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql';
-export const CELOSCAN_BASE = process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://alfajores.celoscan.io';
-export const CELO_CHAIN = process.env.NEXT_PUBLIC_CELO_CHAIN || 'alfajores';
+export const CELOSCAN_BASE = process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://celo-sepolia.blockscout.com';
+export const CELO_CHAIN = process.env.NEXT_PUBLIC_CELO_CHAIN || 'celoSepolia';
 export const celoScanTx = (hash: string) => `${CELOSCAN_BASE}/tx/${hash}`;
 export const celoScanAddress = (addr: string) => `${CELOSCAN_BASE}/address/${addr}`;
  
@@ -824,10 +824,10 @@ All guards should be injectable (use @Injectable())
 
   PHASE 2
 Celo Smart Contracts
-Hardhat · Solidity · CoopFactory · CooperativeVault · GasRelayer · Alfajores testnet
+Hardhat · Solidity · CoopFactory · CooperativeVault · GasRelayer · Celo Sepolia testnet
 Phase 2 builds and deploys the three smart contracts that form the trust backbone of CoopEnergie. Users never interact with these contracts directly — the backend relayer does it on their behalf.
 
-You will need a funded Alfajores testnet wallet to deploy. Get free testnet CELO from: https://faucet.celo.org — paste your relayer wallet address and receive test CELO within seconds.
+You will need a funded Celo Sepolia testnet wallet to deploy. Get free testnet CELO from: https://faucet.celo.org/celo-sepolia — paste your relayer wallet address and receive test CELO within seconds.
 
 Task 2.1  Hardhat project setup
   ⬤  COPILOT PROMPT — Task 2.1
@@ -846,9 +846,9 @@ TASK: Set up Hardhat in the contracts/ directory for Celo blockchain development
    - Import hardhat-celo or configure Celo networks manually
    - Networks:
      - hardhat: { chainId: 31337 }
-     - alfajores: {
-         url: "https://alfajores-forno.celo-testnet.org",
-         chainId: 44787,
+     - celoSepolia: {
+         url: "https://forno.celo-sepolia.celo-testnet.org",
+         chainId: 11142220,
          accounts: [process.env.CELO_RELAYER_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001"]
        }
      - celo: {
@@ -864,7 +864,7 @@ TASK: Set up Hardhat in the contracts/ directory for Celo blockchain development
    scripts:
      "compile": "hardhat compile"
      "test": "hardhat test"
-     "deploy:alfajores": "hardhat run scripts/deploy.ts --network alfajores"
+     "deploy:celoSepolia": "hardhat run scripts/deploy.ts --network celoSepolia"
      "deploy:mainnet": "hardhat run scripts/deploy.ts --network celo"
  
 4. Run: cd contracts && bun run compile (may fail if no .sol files yet, that is expected)
@@ -1019,11 +1019,11 @@ CoopFactory:
 Run: cd contracts && bun run test
 All tests must pass.
 
-Task 2.6  Deploy script and Alfajores deployment
+Task 2.6  Deploy script and Celo Sepolia deployment
   ⬤  COPILOT PROMPT — Task 2.6
 Do everything autonomously. Do not ask for confirmation.
  
-TASK: Create the deployment script and deploy to Celo Alfajores testnet.
+TASK: Create the deployment script and deploy to Celo Sepolia testnet.
  
 1. Create contracts/scripts/deploy.ts:
    - Deploys GasRelayer first (owner = deployer wallet)
@@ -1031,15 +1031,15 @@ TASK: Create the deployment script and deploy to Celo Alfajores testnet.
    - Calls gasRelayer.transferOwnership(coopFactory.address) so factory can whitelist vaults
    - Logs: GasRelayer address, CoopFactory address
    - Writes deployed addresses to contracts/deployed-addresses.json:
-     { "network": "alfajores", "GasRelayer": "0x...", "CoopFactory": "0x...", "deployedAt": "ISO timestamp" }
+     { "network": "celoSepolia", "GasRelayer": "0x...", "CoopFactory": "0x...", "deployedAt": "ISO timestamp" }
  
 2. Load CELO_RELAYER_PRIVATE_KEY from process.env (dotenv if needed)
  
 3. Run the deployment:
-   cd contracts && bun run deploy:alfajores
+   cd contracts && bun run deploy:celoSepolia
  
    NOTE: This requires CELO_RELAYER_PRIVATE_KEY to be set in .env AND the wallet
-   to have Alfajores test CELO. If the key is not set, skip the actual run and
+   to have Celo Sepolia test CELO. If the key is not set, skip the actual run and
    just confirm the script is syntactically correct.
  
 4. After deployment (or as a fallback), update root .env:
@@ -1065,11 +1065,11 @@ TASK: Set up the viem blockchain client and contract ABI loading in the NestJS b
 2. Create apps/backend/src/blockchain/blockchain.module.ts — @Global() module that provides all blockchain services
  
 3. Create apps/backend/src/blockchain/celo-client.ts:
-   - Creates a viem publicClient for Celo Alfajores (or mainnet based on env)
+   - Creates a viem publicClient for Celo Sepolia (or mainnet based on env)
    - Creates a viem walletClient using the CELO_RELAYER_PRIVATE_KEY account
    - Exports both clients
-   - Chain config: alfajores from 'viem/chains' or manual chain config
-     { id: 44787, name: 'Celo Alfajores', nativeCurrency: { name:'CELO', symbol:'CELO', decimals:18 },
+   - Chain config: celoSepolia from 'viem/chains' or manual chain config
+     { id: 11142220, name: 'Celo Sepolia', nativeCurrency: { name:'CELO', symbol:'CELO', decimals:18 },
        rpcUrls: { default: { http: [process.env.CELO_RPC_URL] } } }
  
 4. Create apps/backend/src/blockchain/abis/:
@@ -1839,7 +1839,7 @@ TASK: Create the ledger module and admin module.
 ledger.service.ts:
 - findByCooperative(cooperativeId, { type?, limit?, offset? }):
   Returns LedgerEvents filtered by cooperative, optionally filtered by type
-  Adds celoScanUrl to each event: `${process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://alfajores.celoscan.io'}/tx/${event.txHash}`
+  Adds celoScanUrl to each event: `${process.env.NEXT_PUBLIC_CELOSCAN_BASE || 'https://celo-sepolia.blockscout.com'}/tx/${event.txHash}`
 - getStats(cooperativeId): returns { totalTransactions, blockCount (distinct blockNumbers), verifiedCount (all), modificationsCount: 0 }
  
 No REST controller — all queries via GraphQL (already handled by ledger.resolver.ts from Phase 6).
@@ -2703,7 +2703,7 @@ GET http://localhost:4000/api/v1/health returns { status: ok }
 POST /api/v1/auth/login with seed credentials returns JWT
 GraphQL playground at http://localhost:4000/graphql is accessible
 Database has all tables (bun run db:studio)
-Smart contracts deployed to Alfajores (verify at alfajores.celoscan.io/address/{coopFactory})
+Smart contracts deployed to Celo Sepolia (verify at celo-sepolia.blockscout.com/address/{coopFactory})
 Web Verification
 bun run dev:web starts without errors at localhost:3000/fr
 Login page works with seed credentials

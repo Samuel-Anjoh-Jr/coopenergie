@@ -16,4 +16,4 @@ export const GRAPHQL_WS_URL =
 export const CELOSCAN_BASE =
   process.env.EXPO_PUBLIC_CELOSCAN_BASE ||
   process.env.NEXT_PUBLIC_CELOSCAN_BASE ||
-  "https://alfajores.celoscan.io";
+  "https://celo-sepolia.blockscout.com";

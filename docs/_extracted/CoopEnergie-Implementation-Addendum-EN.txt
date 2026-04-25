@@ -82,8 +82,8 @@ node -e "
 "
 Save both values before closing the terminal. The private key cannot be recovered if lost. Store it in a password manager and as a secret in Railway/GitHub Actions.
 
-2.3 Fund the wallet on Alfajores Testnet
-Alfajores is Celo's test network. Test CELO has no real value — it's free.
+2.3 Fund the wallet on Celo Sepolia Testnet
+Celo Sepolia is Celo's test network (replacing the deprecated Alfajores). Test CELO has no real value — it's free.
 Step
 Action
 Where
@@ -92,9 +92,9 @@ Open your browser
 —
 2
 Go to the faucet
-https://faucet.celo.org
+https://faucet.celo.org/celo-sepolia
 3
-Make sure "Alfajores" is selected in the network dropdown
+Make sure "Celo Sepolia" is selected in the network dropdown
 Faucet page
 4
 Paste your relayer wallet address (the 0x... address from step 2.2)
@@ -106,13 +106,13 @@ Faucet page
 Wait 10–30 seconds — you will receive 1 CELO
 Email/page confirmation
 7
-Verify: paste your address at https://alfajores.celoscan.io/address/{your_address}
-CeloScan Alfajores
+Verify: paste your address at https://celo-sepolia.blockscout.com/address/{your_address}
+Blockscout Celo Sepolia
 8
 Add to root .env: CELO_RELAYER_PRIVATE_KEY=0x... (the private key from step 2.2)
 Your .env file
 9
-Add: CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+Add: CELO_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 Your .env file
 
 2.4 Fund the wallet on Celo Mainnet (real money)
@@ -367,18 +367,18 @@ NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
 NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
  
 # ── CELO ──────────────────────────────────────────────────────
-# Testnet: https://alfajores-forno.celo-testnet.org
+# Testnet: https://forno.celo-sepolia.celo-testnet.org
 # Mainnet: https://forno.celo.org
-CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+CELO_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 CELO_RELAYER_PRIVATE_KEY=REPLACE_WITH_GENERATED_PRIVATE_KEY
 COOP_FACTORY_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
 GAS_RELAYER_ADDRESS=REPLACE_AFTER_CONTRACT_DEPLOY
  
 # ── CELOSCAN ──────────────────────────────────────────────────
-# Testnet: https://alfajores.celoscan.io
+# Testnet: https://celo-sepolia.blockscout.com
 # Mainnet: https://celoscan.io
-NEXT_PUBLIC_CELOSCAN_BASE=https://alfajores.celoscan.io
-NEXT_PUBLIC_CELO_CHAIN=alfajores
+NEXT_PUBLIC_CELOSCAN_BASE=https://celo-sepolia.blockscout.com
+NEXT_PUBLIC_CELO_CHAIN=celoSepolia
  
 # ── CAMPAY ────────────────────────────────────────────────────
 # Sandbox: https://demo.campay.net/api
@@ -937,15 +937,15 @@ Command / URL
 Generate wallet
 node -e "const {generatePrivateKey,privateKeyToAccount}=require('viem/accounts'); const pk=generatePrivateKey(); console.log(pk, privateKeyToAccount(pk).address)"
 Get testnet CELO
-https://faucet.celo.org → select Alfajores → paste address → click Faucet
+https://faucet.celo.org/celo-sepolia → select Celo Sepolia → paste address → click Faucet
 Check testnet balance
-https://alfajores.celoscan.io/address/{YOUR_ADDRESS}
+https://celo-sepolia.blockscout.com/address/{YOUR_ADDRESS}
 Testnet RPC URL
-https://alfajores-forno.celo-testnet.org
+https://forno.celo-sepolia.celo-testnet.org
 Mainnet RPC URL
 https://forno.celo.org
 Testnet explorer
-https://alfajores.celoscan.io
+https://celo-sepolia.blockscout.com
 Mainnet explorer
 https://celoscan.io
 Buy mainnet CELO

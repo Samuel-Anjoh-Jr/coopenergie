@@ -29,7 +29,7 @@ CONFIDENTIAL — Internal Architecture Reference
 1.1 Platform Summary
 CoopEnergie is a bilingual (FR default / EN) cooperative solar funding platform for the Cameroonian market. Citizens form digital cooperatives, pool contributions, govern decisions via collective voting, and verify every financial event on the public Celo blockchain.
 The architecture is built in two layers that share the same codebase and can be deployed independently:
-Hackathon MVP: Next.js web app with real Celo smart contracts on Alfajores testnet, REST API calls to backend, and a polished bilingual UI.
+Hackathon MVP: Next.js web app with real Celo smart contracts on Celo Sepolia testnet, REST API calls to backend, and a polished bilingual UI.
 Production: Full monorepo — web + NestJS backend + Expo mobile — with CamPay payments, offline-first sync, GraphQL queries, WebSocket subscriptions, and Celo Mainnet smart contracts.
 1.2 Architecture Principles
 Principle
@@ -163,7 +163,7 @@ Component
 Technology
 Purpose
 Network
-Celo (Mainnet + Alfajores testnet)
+Celo (Mainnet + Celo Sepolia testnet)
 EVM-compatible L1 chain optimised for mobile and developing markets
 Smart contracts
 Solidity 0.8.x
@@ -201,7 +201,7 @@ Redis
 Railway Redis
 Staging + Production
 Smart contracts
-Celo Alfajores (test) / Mainnet (prod)
+Celo Sepolia (test) / Mainnet (prod)
 Per environment
 Mobile builds
 EAS (Expo Application Services)
@@ -828,7 +828,7 @@ Expo Go on a physical device for mobile development
 Hardhat for contract compilation and local Celo testnet interaction
 11.2 Quick Start — Web MVP Only
 cd apps/web && bun install && bun dev
-# Connects to Celo Alfajores testnet
+# Connects to Celo Sepolia testnet
 # Visits: http://localhost:3000/fr (default locale: FR)
 11.3 Full Monorepo Start
 git clone <repo> && cd coopenergie
@@ -838,7 +838,7 @@ bun run db:up             # start Docker PostgreSQL + Redis
 bun run db:migrate        # apply Prisma migrations
 bun run db:generate       # generate Prisma client
 bun run db:seed           # seed with Cameroonian test data
-cd contracts && bun hardhat deploy --network alfajores  # deploy to testnet
+cd contracts && bun run deploy:celoSepolia  # deploy to testnet
 bun run dev               # start web + backend
 11.4 Environment Variables
 Variable
@@ -866,13 +866,13 @@ NEXT_PUBLIC_GRAPHQL_URL
 http://localhost:4000/graphql
 Web + Mobile
 CELO_RPC_URL
-https://alfajores-forno.celo-testnet.org
+https://forno.celo-sepolia.celo-testnet.org
 Backend blockchain services
 CELO_RELAYER_PRIVATE_KEY
 Generated relayer wallet private key
 Backend gas relayer
 COOP_FACTORY_ADDRESS
-Deployed CoopFactory.sol address on Alfajores
+Deployed CoopFactory.sol address on Celo Sepolia
 Backend factory service
 GAS_RELAYER_ADDRESS
 Deployed GasRelayer.sol address

@@ -59,7 +59,7 @@ Inside the contribute() function: emit ContributionMade(member, amountXAF, total
   Step 7  —  Backend reads the TX hash and stores it
 viem returns { txHash, blockNumber } after waiting for receipt. Backend updates the Contribution record: txHash = "0xabc...", blockNumber = 28471935, status = CONFIRMED.
   Step 8  —  User sees the proof
-The UI displays the TX hash as a clickable link: https://alfajores.celoscan.io/tx/0xabc... Clicking it opens CeloScan which decodes the event logs and shows: "ContributionMade — member: 0x1234..., amountXAF: 50000, totalXAF: 950000, at block 28471935 (April 28, 2026 14:32:11 UTC)".
+The UI displays the TX hash as a clickable link: https://celo-sepolia.blockscout.com/tx/0xabc... Clicking it opens Blockscout which decodes the event logs and shows: "ContributionMade — member: 0x1234..., amountXAF: 50000, totalXAF: 950000, at block 28471935 (April 28, 2026 14:32:11 UTC)".
 
 1.4 What makes the hash cryptographically unforgeable
 Property
@@ -107,7 +107,7 @@ The Celo address is pseudonymous, not anonymous. On-chain you see 0x1234... cont
 
 1.6 How a judge or user verifies a specific action independently
 The full verification flow, requiring zero trust in CoopEnergie:
-Go to celoscan.io (or alfajores.celoscan.io for testnet).
+Go to celoscan.io (or celo-sepolia.blockscout.com for testnet).
 Paste the TX hash displayed in the app into the search bar.
 CeloScan displays the full transaction: the contract called (CooperativeVault address), the function called (contribute), and the arguments decoded from ABI: member address, FCFA amount.
 In the "Logs" tab: see the ContributionMade event in human-readable form with exact values.

@@ -28,7 +28,7 @@ export class LedgerService {
 
     const celoscanBase =
       process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
-      "https://alfajores.celoscan.io";
+      "https://celo-sepolia.blockscout.com";
 
     return events.map((event) => ({
       ...event,

@@ -39,6 +39,10 @@
     "keys": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
     "test": "echo Run tests from app directories"
   },
+  "overrides": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.46.2",
     "@vscode/ripgrep": "^1.17.1",

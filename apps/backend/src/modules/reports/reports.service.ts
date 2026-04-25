@@ -162,7 +162,7 @@ export class ReportsService {
           (cooperative.vaultAddress
             ? `${(
                 process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
-                "https://alfajores.celoscan.io"
+                "https://celo-sepolia.blockscout.com"
               ).replace(/\/+$/, "")}/address/${cooperative.vaultAddress}`
             : null),
       },

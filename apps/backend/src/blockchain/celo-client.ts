@@ -1,8 +1,8 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { celo, celoAlfajores } from "viem/chains";
+import { celo, celoSepolia } from "viem/chains";
 
-const defaultAlfajoresRpcUrl = "https://alfajores-forno.celo-testnet.org";
+const defaultCeloSepoliaRpcUrl = "https://forno.celo-sepolia.celo-testnet.org";
 const defaultMainnetRpcUrl = "https://forno.celo.org";
 
 function normalizePrivateKey(value?: string): `0x${string}` | undefined {
@@ -22,7 +22,7 @@ function getNetworkName() {
     process.env.CELO_CHAIN ||
     process.env.NEXT_PUBLIC_CELO_CHAIN ||
     process.env.CELO_NETWORK ||
-    "alfajores"
+    "celosepolia"
   ).toLowerCase();
 }
 
@@ -36,7 +36,7 @@ function getRpcUrl() {
     return process.env.CELO_RPC_URL.trim();
   }
 
-  return isMainnetNetwork() ? defaultMainnetRpcUrl : defaultAlfajoresRpcUrl;
+  return isMainnetNetwork() ? defaultMainnetRpcUrl : defaultCeloSepoliaRpcUrl;
 }
 
 const rpcUrl = getRpcUrl();
@@ -49,7 +49,7 @@ const chain = isMainnetNetwork()
       },
     }
   : {
-      ...celoAlfajores,
+      ...celoSepolia,
       rpcUrls: {
         default: { http: [rpcUrl] },
         public: { http: [rpcUrl] },

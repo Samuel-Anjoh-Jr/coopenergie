@@ -1,11 +1,11 @@
-# Alfajores Deployment
+# Celo Sepolia Deployment
 
-The Alfajores deployment was not executed from this workspace because `CELO_RELAYER_PRIVATE_KEY` is not configured with a real value in the root `.env`.
+The Celo Sepolia deployment was not executed from this workspace because `CELO_RELAYER_PRIVATE_KEY` is not configured with a real value in the root `.env`.
 
 ## Prerequisites
 
 1. Set `CELO_RELAYER_PRIVATE_KEY` in [../.env](C:/Users/User/Documents/coopenergie/.env) to the funded deployer wallet's private key.
-2. Make sure that wallet has Alfajores test CELO for gas.
+2. Make sure that wallet has Celo Sepolia test CELO for gas.
 
 ## Run
 
@@ -13,7 +13,7 @@ From the repository root:
 
 ```powershell
 cd contracts
-bun run deploy:alfajores
+bun run deploy:celoSepolia
 ```
 
 ## What the script does

@@ -311,7 +311,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift">
           <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-gradient-to-r from-primary/20 to-primary/10">
+              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
                 <Wallet className="h-4 w-4 md:h-6 md:w-6 text-primary" />
               </div>
             </div>
@@ -327,7 +327,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-100 hover-lift">
           <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-gradient-to-r from-secondary/20 to-secondary/10">
+              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
                 <Activity className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-200 hover-lift">
           <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-gradient-to-r from-primary/20 to-primary/10">
+              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
                 <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-300 hover-lift">
           <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-gradient-to-r from-secondary/20 to-secondary/10">
+              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
                 <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
               </div>
             </div>
@@ -385,7 +385,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
               <p className="text-muted-foreground mb-1">
                 {t.dashboard.cooperativeName}
               </p>
-              <p className="font-semibold text-base md:text-lg break-words">
+              <p className="font-semibold text-base md:text-lg wrap-break-word">
                 {cooperativeName}
               </p>
             </div>
@@ -471,10 +471,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
             {recentActivity.map((activity: ActivityItem) => (
               <div
                 key={`${activity.id}-${recentSubscriptionTick}`}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
               >
                 <div className="flex items-start sm:items-center gap-3 md:gap-4 min-w-0 flex-1">
-                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0">
                     <span className="text-base md:text-lg">
                       {activity.icon === "money"
                         ? "💰"
@@ -493,7 +493,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     </p>
                   </div>
                 </div>
-                <div className="text-left sm:text-right flex-shrink-0 pl-12 sm:pl-0">
+                <div className="text-left sm:text-right shrink-0 pl-12 sm:pl-0">
                   {activity.amount && (
                     <p className="font-semibold text-sm md:text-base text-gradient-green">
                       {activity.amount}

@@ -848,7 +848,7 @@ Redis
 Railway Redis
 Managed Redis on Railway; rate limiting, session cache, queues
 Smart Contracts
-Celo Mainnet / Alfajores (testnet)
+Celo Mainnet / Celo Sepolia (testnet)
 Hardhat deploy via CI — contract addresses stored in env vars
 apps/mobile iOS
 EAS + App Store

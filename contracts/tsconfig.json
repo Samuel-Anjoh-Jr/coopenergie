@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "5.0",
     // Environment setup & latest features
     "lib": ["ESNext"],
     "target": "ESNext",
-    "module": "Preserve",
+    "module": "commonjs",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
 
     // Bundler mode
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,

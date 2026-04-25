@@ -16,6 +16,7 @@ const targets = [
   "apps/web/.env.local",
   "apps/backend/.env",
   "apps/mobile/.env",
+  "contracts/.env",
 ];
 
 for (const relativeTarget of targets) {
