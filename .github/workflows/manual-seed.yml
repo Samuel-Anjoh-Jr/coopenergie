@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirmation == 'CONFIRM'
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
