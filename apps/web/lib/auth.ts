@@ -3,6 +3,27 @@ import Credentials from "next-auth/providers/credentials";
 
 import { API_URL } from "@/lib/config";
 
+function deriveAuthUrlFromVercelUrl() {
+  const hasAuthUrl = Boolean(process.env.AUTH_URL || process.env.NEXTAUTH_URL);
+  if (hasAuthUrl) {
+    return;
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (!vercelUrl) {
+    return;
+  }
+
+  const derivedUrl = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")
+    ? vercelUrl
+    : `https://${vercelUrl}`;
+
+  process.env.AUTH_URL = derivedUrl;
+  process.env.NEXTAUTH_URL = derivedUrl;
+}
+
+deriveAuthUrlFromVercelUrl();
+
 export const authOptions: NextAuthConfig = {
   session: {
     strategy: "jwt",

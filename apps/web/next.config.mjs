@@ -4,13 +4,18 @@ const REQUIRED_SINGLE_ENV_VARS = [
   "NEXT_PUBLIC_CELOSCAN_BASE",
 ];
 
-const REQUIRED_ALIAS_ENV_VARS = [
-  ["AUTH_SECRET", "NEXTAUTH_SECRET"],
-  ["AUTH_URL", "NEXTAUTH_URL"],
-];
+const REQUIRED_ALIAS_ENV_VARS = [["AUTH_SECRET", "NEXTAUTH_SECRET"]];
 
 function isMissing(value) {
   return !value || value.trim().length === 0;
+}
+
+function hasAuthUrlSource() {
+  const hasExplicitAuthUrl =
+    !isMissing(process.env.AUTH_URL) || !isMissing(process.env.NEXTAUTH_URL);
+  const hasVercelUrlFallback = !isMissing(process.env.VERCEL_URL);
+
+  return hasExplicitAuthUrl || hasVercelUrlFallback;
 }
 
 function validateRequiredEnv() {
@@ -29,6 +34,10 @@ function validateRequiredEnv() {
     }
   }
 
+  if (!hasAuthUrlSource()) {
+    missing.push("AUTH_URL or NEXTAUTH_URL or VERCEL_URL");
+  }
+
   if (missing.length === 0) {
     return;
   }
@@ -37,7 +46,7 @@ function validateRequiredEnv() {
     [
       "[env] Missing required environment variables for apps/web.",
       `Set the following in Vercel Project Settings > Environment Variables: ${missing.join(", ")}`,
-      "Tip: AUTH_* is preferred, NEXTAUTH_* is supported as fallback.",
+      "Tip: AUTH_* is preferred, NEXTAUTH_* is supported as fallback, and VERCEL_URL is accepted for preview URL fallback.",
     ].join(" "),
   );
 }

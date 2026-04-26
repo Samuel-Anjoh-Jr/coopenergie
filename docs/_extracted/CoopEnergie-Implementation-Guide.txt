@@ -2584,8 +2584,8 @@ Jobs:
    - Run: cd contracts && bun run compile
  
 4. preview-deploy (depends on: build):
-   - Uses vercel/action to deploy apps/web to Vercel Preview
-   - Requires secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+  - Removed: web preview/prod deploy is handled by Vercel Git integration
+  - No Vercel CLI secrets are required in GitHub Actions for web deploy
 
 Task 11.2  GitHub Actions — staging and production deploy
   ⬤  COPILOT PROMPT — Task 11.2

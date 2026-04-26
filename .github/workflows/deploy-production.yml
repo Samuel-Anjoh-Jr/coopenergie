@@ -85,9 +85,10 @@ jobs:
     needs: validate
     if: contains(toJson(github.event.commits), 'apps/backend/prisma')
     env:
-      # Supabase direct connection URL (port 5432, not the pooler).
-      # Set in GitHub → Settings → Secrets → Actions → DATABASE_URL
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Prisma schema expects both DATABASE_URL and DIRECT_URL.
+      # Use direct Supabase URL (port 5432) for migration safety.
+      DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL || secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,29 +105,12 @@ jobs:
       - name: Run Prisma migrate deploy
         run: bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma
 
-  deploy-web:
-    runs-on: ubuntu-latest
-    needs: validate
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Deploy web to Vercel production
-        run: bunx vercel@latest --prod --token="${{ secrets.VERCEL_TOKEN }}" --yes
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
   notify-success:
     runs-on: ubuntu-latest
     needs:
-      - deploy-web
       - deploy-contracts
       - db-migrate
-    if: always() && needs.deploy-web.result == 'success' && (needs.deploy-contracts.result == 'success' || needs.deploy-contracts.result == 'skipped') && (needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped')
+    if: always() && (needs.deploy-contracts.result == 'success' || needs.deploy-contracts.result == 'skipped') && (needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped')
     steps:
       - name: Write deployment summary
         run: |
@@ -134,7 +118,7 @@ jobs:
             echo "## Production Deployment Summary"
             echo "- Backend: auto-deployed by Railway (branch integration)"
             echo "- DB Migrations: ${{ needs.db-migrate.result }}"
-            echo "- Web: ${{ needs.deploy-web.result }}"
+            echo "- Web: auto-deployed by Vercel Git integration"
             echo "- Contracts: ${{ needs.deploy-contracts.result }}"
             echo "- Trigger: ${{ github.sha }}"
             echo "- Actor: ${{ github.actor }}"

@@ -32,4 +32,5 @@ jobs:
       - name: Deploy migrations
         run: bunx prisma@5.22.0 migrate deploy --schema prisma/schema.prisma
         env:
-          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
