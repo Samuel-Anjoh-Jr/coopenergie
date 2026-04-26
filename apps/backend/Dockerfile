@@ -9,11 +9,11 @@ COPY packages/config/package.json packages/config/
 COPY packages/graphql-schema/package.json packages/graphql-schema/
 COPY packages/types/package.json packages/types/
 COPY apps/backend/prisma apps/backend/prisma
-RUN bun install --production --frozen-lockfile
+RUN bun install --frozen-lockfile
 COPY apps/backend/src apps/backend/src
 COPY apps/backend/tsconfig.json apps/backend/
 WORKDIR /app/apps/backend
 RUN bunx prisma@5.22.0 generate
-RUN bun build src/main.ts --target bun --outdir dist
+RUN bun run build
 EXPOSE 4000
 CMD ["bun", "run", "dist/main.js"]
