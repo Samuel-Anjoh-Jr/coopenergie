@@ -146,12 +146,23 @@ async function bootstrap() {
     }),
   );
   app.use(helmet());
+  const allowedOrigins = [
+    process.env.AUTH_URL,
+    process.env.NEXTAUTH_URL,
+    process.env.CORS_ORIGIN,
+    "https://coopenergie-backend.vercel.app",
+    "http://localhost:3000",
+  ].filter(Boolean) as string[];
+
   app.use(
     cors({
-      origin:
-        process.env.AUTH_URL ||
-        process.env.NEXTAUTH_URL ||
-        "http://localhost:3000",
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS: origin '${origin}' not allowed`));
+        }
+      },
       credentials: true,
     }),
   );
