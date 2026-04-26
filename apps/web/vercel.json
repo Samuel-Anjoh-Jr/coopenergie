@@ -1,6 +1,6 @@
 {
-  "buildCommand": "bun run --cwd ../.. build:web",
-  "outputDirectory": "apps/web/.next",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "bun install"
 }
