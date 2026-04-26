@@ -95,6 +95,39 @@ function validateDatabaseUrlOrExit() {
   }
 }
 
+function normalizeBaseUrl(value: string): string {
+  return value.trim().replace(/\/+$/, "");
+}
+
+function resolvePublicBaseUrl(port: string | number): string {
+  const configuredUrl =
+    process.env.APP_URL ||
+    process.env.AUTH_URL ||
+    process.env.NEXTAUTH_URL;
+
+  if (configuredUrl) {
+    return normalizeBaseUrl(configuredUrl);
+  }
+
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  }
+
+  return `http://localhost:${port}`;
+}
+
+function resolveRuntimeEnvironment(): string {
+  if (process.env.NODE_ENV) {
+    return process.env.NODE_ENV;
+  }
+
+  if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID) {
+    return "production";
+  }
+
+  return "development";
+}
+
 async function bootstrap() {
   validateDatabaseUrlOrExit();
 
@@ -188,7 +221,9 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || process.env.API_PORT || 4000;
-  const nodeEnv = process.env.NODE_ENV || "development";
+  const nodeEnv = resolveRuntimeEnvironment();
+  const publicBaseUrl = resolvePublicBaseUrl(port);
+  const graphqlUrl = `${publicBaseUrl}/graphql`;
 
   await app.listen(port, () => {
     console.log("\n");
@@ -196,8 +231,8 @@ async function bootstrap() {
     console.log("║       🚀 CoopEnergie Backend Server Started 🚀         ║");
     console.log("╚════════════════════════════════════════════════════════╝");
     console.log(`\n  ✓ Environment:     ${nodeEnv}`);
-    console.log(`  ✓ Server running on: http://localhost:${port}`);
-    console.log(`  ✓ GraphQL endpoint:  http://localhost:${port}/graphql`);
+    console.log(`  ✓ Server running on: ${publicBaseUrl}`);
+    console.log(`  ✓ GraphQL endpoint:  ${graphqlUrl}`);
     console.log(`  ✓ API prefix:        /api/v1`);
     console.log(
       `  ✓ Database:        ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`,
