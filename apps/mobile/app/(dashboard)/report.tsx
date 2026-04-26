@@ -13,6 +13,8 @@ import {
 } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
 import { useMobileTranslations } from "@/lib/translations";
+import PressableScale from "@/components/pressable-scale";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 type ReportData = {
   cooperativeName: string;
@@ -312,7 +314,7 @@ export default function ReportScreen() {
   const report = data?.report || cachedReport;
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] p-4">
+    <ScreenReveal className="bg-[#F5F8F5] p-4">
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
@@ -326,7 +328,7 @@ export default function ReportScreen() {
       ) : (
         <View className="gap-3">
           {pushWithdrawalContext ? (
-            <Pressable
+            <PressableScale
               className="bg-white rounded-2xl border border-orange-300 p-4 gap-2"
               onPress={() => {
                 router.push({
@@ -380,7 +382,7 @@ export default function ReportScreen() {
                   Request: {pushWithdrawalContext.withdrawalRequestId}
                 </Text>
               ) : null}
-            </Pressable>
+            </PressableScale>
           ) : null}
 
           <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
@@ -480,7 +482,7 @@ export default function ReportScreen() {
             </View>
           ) : null}
 
-          <Pressable
+          <PressableScale
             className={`rounded-xl py-3 ${isOnline ? "bg-[#1B5E20]" : "bg-slate-400"}`}
             onPress={downloadCsv}
             disabled={!isOnline}
@@ -488,9 +490,9 @@ export default function ReportScreen() {
             <Text className="text-white text-center font-semibold">
               {t("report.downloadCsv")}
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
       )}
-    </View>
+    </ScreenReveal>
   );
 }

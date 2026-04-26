@@ -9,6 +9,14 @@ import { Locale, useTranslations } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   BarChart3,
   Bell,
   BellOff,
@@ -61,7 +69,7 @@ export default function DashboardLayout({
   const locale = (params.locale as string) || "en";
   const t = useTranslations(locale as Locale);
   const { data: session, status } = useSession();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notificationBannerDismissed, setNotificationBannerDismissed] =
     useState(false);
   const { notificationsEnabled, requestPermission } = useNotifications();
@@ -80,32 +88,8 @@ export default function DashboardLayout({
 
   // Close sidebar when route changes
   useEffect(() => {
-    setSidebarOpen(false);
+    setMobileNavOpen(false);
   }, [pathname]);
-
-  // Close sidebar on escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setSidebarOpen(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  // Prevent body scroll when sidebar is open on mobile
-  useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [sidebarOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -129,117 +113,141 @@ export default function DashboardLayout({
     return null;
   }
 
+  const visibleNavItems = navItems.filter(
+    (item) =>
+      (!item.requiresCoopAdmin ||
+        userRole === "COOP_ADMIN" ||
+        userRole === "PLATFORM_ADMIN") &&
+      (!item.requiresPlatformAdmin || userRole === "PLATFORM_ADMIN"),
+  );
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Mobile Backdrop Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Mobile Menu Button - Fixed position with proper touch target (44px min) */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-18 left-4 z-50 lg:hidden bg-card/90 backdrop-blur-md shadow-lg border border-border/50 w-11 h-11 rounded-xl hover:bg-card"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label={
-          sidebarOpen ? t("navigation.closeMenu") : t("navigation.openMenu")
-        }
-        aria-expanded={sidebarOpen}
-      >
-        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </Button>
-
-      {/* Sidebar - Slide-in drawer on mobile */}
-      <aside
-        className={`
-          fixed lg:static inset-y-0 left-0 z-50
-          w-72 lg:w-64 border-r border-border/50 bg-card/98 backdrop-blur-md
-          transform transition-transform duration-300 ease-out
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          shadow-2xl lg:shadow-none
-        `}
-        role="navigation"
-        aria-label={t("navigation.dashboardNavigation")}
-      >
-        {/* Mobile close button inside sidebar */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border/50">
-          <span className="font-semibold text-foreground">
-            {t("navigation.menu")}
-          </span>
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="w-10 h-10"
-            onClick={() => setSidebarOpen(false)}
-            aria-label={t("navigation.closeMenu")}
+            className="fixed top-18 left-4 z-50 lg:hidden h-11 w-11 rounded-xl border border-border/50 bg-card/90 shadow-lg backdrop-blur-md"
+            aria-label={t("navigation.openMenu")}
           >
-            <X className="w-5 h-5" />
+            <Menu className="h-5 w-5" />
           </Button>
-        </div>
+        </SheetTrigger>
 
-        {/* Navigation */}
-        <nav className="space-y-1 p-3 pt-4 lg:pt-6">
-          {navItems
-            .filter(
-              (item) =>
-                (!item.requiresCoopAdmin ||
-                  userRole === "COOP_ADMIN" ||
-                  userRole === "PLATFORM_ADMIN") &&
-                (!item.requiresPlatformAdmin || userRole === "PLATFORM_ADMIN"),
-            )
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === `/${locale}${item.href}` ||
-                (item.href === "/dashboard" &&
-                  pathname === `/${locale}/dashboard`);
-              return (
-                <Link
-                  key={item.key}
-                  href={`/${locale}${item.href}`}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group min-h-11 ${
+        <SheetContent side="left" className="w-76 p-0">
+          <SheetHeader className="border-b border-border/50">
+            <SheetTitle>{t("navigation.menu")}</SheetTitle>
+          </SheetHeader>
+
+          <div className="flex h-full flex-col">
+            <nav
+              className="flex-1 space-y-1 overflow-y-auto p-3"
+              aria-label={t("navigation.dashboardNavigation")}
+            >
+              {visibleNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  pathname === `/${locale}${item.href}` ||
+                  (item.href === "/dashboard" &&
+                    pathname === `/${locale}/dashboard`);
+
+                return (
+                  <SheetClose asChild key={item.key}>
+                    <Link
+                      href={`/${locale}${item.href}`}
+                      className={`flex min-h-11 items-center gap-3 rounded-xl px-4 py-3.5 text-sm transition-all duration-200 group ${
+                        isActive
+                          ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium border border-primary/20"
+                          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                      }`}
+                    >
+                      <div
+                        className={`rounded-lg p-1.5 ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted group-hover:bg-primary/10"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <span>{t(`dashboard.${item.key}`)}</span>
+                    </Link>
+                  </SheetClose>
+                );
+              })}
+            </nav>
+
+            <div className="p-3 pb-6">
+              <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-amber-500/10 p-4">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {t("dashboard.currentCooperative")}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {cooperativeName}
+                </p>
+                {session?.user ? (
+                  <p className="mt-2 truncate text-xs text-muted-foreground">
+                    {t("dashboard.loggedInAs")}: {session.user.name}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <aside
+        className="hidden w-64 flex-col border-r border-border/50 bg-card/98 lg:flex"
+        role="navigation"
+        aria-label={t("navigation.dashboardNavigation")}
+      >
+        <nav className="flex-1 space-y-1 p-3 pt-6">
+          {visibleNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              pathname === `/${locale}${item.href}` ||
+              (item.href === "/dashboard" &&
+                pathname === `/${locale}/dashboard`);
+
+            return (
+              <Link
+                key={item.key}
+                href={`/${locale}${item.href}`}
+                className={`flex min-h-11 items-center gap-3 rounded-xl px-4 py-3.5 text-sm transition-all duration-200 group ${
+                  isActive
+                    ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium border border-primary/20"
+                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                <div
+                  className={`rounded-lg p-1.5 ${
                     isActive
-                      ? "bg-linear-to-r from-primary/20 to-primary/10 text-primary font-medium shadow-sm border border-primary/20"
-                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:bg-muted"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted group-hover:bg-primary/10"
                   }`}
                 >
-                  <div
-                    className={`p-1.5 rounded-lg transition-all duration-300 ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted group-hover:bg-primary/10"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-sm lg:text-base">
-                    {t(`dashboard.${item.key}`)}
-                  </span>
-                </Link>
-              );
-            })}
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span>{t(`dashboard.${item.key}`)}</span>
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Bottom Card */}
-        <div className="absolute bottom-4 left-3 right-3">
-          <div className="p-4 rounded-xl bg-linear-to-br from-primary/10 to-amber-500/10 border border-primary/20">
-            <p className="text-xs text-muted-foreground mb-2">
+        <div className="p-3 pb-6">
+          <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-amber-500/10 p-4">
+            <p className="mb-2 text-xs text-muted-foreground">
               {t("dashboard.currentCooperative")}
             </p>
             <p className="text-sm font-semibold text-foreground">
               {cooperativeName}
             </p>
-            {session?.user && (
-              <p className="text-xs text-muted-foreground mt-2 truncate">
+            {session?.user ? (
+              <p className="mt-2 truncate text-xs text-muted-foreground">
                 {t("dashboard.loggedInAs")}: {session.user.name}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </aside>

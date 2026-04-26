@@ -1,14 +1,16 @@
 {
   "cli": { "version": ">= 5.0.0" },
   "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
     "staging": {
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "https://staging-api.coopenergie.cm" }
+      "android": { "buildType": "apk" }
     },
     "production": {
-      "distribution": "store",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.coopenergie.cm" }
+      "distribution": "store"
     }
   },
   "submit": {

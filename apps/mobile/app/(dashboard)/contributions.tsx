@@ -18,6 +18,8 @@ import { enqueue } from "@/lib/offline/action-queue";
 import { getContributions, saveContributions } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
 import { useMobileTranslations } from "@/lib/translations";
+import PressableScale from "@/components/pressable-scale";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 type Contribution = {
   id: string;
@@ -186,7 +188,7 @@ export default function ContributionsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] p-4">
+    <ScreenReveal className="bg-[#F5F8F5] p-4">
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
@@ -195,14 +197,14 @@ export default function ContributionsScreen() {
         </View>
       )}
 
-      <Pressable
+      <PressableScale
         className="rounded-xl px-4 py-3 mb-4 bg-[#1B5E20]"
         onPress={() => setModalVisible(true)}
       >
         <Text className="text-white text-center font-semibold">
           {t("common.contribute")}
         </Text>
-      </Pressable>
+      </PressableScale>
 
       {loading ? (
         <Text className="text-[#1B5E20]">
@@ -244,26 +246,26 @@ export default function ContributionsScreen() {
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4"
             />
             <View className="flex-row gap-3">
-              <Pressable
+              <PressableScale
                 className="flex-1 border border-[#1B5E20] rounded-xl py-3"
                 onPress={() => setModalVisible(false)}
               >
                 <Text className="text-center text-[#1B5E20] font-semibold">
                   {t("common.cancel")}
                 </Text>
-              </Pressable>
-              <Pressable
+              </PressableScale>
+              <PressableScale
                 className="flex-1 bg-[#1B5E20] rounded-xl py-3"
                 onPress={submitContribution}
               >
                 <Text className="text-center text-white font-semibold">
                   {t("common.submit")}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </ScreenReveal>
   );
 }

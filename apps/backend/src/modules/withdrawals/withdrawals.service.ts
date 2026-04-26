@@ -66,6 +66,8 @@ export class WithdrawalsService {
       select: {
         id: true,
         name: true,
+        suspended: true,
+        withdrawalsLocked: true,
         confirmedBalanceXAF: true,
         vaultAddress: true,
       },
@@ -73,6 +75,18 @@ export class WithdrawalsService {
 
     if (!cooperative) {
       throw new NotFoundException("Cooperative not found.");
+    }
+
+    if (cooperative.suspended) {
+      throw new BadRequestException(
+        "This cooperative is suspended and cannot create withdrawal proposals.",
+      );
+    }
+
+    if (cooperative.withdrawalsLocked) {
+      throw new BadRequestException(
+        "Withdrawals are currently locked for this cooperative.",
+      );
     }
 
     if (cooperative.confirmedBalanceXAF < dto.amountXAF) {

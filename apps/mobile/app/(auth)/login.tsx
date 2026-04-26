@@ -11,6 +11,8 @@ import {
 
 import { login } from "@/lib/auth";
 import { useMobileTranslations } from "@/lib/translations";
+import PressableScale from "@/components/pressable-scale";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -35,7 +37,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] px-6 py-10 justify-center">
+    <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
         <Text className="text-3xl font-bold text-[#1B5E20] mb-2">
           CoopEnergie
@@ -68,7 +70,7 @@ export default function LoginScreen() {
           className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-6"
         />
 
-        <Pressable
+        <PressableScale
           onPress={onSubmit}
           disabled={isSubmitting || !email.trim() || !password}
           className="rounded-xl bg-[#1B5E20] px-4 py-3 items-center"
@@ -80,16 +82,16 @@ export default function LoginScreen() {
               {t("common.login")}
             </Text>
           )}
-        </Pressable>
+        </PressableScale>
 
         <Link href="/(auth)/register" asChild>
-          <Pressable className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
+          <PressableScale className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
               {t("auth.createAccount")}
             </Text>
-          </Pressable>
+          </PressableScale>
         </Link>
       </View>
-    </View>
+    </ScreenReveal>
   );
 }

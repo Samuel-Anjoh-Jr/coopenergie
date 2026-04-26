@@ -121,6 +121,8 @@ model Cooperative {
   id                   String                @id @default(cuid())
   name                 String
   slug                 String                @unique
+  suspended            Boolean               @default(false)
+  withdrawalsLocked    Boolean               @default(false)
   targetAmountXAF      Int
   vaultAddress         String?
   celoScanUrl          String?

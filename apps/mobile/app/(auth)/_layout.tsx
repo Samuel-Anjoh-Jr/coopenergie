@@ -7,6 +7,8 @@ export default function AuthLayout() {
         headerStyle: { backgroundColor: "#1B5E20" },
         headerTintColor: "#F4FBF4",
         contentStyle: { backgroundColor: "#F5F8F5" },
+        animation: "fade_from_bottom",
+        gestureEnabled: true,
       }}
     >
       <Stack.Screen name="login" options={{ title: "Connexion" }} />

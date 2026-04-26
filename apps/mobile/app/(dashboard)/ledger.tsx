@@ -7,6 +7,8 @@ import { useActiveCooperative } from "@/lib/dashboard";
 import { getLedger, saveLedger } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
 import { useMobileTranslations } from "@/lib/translations";
+import PressableScale from "@/components/pressable-scale";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 type LedgerEvent = {
   id: string;
@@ -89,7 +91,7 @@ export default function LedgerScreen() {
   const displayItems = events.length ? events : localItems;
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] p-4">
+    <ScreenReveal className="bg-[#F5F8F5] p-4">
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
@@ -104,7 +106,7 @@ export default function LedgerScreen() {
           {activeCooperative?.vaultAddress || "-"}
         </Text>
         {!!activeCooperative?.vaultAddress && (
-          <Pressable
+          <PressableScale
             className="mt-2"
             onPress={() =>
               Linking.openURL(
@@ -115,13 +117,13 @@ export default function LedgerScreen() {
             <Text className="text-[#1B5E20] font-semibold">
               {t("blockchain.viewOnCeloScan")}
             </Text>
-          </Pressable>
+          </PressableScale>
         )}
       </View>
 
       <View className="flex-row gap-2 mb-4">
         {FILTERS.map((item) => (
-          <Pressable
+          <PressableScale
             key={item.key}
             className={`px-3 py-2 rounded-full ${
               filter.key === item.key
@@ -139,7 +141,7 @@ export default function LedgerScreen() {
             >
               {t(`ledger.${item.key}`)}
             </Text>
-          </Pressable>
+          </PressableScale>
         ))}
       </View>
 
@@ -166,7 +168,7 @@ export default function LedgerScreen() {
               <Text className="text-slate-500 mt-1">
                 {new Date(item.createdAt).toLocaleString()}
               </Text>
-              <Pressable
+              <PressableScale
                 className="mt-2"
                 onPress={() =>
                   Linking.openURL(
@@ -177,11 +179,11 @@ export default function LedgerScreen() {
                 <Text className="text-[#1B5E20] font-semibold">
                   {t("blockchain.verifyOnCeloScan")}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           )}
         />
       )}
-    </View>
+    </ScreenReveal>
   );
 }

@@ -115,7 +115,42 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@keyframes nav-dot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scale(1.45);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+.nav-active-dot {
+  animation: nav-dot-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-active-dot {
+    animation: none;
+  }
+}
+
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }

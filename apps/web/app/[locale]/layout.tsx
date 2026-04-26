@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { Locale } from "@/lib/translations";
-import Navbar from "@/components/navbar";
+import { Navbar } from "@/components/navbar";
 
 export default function LocaleLayout({
   children,

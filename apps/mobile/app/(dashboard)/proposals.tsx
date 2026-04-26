@@ -19,6 +19,8 @@ import { getProposals, saveProposals } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import { useMobileTranslations } from "@/lib/translations";
+import PressableScale from "@/components/pressable-scale";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 type Proposal = {
   id: string;
@@ -447,7 +449,7 @@ export default function ProposalsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] p-4">
+    <ScreenReveal className="bg-[#F5F8F5] p-4">
       {!isOnline && (
         <View className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-2 mb-3">
           <Text className="text-amber-800 font-medium">
@@ -456,24 +458,24 @@ export default function ProposalsScreen() {
         </View>
       )}
 
-      <Pressable
+      <PressableScale
         className="rounded-xl px-4 py-3 mb-4 bg-[#1B5E20]"
         onPress={() => setModalVisible(true)}
       >
         <Text className="text-white text-center font-semibold">
           {t("proposals.createProposal")}
         </Text>
-      </Pressable>
+      </PressableScale>
 
       {userRole === "COOP_ADMIN" && (
-        <Pressable
+        <PressableScale
           className="rounded-xl px-4 py-3 mb-4 bg-[#C75B12]"
           onPress={() => setWithdrawalModalVisible(true)}
         >
           <Text className="text-white text-center font-semibold">
             {t("proposals.createWithdrawal")}
           </Text>
-        </Pressable>
+        </PressableScale>
       )}
 
       {loading ? (
@@ -514,22 +516,22 @@ export default function ProposalsScreen() {
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4 min-h-[96px]"
             />
             <View className="flex-row gap-3">
-              <Pressable
+              <PressableScale
                 className="flex-1 border border-[#1B5E20] rounded-xl py-3"
                 onPress={() => setModalVisible(false)}
               >
                 <Text className="text-center text-[#1B5E20] font-semibold">
                   {t("common.cancel")}
                 </Text>
-              </Pressable>
-              <Pressable
+              </PressableScale>
+              <PressableScale
                 className="flex-1 bg-[#1B5E20] rounded-xl py-3"
                 onPress={submitProposal}
               >
                 <Text className="text-center text-white font-semibold">
                   {t("common.submit")}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
         </View>
@@ -593,7 +595,7 @@ export default function ProposalsScreen() {
                       withdrawalForm.destinationType === option;
 
                     return (
-                      <Pressable
+                      <PressableScale
                         key={option}
                         className={`flex-1 rounded-xl px-3 py-3 border ${
                           isSelected
@@ -617,7 +619,7 @@ export default function ProposalsScreen() {
                         >
                           {getDestinationLabel(option, t)}
                         </Text>
-                      </Pressable>
+                      </PressableScale>
                     );
                   },
                 )}
@@ -704,28 +706,28 @@ export default function ProposalsScreen() {
               />
 
               <View className="flex-row gap-3 mb-1">
-                <Pressable
+                <PressableScale
                   className="flex-1 border border-[#C75B12] rounded-xl py-3"
                   onPress={() => setWithdrawalModalVisible(false)}
                 >
                   <Text className="text-center text-[#C75B12] font-semibold">
                     {t("common.cancel")}
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale
                   className="flex-1 bg-[#C75B12] rounded-xl py-3"
                   onPress={submitWithdrawalProposal}
                 >
                   <Text className="text-center text-white font-semibold">
                     {t("common.submit")}
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    </ScreenReveal>
   );
 }
 

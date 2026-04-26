@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { isAuthenticated } from "@/lib/auth";
 import { invitationTokenStorage } from "@/lib/storage";
 import { useMobileTranslations } from "@/lib/translations";
+import { ScreenReveal } from "@/components/screen-reveal";
 
 export default function JoinScreen() {
   const router = useRouter();
@@ -58,11 +59,11 @@ export default function JoinScreen() {
   }, [params.token, router]);
 
   return (
-    <View className="flex-1 bg-[#F5F8F5] items-center justify-center px-6">
+    <ScreenReveal className="bg-[#F5F8F5] items-center justify-center px-6">
       <ActivityIndicator size="large" color="#1B5E20" />
       <Text className="mt-4 text-[#1B5E20] font-semibold text-base">
         {t("auth.processingInvitation")}
       </Text>
-    </View>
+    </ScreenReveal>
   );
 }
