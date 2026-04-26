@@ -115,7 +115,6 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Deploy web to Vercel production
-        working-directory: ./apps/web
         run: bunx vercel@latest --prod --token="${{ secrets.VERCEL_TOKEN }}" --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
