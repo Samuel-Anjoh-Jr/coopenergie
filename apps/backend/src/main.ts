@@ -187,7 +187,7 @@ async function bootstrap() {
     next();
   });
 
-  const port = process.env.API_PORT || 4000;
+  const port = process.env.PORT || process.env.API_PORT || 4000;
   const nodeEnv = process.env.NODE_ENV || "development";
 
   await app.listen(port, () => {
