@@ -26,7 +26,9 @@ export class EncryptionService {
       }
 
       const fallbackSeed =
-        process.env.NEXTAUTH_SECRET || "coopenergie-local-dev-encryption-key";
+        process.env.AUTH_SECRET ||
+        process.env.NEXTAUTH_SECRET ||
+        "coopenergie-local-dev-encryption-key";
       keyString = scryptSync(fallbackSeed, "coopenergie", 32).toString("hex");
       console.warn(
         "[EncryptionService] ENCRYPTION_KEY missing; using derived development fallback key.",

@@ -49,7 +49,55 @@ const express = {
     },
 };
 
+function validateDatabaseUrlOrExit() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    console.error(
+      "[startup] DATABASE_URL is missing. Set a full Postgres URL before starting the backend.",
+    );
+    process.exit(1);
+  }
+
+  if (
+    !databaseUrl.startsWith("postgresql://") &&
+    !databaseUrl.startsWith("postgres://")
+  ) {
+    console.error(
+      `[startup] DATABASE_URL must start with postgresql:// or postgres://. Current value starts with: ${databaseUrl.split(":")[0] || "<empty>"}`,
+    );
+    process.exit(1);
+  }
+
+  try {
+    const parsed = new URL(databaseUrl);
+    if (!parsed.hostname) {
+      throw new Error("missing hostname");
+    }
+
+    const databaseName = parsed.pathname.replace(/^\//, "");
+    if (!databaseName) {
+      throw new Error("missing database name in path");
+    }
+
+    if (parsed.port) {
+      const port = Number(parsed.port);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new Error("invalid port number");
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[startup] DATABASE_URL is malformed (${message}). Example: postgresql://user:password@host:5432/database`,
+    );
+    process.exit(1);
+  }
+}
+
 async function bootstrap() {
+  validateDatabaseUrlOrExit();
+
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
@@ -67,7 +115,10 @@ async function bootstrap() {
   app.use(helmet());
   app.use(
     cors({
-      origin: process.env.NEXTAUTH_URL || "http://localhost:3000",
+      origin:
+        process.env.AUTH_URL ||
+        process.env.NEXTAUTH_URL ||
+        "http://localhost:3000",
       credentials: true,
     }),
   );
@@ -155,7 +206,7 @@ async function bootstrap() {
       `  ✓ Redis:           ${process.env.REDIS_URL ? "Connected" : "Not configured"}`,
     );
     console.log(
-      `  ✓ JWT enabled:     ${process.env.NEXTAUTH_SECRET ? "Yes" : "No"}`,
+      `  ✓ JWT enabled:     ${process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET ? "Yes" : "No"}`,
     );
     console.log("\n  Ready to handle requests...\n");
   });

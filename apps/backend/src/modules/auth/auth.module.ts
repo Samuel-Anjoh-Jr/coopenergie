@@ -17,6 +17,7 @@ import { UsersModule } from "../users/users.module";
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret:
+          configService.get<string>("AUTH_SECRET") ||
           configService.get<string>("NEXTAUTH_SECRET") ||
           "REPLACE_WITH_MIN_32_CHAR_SECRET",
         signOptions: { expiresIn: "7d" },

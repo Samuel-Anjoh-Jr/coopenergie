@@ -63,7 +63,24 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    await this.startListening();
+    if (process.env.BLOCKCHAIN_ENABLED !== "true") {
+      this.logger.log(
+        "Blockchain event listener disabled (BLOCKCHAIN_ENABLED is not 'true').",
+      );
+      return;
+    }
+
+    try {
+      await this.startListening();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to start blockchain event listeners: ${message}`,
+      );
+      this.logger.warn(
+        "Continuing startup without blockchain event listeners. Check DATABASE_URL and blockchain-related env vars.",
+      );
+    }
   }
 
   onModuleDestroy() {
