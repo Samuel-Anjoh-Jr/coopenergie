@@ -13,7 +13,7 @@ RUN bun install --production --frozen-lockfile
 COPY apps/backend/src apps/backend/src
 COPY apps/backend/tsconfig.json apps/backend/
 WORKDIR /app/apps/backend
-RUN bunx prisma generate
+RUN bunx prisma@5.22.0 generate
 RUN bun build src/main.ts --target bun --outdir dist
 EXPOSE 4000
 CMD ["bun", "run", "dist/main.js"]
