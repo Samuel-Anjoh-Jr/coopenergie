@@ -22,7 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GET_COOPERATIVE_DETAIL, GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
+import {
+  GET_COOPERATIVE_DETAIL,
+  GET_MY_COOPERATIVES,
+} from "@/lib/graphql/queries/cooperative";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -423,7 +426,9 @@ export default function InvitationsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={member.role === "COOP_ADMIN" ? "default" : "outline"}
+                        variant={
+                          member.role === "COOP_ADMIN" ? "default" : "outline"
+                        }
                       >
                         {member.role === "COOP_ADMIN"
                           ? t("invitations.roleAdmin")

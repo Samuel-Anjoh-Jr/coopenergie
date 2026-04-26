@@ -147,7 +147,10 @@ export default function Homepage() {
       </section>
 
       {/* Vision-Mission Section */}
-      <section id="vision" className="py-24 bg-nuit-dark relative overflow-hidden border-t border-white/5">
+      <section
+        id="vision"
+        className="py-24 bg-nuit-dark relative overflow-hidden border-t border-white/5"
+      >
         {/* Subtle background glow */}
         <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-soleil/5 rounded-full blur-[120px] -translate-y-1/2 pointer-events-none"></div>
 

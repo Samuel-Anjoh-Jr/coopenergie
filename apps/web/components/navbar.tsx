@@ -75,7 +75,7 @@ export default function Navbar({ locale }: NavbarProps) {
           </Link>
 
           {/* Desktop nav links - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6">
             {isLandingPage ? (
               landingNavItems.map((item) => (
                 <a

@@ -81,8 +81,11 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const t = getTranslations(locale);
 
-  const { data: myCooperativesData, loading: loadingMyCooperatives, refetch: refetchMyCooperatives } =
-    useQuery(GET_MY_COOPERATIVES);
+  const {
+    data: myCooperativesData,
+    loading: loadingMyCooperatives,
+    refetch: refetchMyCooperatives,
+  } = useQuery(GET_MY_COOPERATIVES);
 
   useEffect(() => {
     if (
@@ -214,8 +217,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   const loadingOverview = loadingMyCooperatives || loadingDetail;
 
   const hasNoCooperative =
-    !loadingMyCooperatives &&
-    myCooperativesData?.myCooperatives?.length === 0;
+    !loadingMyCooperatives && myCooperativesData?.myCooperatives?.length === 0;
 
   const handleCreateCooperative = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,7 +234,11 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       setCoopTarget("");
       await refetchMyCooperatives();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create cooperative.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create cooperative.",
+      );
     } finally {
       setIsCreatingCoop(false);
     }
@@ -265,9 +271,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={(e) => void handleCreateCooperative(e)} className="space-y-4 max-w-md">
+            <form
+              onSubmit={(e) => void handleCreateCooperative(e)}
+              className="space-y-4 max-w-md"
+            >
               <div className="space-y-1.5">
-                <Label htmlFor="coop-name">{t.createCooperative.nameLabel}</Label>
+                <Label htmlFor="coop-name">
+                  {t.createCooperative.nameLabel}
+                </Label>
                 <Input
                   id="coop-name"
                   value={coopName}
@@ -278,7 +289,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="coop-target">{t.createCooperative.targetLabel}</Label>
+                <Label htmlFor="coop-target">
+                  {t.createCooperative.targetLabel}
+                </Label>
                 <Input
                   id="coop-target"
                   type="number"
@@ -290,7 +303,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isCreatingCoop || !coopName.trim() || !coopTarget}>
+              <Button
+                type="submit"
+                disabled={isCreatingCoop || !coopName.trim() || !coopTarget}
+              >
                 {isCreatingCoop ? (
                   <>
                     <Spinner className="mr-2" />
@@ -307,207 +323,207 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
       {!hasNoCooperative && (
         <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
-                <Wallet className="h-4 w-4 md:h-6 md:w-6 text-primary" />
-              </div>
-            </div>
-            <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
-              {loadingOverview ? "..." : formatXaf(totalCollected)}
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">
-              {t.dashboard.totalContributions}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-100 hover-lift">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
-                <Activity className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
-              </div>
-            </div>
-            <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
-              {activeProposals}
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">
-              {t.dashboard.activeProposals}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-200 hover-lift">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
-                <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
-              </div>
-            </div>
-            <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
-              {memberCount}
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">
-              {t.dashboard.members}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-300 hover-lift">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
-                <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
-              </div>
-            </div>
-            <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
-              {progress.toFixed(1)}%
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">
-              {t.dashboard.progress}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-400">
-        <CardHeader className="pb-4 md:pb-6">
-          <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
-            {t.dashboard.cooperativeSummary}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 md:space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 text-sm md:text-base">
-            <div>
-              <p className="text-muted-foreground mb-1">
-                {t.dashboard.cooperativeName}
-              </p>
-              <p className="font-semibold text-base md:text-lg wrap-break-word">
-                {cooperativeName}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">
-                {t.dashboard.targetAmount}
-              </p>
-              <p className="font-semibold text-base md:text-lg text-gradient-green">
-                {formatXaf(targetAmount)}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">
-                {t.dashboard.totalCollected}
-              </p>
-              <p className="font-semibold text-base md:text-lg text-gradient-green">
-                {formatXaf(totalCollected)}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">
-                {t.dashboard.remainingAmount}
-              </p>
-              <p className="font-semibold text-base md:text-lg">
-                {formatXaf(remainingAmount)}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <span className="text-sm md:text-base font-medium">
-                {t.dashboard.progress}
-              </span>
-              <span className="text-lg md:text-xl font-bold text-gradient-green">
-                {progress.toFixed(1)}%
-              </span>
-            </div>
-            <Progress value={progress} className="h-3 md:h-4" />
-          </div>
-
-          <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-sm">Vault Address</p>
-              <p className="font-mono text-xs sm:text-sm break-all">
-                {vaultAddress || "-"}
-              </p>
-              {celoScanUrl ? (
-                <a
-                  href={celoScanUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-primary hover:underline"
-                >
-                  View on CeloScan
-                </a>
-              ) : null}
-            </div>
-
-            {celoScanUrl ? (
-              <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
-                <QRCodeSVG value={celoScanUrl} size={92} />
-              </div>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-500">
-        <CardHeader className="pb-4 md:pb-6">
-          <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
-            {t.dashboard.recentActivity}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 md:space-y-6">
-            {recentActivity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recent activity yet.
-              </p>
-            ) : null}
-
-            {recentActivity.map((activity: ActivityItem) => (
-              <div
-                key={`${activity.id}-${recentSubscriptionTick}`}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
-              >
-                <div className="flex items-start sm:items-center gap-3 md:gap-4 min-w-0 flex-1">
-                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0">
-                    <span className="text-base md:text-lg">
-                      {activity.icon === "money"
-                        ? "💰"
-                        : activity.icon === "vote"
-                          ? "🗳️"
-                          : "📋"}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm md:text-base truncate">
-                      {activity.user}
-                    </p>
-                    <p className="text-xs md:text-sm text-muted-foreground truncate">
-                      {activity.action}
-                      {activity.description && ` - ${activity.description}`}
-                    </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
+                    <Wallet className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                   </div>
                 </div>
-                <div className="text-left sm:text-right shrink-0 pl-12 sm:pl-0">
-                  {activity.amount && (
-                    <p className="font-semibold text-sm md:text-base text-gradient-green">
-                      {activity.amount}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {activity.timestamp}
+                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                  {loadingOverview ? "..." : formatXaf(totalCollected)}
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                  {t.dashboard.totalContributions}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-100 hover-lift">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
+                    <Activity className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                  {activeProposals}
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                  {t.dashboard.activeProposals}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-200 hover-lift">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
+                    <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
+                  </div>
+                </div>
+                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                  {memberCount}
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                  {t.dashboard.members}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-300 hover-lift">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
+                    <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
+                  </div>
+                </div>
+                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                  {progress.toFixed(1)}%
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                  {t.dashboard.progress}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-400">
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
+                {t.dashboard.cooperativeSummary}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 text-sm md:text-base">
+                <div>
+                  <p className="text-muted-foreground mb-1">
+                    {t.dashboard.cooperativeName}
+                  </p>
+                  <p className="font-semibold text-base md:text-lg wrap-break-word">
+                    {cooperativeName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">
+                    {t.dashboard.targetAmount}
+                  </p>
+                  <p className="font-semibold text-base md:text-lg text-gradient-green">
+                    {formatXaf(targetAmount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">
+                    {t.dashboard.totalCollected}
+                  </p>
+                  <p className="font-semibold text-base md:text-lg text-gradient-green">
+                    {formatXaf(totalCollected)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">
+                    {t.dashboard.remainingAmount}
+                  </p>
+                  <p className="font-semibold text-base md:text-lg">
+                    {formatXaf(remainingAmount)}
                   </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                  <span className="text-sm md:text-base font-medium">
+                    {t.dashboard.progress}
+                  </span>
+                  <span className="text-lg md:text-xl font-bold text-gradient-green">
+                    {progress.toFixed(1)}%
+                  </span>
+                </div>
+                <Progress value={progress} className="h-3 md:h-4" />
+              </div>
+
+              <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">Vault Address</p>
+                  <p className="font-mono text-xs sm:text-sm break-all">
+                    {vaultAddress || "-"}
+                  </p>
+                  {celoScanUrl ? (
+                    <a
+                      href={celoScanUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      View on CeloScan
+                    </a>
+                  ) : null}
+                </div>
+
+                {celoScanUrl ? (
+                  <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
+                    <QRCodeSVG value={celoScanUrl} size={92} />
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-500">
+            <CardHeader className="pb-4 md:pb-6">
+              <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
+                {t.dashboard.recentActivity}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 md:space-y-6">
+                {recentActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No recent activity yet.
+                  </p>
+                ) : null}
+
+                {recentActivity.map((activity: ActivityItem) => (
+                  <div
+                    key={`${activity.id}-${recentSubscriptionTick}`}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
+                  >
+                    <div className="flex items-start sm:items-center gap-3 md:gap-4 min-w-0 flex-1">
+                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0">
+                        <span className="text-base md:text-lg">
+                          {activity.icon === "money"
+                            ? "💰"
+                            : activity.icon === "vote"
+                              ? "🗳️"
+                              : "📋"}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm md:text-base truncate">
+                          {activity.user}
+                        </p>
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
+                          {activity.action}
+                          {activity.description && ` - ${activity.description}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right shrink-0 pl-12 sm:pl-0">
+                      {activity.amount && (
+                        <p className="font-semibold text-sm md:text-base text-gradient-green">
+                          {activity.amount}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {activity.timestamp}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

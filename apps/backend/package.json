@@ -7,7 +7,7 @@
     "build": "bunx tsc -p tsconfig.json",
     "start": "node dist/main",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bunx prisma generate --schema prisma/schema.prisma && tsc --noEmit",
     "prisma:seed": "bun run src/prisma/seed.ts"
   },
   "dependencies": {

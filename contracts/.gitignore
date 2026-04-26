@@ -22,6 +22,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.production.local
 .env.local
 
+# generated deployment output (per-run scratch file — see deployments/ for committed records)
+deployed-addresses.json
+
 # caches
 .eslintcache
 .cache

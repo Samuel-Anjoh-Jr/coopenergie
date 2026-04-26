@@ -1,7 +1,7 @@
 {
   "name": "@coopenergie/contracts",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",

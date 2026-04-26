@@ -229,7 +229,8 @@ const translations = {
     },
     createCooperative: {
       title: "Create your cooperative",
-      description: "You're not part of any cooperative yet. Create one to get started — you'll be the admin and can invite others.",
+      description:
+        "You're not part of any cooperative yet. Create one to get started — you'll be the admin and can invite others.",
       nameLabel: "Cooperative name",
       namePlaceholder: "e.g. Douala Solar Community",
       targetLabel: "Fundraising target (XAF)",
@@ -737,7 +738,8 @@ const translations = {
     },
     createCooperative: {
       title: "Créer votre coopérative",
-      description: "Vous ne faites partie d'aucune coopérative pour l'instant. Créez-en une pour commencer — vous en serez l'administrateur et pourrez inviter d'autres membres.",
+      description:
+        "Vous ne faites partie d'aucune coopérative pour l'instant. Créez-en une pour commencer — vous en serez l'administrateur et pourrez inviter d'autres membres.",
       nameLabel: "Nom de la coopérative",
       namePlaceholder: "Ex. Communauté Solaire de Douala",
       targetLabel: "Objectif de collecte (XAF)",

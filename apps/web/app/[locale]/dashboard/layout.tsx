@@ -41,7 +41,12 @@ const navItems = [
   { key: "proposals", icon: Lightbulb, href: "/dashboard/proposals" },
   { key: "ledger", icon: FileText, href: "/dashboard/ledger" },
   { key: "report", icon: Download, href: "/dashboard/report" },
-  { key: "settings", icon: Settings, href: "/dashboard/settings", requiresPlatformAdmin: true },
+  {
+    key: "settings",
+    icon: Settings,
+    href: "/dashboard/settings",
+    requiresPlatformAdmin: true,
+  },
   { key: "profile", icon: User, href: "/dashboard/profile" },
 ];
 
@@ -182,7 +187,9 @@ export default function DashboardLayout({
           {navItems
             .filter(
               (item) =>
-                (!item.requiresCoopAdmin || userRole === "COOP_ADMIN" || userRole === "PLATFORM_ADMIN") &&
+                (!item.requiresCoopAdmin ||
+                  userRole === "COOP_ADMIN" ||
+                  userRole === "PLATFORM_ADMIN") &&
                 (!item.requiresPlatformAdmin || userRole === "PLATFORM_ADMIN"),
             )
             .map((item) => {

@@ -1,13 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 import hre from "hardhat";
 
-const currentDir = dirname(fileURLToPath(import.meta.url));
+const currentDir = __dirname;
 
 async function main() {
-  const { ethers, network } = hre;
+  const { ethers, network } = hre as any;
   const [deployer] = await ethers.getSigners();
 
   if (!deployer) {
@@ -42,16 +41,22 @@ async function main() {
     deployedAt: new Date().toISOString(),
   };
 
-  const outputPath = resolve(currentDir, "..", "deployed-addresses.json");
-  await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(
-    outputPath,
-    `${JSON.stringify(deploymentRecord, null, 2)}\n`,
-    "utf8",
-  );
+  // Write to deployments/<network>.json — committed source of truth per network.
+  // Also write deployed-addresses.json as a local scratch file (gitignored).
+  const deploymentsDir = resolve(currentDir, "..", "deployments");
+  await mkdir(deploymentsDir, { recursive: true });
+  const networkFile = resolve(deploymentsDir, `${network.name}.json`);
+  const scratchFile = resolve(currentDir, "..", "deployed-addresses.json");
+  const payload = `${JSON.stringify(deploymentRecord, null, 2)}\n`;
+  await writeFile(networkFile, payload, "utf8");
+  await writeFile(scratchFile, payload, "utf8");
 
-  console.log(`GasRelayer address: ${gasRelayer.address}`);
+  console.log(`\nDeployed to: ${network.name}`);
+  console.log(`GasRelayer address:  ${gasRelayer.address}`);
   console.log(`CoopFactory address: ${coopFactory.address}`);
+  console.log(`\n# Copy these into Railway / Vercel env vars:`);
+  console.log(`COOP_FACTORY_ADDRESS=${coopFactory.address}`);
+  console.log(`GAS_RELAYER_ADDRESS=${gasRelayer.address}`);
 }
 
 main().catch((error) => {

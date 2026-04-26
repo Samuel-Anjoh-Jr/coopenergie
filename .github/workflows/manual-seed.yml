@@ -1,5 +1,10 @@
 name: Manual Seed Production
 
+# Connects directly to Supabase using DATABASE_URL.
+# Set the following secret in GitHub → Settings → Secrets → Actions:
+#   DATABASE_URL — Supabase direct connection URL (Settings → Database → Connection string → URI)
+#                  Use the direct URL (port 5432), not the pooler URL.
+
 on:
   workflow_dispatch:
     inputs:
@@ -13,11 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirmation == 'CONFIRM'
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PRODUCTION_SERVICE: ${{ secrets.RAILWAY_PRODUCTION_SERVICE }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Execute seed command in production container
-        run: bunx @railway/cli@latest run --service "$RAILWAY_PRODUCTION_SERVICE" "bun run db:seed"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Prisma client
+        run: bunx prisma generate --schema apps/backend/prisma/schema.prisma
+
+      - name: Run database seed
+        run: bun run db:seed
+        working-directory: apps/backend

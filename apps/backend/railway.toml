@@ -3,6 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "apps/backend/Dockerfile"
 
 [deploy]
-startCommand = "bun run start"
+startCommand = "bun run dist/main.js"
 healthcheckPath = "/api/v1/health"
 restartPolicyType = "ON_FAILURE"

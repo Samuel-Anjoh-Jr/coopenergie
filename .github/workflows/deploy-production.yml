@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   validate:
@@ -30,6 +33,10 @@ jobs:
     if: contains(toJson(github.event.commits), 'contracts/')
     env:
       CELO_RELAYER_PRIVATE_KEY: ${{ secrets.CELO_RELAYER_PRIVATE_KEY }}
+      # Set Repository Variable CONTRACTS_NETWORK to either:
+      # - celoSepolia (recommended default for now)
+      # - celo (mainnet)
+      CONTRACTS_NETWORK: ${{ vars.CONTRACTS_NETWORK }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,15 +47,47 @@ jobs:
       - name: Install contracts dependencies
         run: cd contracts && bun install
 
-      - name: Deploy contracts to mainnet
-        run: cd contracts && bun run deploy:mainnet
+      - name: Deploy contracts to selected Celo network
+        run: |
+          cd contracts
+          NETWORK="${CONTRACTS_NETWORK:-celoSepolia}"
+          if [ "$NETWORK" = "celo" ]; then
+            bun run deploy:mainnet
+          elif [ "$NETWORK" = "celoSepolia" ]; then
+            bun run deploy:celoSepolia
+          else
+            echo "Invalid CONTRACTS_NETWORK: $NETWORK"
+            echo "Expected one of: celo, celoSepolia"
+            exit 1
+          fi
 
-  deploy-backend:
+      - name: Print env vars to update in Railway / Vercel
+        run: |
+          NETWORK="${CONTRACTS_NETWORK:-celoSepolia}"
+          FILE="contracts/deployments/${NETWORK}.json"
+          FACTORY=$(jq -r '.CoopFactory' "$FILE")
+          RELAYER=$(jq -r '.GasRelayer' "$FILE")
+          {
+            echo "## Contract addresses deployed — update your env vars"
+            echo '```'
+            echo "COOP_FACTORY_ADDRESS=${FACTORY}"
+            echo "GAS_RELAYER_ADDRESS=${RELAYER}"
+            echo '```'
+            echo "> Set these in Railway (Variables tab) and Vercel (Environment Variables) then redeploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Backend is deployed automatically by Railway's GitHub branch integration.
+  # No Railway CLI or secrets are needed — Railway watches the main branch and
+  # rebuilds the Docker image (apps/backend/Dockerfile) on every push.
+
+  db-migrate:
     runs-on: ubuntu-latest
     needs: validate
+    if: contains(toJson(github.event.commits), 'apps/backend/prisma')
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PRODUCTION_SERVICE: ${{ secrets.RAILWAY_PRODUCTION_SERVICE }}
+      # Supabase direct connection URL (port 5432, not the pooler).
+      # Set in GitHub → Settings → Secrets → Actions → DATABASE_URL
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,11 +98,10 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Deploy backend to Railway production
-        run: bunx @railway/cli@latest up --service "$RAILWAY_PRODUCTION_SERVICE" --detach
+      - name: Generate Prisma client
+        run: bunx prisma generate --schema apps/backend/prisma/schema.prisma
 
-      - name: Run Prisma migrate deploy (production)
-        if: contains(toJson(github.event.commits), 'apps/backend/prisma/schema.prisma') || contains(toJson(github.event.commits), 'apps/backend/prisma/migrations/')
+      - name: Run Prisma migrate deploy
         run: bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma
 
   deploy-web:
@@ -85,16 +123,17 @@ jobs:
   notify-success:
     runs-on: ubuntu-latest
     needs:
-      - deploy-backend
       - deploy-web
       - deploy-contracts
-    if: always() && needs.deploy-backend.result == 'success' && needs.deploy-web.result == 'success' && (needs.deploy-contracts.result == 'success' || needs.deploy-contracts.result == 'skipped')
+      - db-migrate
+    if: always() && needs.deploy-web.result == 'success' && (needs.deploy-contracts.result == 'success' || needs.deploy-contracts.result == 'skipped') && (needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped')
     steps:
       - name: Write deployment summary
         run: |
           {
             echo "## Production Deployment Summary"
-            echo "- Backend: ${{ needs.deploy-backend.result }}"
+            echo "- Backend: auto-deployed by Railway (branch integration)"
+            echo "- DB Migrations: ${{ needs.db-migrate.result }}"
             echo "- Web: ${{ needs.deploy-web.result }}"
             echo "- Contracts: ${{ needs.deploy-contracts.result }}"
             echo "- Trigger: ${{ github.sha }}"
