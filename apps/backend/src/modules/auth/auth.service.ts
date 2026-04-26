@@ -74,11 +74,17 @@ export class AuthService {
       throw new UnauthorizedException("Invalid email or password.");
     }
 
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { isPlatformAdmin: true },
+    });
+
     const token = await this.generateToken(user.id, user.email);
 
     return {
       user,
       token,
+      isPlatformAdmin: dbUser?.isPlatformAdmin ?? false,
     };
   }
 

@@ -62,6 +62,7 @@ export const authOptions: NextAuthConfig = {
             name?: string;
           };
           token?: string;
+          isPlatformAdmin?: boolean;
         };
 
         if (
@@ -78,6 +79,7 @@ export const authOptions: NextAuthConfig = {
           email: data.user.email,
           name: data.user.name,
           token: data.token,
+          isPlatformAdmin: data.isPlatformAdmin ?? false,
         };
       },
     }),
@@ -89,6 +91,7 @@ export const authOptions: NextAuthConfig = {
         token.email = user.email;
         token.name = user.name;
         token.accessToken = (user as { token?: string }).token;
+        token.isPlatformAdmin = (user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
       }
 
       return token;
@@ -99,6 +102,7 @@ export const authOptions: NextAuthConfig = {
         session.user.email = (token.email as string) || "";
         session.user.name = (token.name as string) || "";
         session.user.token = (token.accessToken as string) || "";
+        session.user.isPlatformAdmin = token.isPlatformAdmin ?? false;
       }
 
       return session;

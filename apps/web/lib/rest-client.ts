@@ -28,7 +28,7 @@ async function request<T>({ method, path, body }: RequestOptions): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_URL}/api/v1${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -25,25 +25,26 @@ export class PlatformAdminGuard implements CanActivate {
       throw new UnauthorizedException("Authentication is required.");
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isPlatformAdmin: true },
+    });
+
+    if (user?.isPlatformAdmin) {
+      request.user = { ...request.user, role: Role.PLATFORM_ADMIN };
+      return true;
+    }
+
     const membership = await this.prisma.membership.findFirst({
-      where: {
-        userId,
-        role: Role.PLATFORM_ADMIN,
-      },
-      select: {
-        role: true,
-      },
+      where: { userId, role: Role.PLATFORM_ADMIN },
+      select: { role: true },
     });
 
     if (!membership) {
       throw new ForbiddenException("Platform admin access is required.");
     }
 
-    request.user = {
-      ...request.user,
-      role: Role.PLATFORM_ADMIN,
-    };
-
+    request.user = { ...request.user, role: Role.PLATFORM_ADMIN };
     return true;
   }
 }

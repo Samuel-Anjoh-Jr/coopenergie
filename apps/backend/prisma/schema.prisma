@@ -100,6 +100,7 @@ model User {
   passwordHash           String
   name                   String
   suspended              Boolean        @default(false)
+  isPlatformAdmin        Boolean        @default(false)
   celoAddress            String?        @unique
   celoKeyEncrypted       String?
   createdAt              DateTime       @default(now())

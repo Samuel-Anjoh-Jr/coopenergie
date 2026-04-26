@@ -23,7 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) || "en";
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,9 +32,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push(`/${locale}/dashboard`);
+      if (session?.user?.isPlatformAdmin) {
+        router.push(`/${locale}/admin`);
+      } else {
+        router.push(`/${locale}/dashboard`);
+      }
     }
-  }, [status, locale, router]);
+  }, [status, session, locale, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +61,14 @@ export default function LoginPage() {
     }
 
     toast.success(t("toasts.loginSuccess"));
-    router.push(`/${locale}/dashboard`);
+
+    const { getSession } = await import("next-auth/react");
+    const session = await getSession();
+    if (session?.user?.isPlatformAdmin) {
+      router.push(`/${locale}/admin`);
+    } else {
+      router.push(`/${locale}/dashboard`);
+    }
   };
 
   return (
