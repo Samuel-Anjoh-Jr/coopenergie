@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sun, Moon, LogOut, User, Zap } from "lucide-react";
 
+
 interface NavbarProps {
   locale: Locale;
 }
