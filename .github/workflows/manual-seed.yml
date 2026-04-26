@@ -31,8 +31,8 @@ jobs:
         run: bun install
 
       - name: Generate Prisma client
-        run: bunx prisma generate --schema apps/backend/prisma/schema.prisma
+        run: bunx prisma@5.22.0 generate --schema apps/backend/prisma/schema.prisma
 
       - name: Run database seed
-        run: bun run db:seed
+        run: bun run prisma:seed
         working-directory: apps/backend
