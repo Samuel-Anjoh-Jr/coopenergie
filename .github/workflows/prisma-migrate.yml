@@ -20,14 +20,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: ${{ github.workspace }}
-
-      - name: Generate Prisma client
-        run: bunx prisma@5.22.0 generate --schema prisma/schema.prisma
+          bun-version: 1.3.13
 
       - name: Deploy migrations
         run: bunx prisma@5.22.0 migrate deploy --schema prisma/schema.prisma
