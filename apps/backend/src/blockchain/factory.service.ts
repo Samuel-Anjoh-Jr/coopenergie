@@ -52,9 +52,9 @@ export class FactoryService {
     });
 
     // Debug logs for explorer lookup
-    // eslint-disable-next-line no-console
+    
     console.log("[DEBUG] Factory address:", factoryAddress);
-    // eslint-disable-next-line no-console
+    
     console.log("[DEBUG] Transaction hash:", txHash);
 
 
@@ -71,7 +71,8 @@ export class FactoryService {
     const fromBlock = safeBlock > 5n ? safeBlock - 5n : 0n;
     const toBlock = safeBlock;
 
-    const deploymentLogs = await this.publicClient.getLogs({
+
+    let deploymentLogs = await this.publicClient.getLogs({
       address: factoryAddress,
       event: parseAbiItem(
         "event CooperativeDeployed(address indexed vault, string name, address indexed admin, uint256 timestamp)",
@@ -80,13 +81,50 @@ export class FactoryService {
       toBlock,
     });
 
-    for (const log of deploymentLogs) {
+    // Fallback: If no logs found, try parsing from receipt.logs using viem's decodeEventLog
+    if (!deploymentLogs.length) {
+      
+      console.warn('[FALLBACK] getLogs returned empty, parsing receipt.logs for CooperativeDeployed event');
+      const eventTopic =
+        '0xb2b64c1dbc055e1c9d7a70d3d8111e859954e120b4c34ca85087eaaf713c1b7e';
+      const { decodeEventLog } = await import('viem');
+      for (const log of receipt.logs as any[]) {
+        try {
+          if (
+            typeof log.topics !== 'undefined' &&
+            log.address.toLowerCase() === factoryAddress.toLowerCase() &&
+            log.topics[0] === eventTopic &&
+            log.transactionHash === txHash
+          ) {
+            // Use viem's decodeEventLog for robust decoding
+            const decoded = decodeEventLog({
+              abi: coopFactoryAbi,
+              data: (log as any).data,
+              topics: (log as any).topics,
+            }) as { args: { vault: string } };
+            
+            console.info('[FALLBACK] Decoded CooperativeDeployed event:', (decoded as any).args);
+            return {
+              vaultAddress: getAddress((decoded as any).args.vault),
+              txHash,
+              celoScanUrl: this.buildCeloScanUrl(txHash),
+              // If you want to return admin, timestamp, name, fallback, extend DeployCooperativeResult type
+            };
+          }
+        } catch (err) {
+          
+          console.error('[FALLBACK] Error decoding log:', err, log);
+        }
+      }
+    }
+
+    for (const log of deploymentLogs as any[]) {
       if (log.transactionHash !== txHash) {
         continue;
       }
-
+      // log.args may be missing type, so cast as any
       return {
-        vaultAddress: getAddress(log.args.vault),
+        vaultAddress: getAddress((log as any).args.vault),
         txHash,
         celoScanUrl: this.buildCeloScanUrl(txHash),
       };
@@ -94,14 +132,14 @@ export class FactoryService {
 
     // Log debug info if not found
     this.publicClient.getTransaction({ hash: txHash }).then(tx => {
-      // eslint-disable-next-line no-console
+      
       console.error('[DEBUG] Transaction:', tx);
     }).catch(() => {});
-    // eslint-disable-next-line no-console
+    
     console.error('[DEBUG] Receipt:', receipt);
-    // eslint-disable-next-line no-console
+    
     console.error('[DEBUG] Block range searched:', { fromBlock, toBlock });
-    // eslint-disable-next-line no-console
+    
     console.error('[DEBUG] deploymentLogs:', deploymentLogs);
     throw new Error(
       `CooperativeDeployed event not found in transaction receipt ${txHash}.`,
