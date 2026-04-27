@@ -36,15 +36,22 @@ export class MailService {
           "CoopEnergie - Transparent Solar Cooperatives",
         ].join("\n");
 
-    return this.sendMail(
-      {
-        to,
-        subject,
-        html: buildInvitationHtml(cooperativeName, joinUrl, locale),
-        text,
-      },
-      `invitation email to ${to}`,
-    );
+    try {
+      return await this.sendMail(
+        {
+          to,
+          subject,
+          html: buildInvitationHtml(cooperativeName, joinUrl, locale),
+          text,
+        },
+        `invitation email to ${to}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send invitation email to ${to}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    }
   }
 
   async sendWithdrawalApprovalNotification(

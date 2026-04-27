@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +16,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  buildInvitationAuthPath,
+  buildJoinPath,
+  getInvitationCopy,
+} from "@/lib/invitations";
 import { Locale, useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
 import { Mail, Lock, AlertCircle } from "lucide-react";
@@ -22,8 +28,15 @@ import { Mail, Lock, AlertCircle } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = (params.locale as string) || "en";
   const { status, data: session } = useSession();
+  const invitationToken = searchParams.get("invitationToken");
+  const joinPath = invitationToken ? buildJoinPath(locale, invitationToken) : null;
+  const signupHref = invitationToken
+    ? buildInvitationAuthPath("signup", locale, invitationToken)
+    : `/${locale}/signup`;
+  const copy = getInvitationCopy(locale as Locale);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,13 +45,18 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
+      if (joinPath) {
+        router.replace(joinPath);
+        return;
+      }
+
       if (session?.user?.isPlatformAdmin) {
-        router.push(`/${locale}/admin`);
+        router.replace(`/${locale}/admin`);
       } else {
-        router.push(`/${locale}/dashboard`);
+        router.replace(`/${locale}/dashboard`);
       }
     }
-  }, [status, session, locale, router]);
+  }, [joinPath, status, session, locale, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +79,11 @@ export default function LoginPage() {
     }
 
     toast.success(t("toasts.loginSuccess"));
+
+    if (joinPath) {
+      router.push(joinPath);
+      return;
+    }
 
     const { getSession } = await import("next-auth/react");
     const session = await getSession();
@@ -140,6 +163,16 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
+            {invitationToken ? (
+              <Alert className="border-primary/20 bg-primary/5">
+                <Mail className="h-4 w-4" />
+                <AlertTitle>{copy.inviteDetectedTitle}</AlertTitle>
+                <AlertDescription>
+                  {copy.inviteDetectedDescription}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <form onSubmit={handleLogin} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
@@ -214,7 +247,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-muted-foreground">
               {t("auth.noAccount")}{" "}
               <Link
-                href={`/${locale}/signup`}
+                href={signupHref}
                 className="text-primary hover:text-primary/80 font-semibold transition-colors"
               >
                 {t("auth.signup")}

@@ -237,7 +237,7 @@ export default function LedgerPage() {
         {/* Header */}
         <div className="space-y-2 md:space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-br from-primary to-accent flex items-center justify-center ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
               <Blocks className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             <div>
@@ -262,7 +262,7 @@ export default function LedgerPage() {
 
         {/* Vault Address Section */}
         {vaultAddress ? (
-          <Card className="border-border/50 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
+          <Card className="border-border/50 bg-linear-to-br from-card via-card to-primary/5 overflow-hidden">
             <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
               <CardTitle className="text-lg md:text-xl flex items-center gap-2">
                 <Blocks className="w-5 h-5 text-primary" />
@@ -282,7 +282,7 @@ export default function LedgerPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 flex-shrink-0"
+                      className="h-8 w-8 shrink-0"
                       onClick={() => void copyToClipboard(vaultAddress)}
                     >
                       {copiedHash === vaultAddress ? (
@@ -311,7 +311,21 @@ export default function LedgerPage() {
                   <QRCodeSVG
                     value={celoScanAddressUrl || vaultAddress}
                     size={96}
+                    aria-label={t("dashboard.qrAlt")}
                   />
+                  <div className="text-xs text-muted-foreground mt-2 text-center">
+                    {t("dashboard.walletAddress")}
+                  </div>
+                  {celoScanAddressUrl && (
+                    <a
+                      href={celoScanAddressUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-xs text-blue-600 underline mt-1 text-center"
+                    >
+                      {t("dashboard.viewOnCeloScan")}
+                    </a>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -319,7 +333,7 @@ export default function LedgerPage() {
         ) : null}
 
         {/* Why This Matters Card */}
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-accent/5 overflow-hidden">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-accent/5 overflow-hidden">
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
             <CardTitle className="text-base md:text-lg flex items-center gap-2">
               <Info className="w-4 h-4 md:w-5 md:h-5 text-primary" />
@@ -417,7 +431,7 @@ export default function LedgerPage() {
                   },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3 md:gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
                       {item.step}
                     </div>
                     <div>
@@ -449,7 +463,7 @@ export default function LedgerPage() {
                 variant={activeFilter === filter.key ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveFilter(filter.key)}
-                className={`gap-2 flex-shrink-0 min-h-[40px] md:min-h-[36px] ${
+                className={`gap-2 shrink-0 min-h-10 md:min-h-9 ${
                   activeFilter === filter.key
                     ? "bg-primary text-primary-foreground"
                     : "border-border hover:bg-muted"
@@ -506,7 +520,7 @@ export default function LedgerPage() {
             {groupedByBlock.map((block) => (
               <div key={block.blockNumber} className="space-y-3">
                 <div className="flex items-center gap-3 px-1">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-linear-to-r from-primary/10 to-accent/10 border border-primary/20">
                     <Blocks className="w-4 h-4 text-primary" />
                     <span className="font-mono text-sm font-semibold text-foreground">
                       {locale === "fr" ? "Bloc" : "Block"} #{block.blockNumber}
@@ -515,7 +529,7 @@ export default function LedgerPage() {
                 </div>
 
                 <div className="relative">
-                  <div className="absolute left-[15px] md:left-[19px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-accent to-primary/50" />
+                  <div className="absolute left-3.75 md:left-4.75 top-0 bottom-0 w-0.5 bg-linear-to-b from-primary via-accent to-primary/50" />
 
                   <div className="space-y-3">
                     {block.transactions.map((event, idx) => {
@@ -637,7 +651,7 @@ export default function LedgerPage() {
                                 </div>
 
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
-                                  <Lock className="w-3 h-3 flex-shrink-0" />
+                                  <Lock className="w-3 h-3 shrink-0" />
                                   <span>{t("ledger.permanentRecord")}</span>
                                 </div>
                               </div>

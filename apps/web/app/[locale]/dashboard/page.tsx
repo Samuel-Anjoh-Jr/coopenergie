@@ -26,7 +26,7 @@ import {
   SUBSCRIPTION_ON_VOTE,
 } from "@/lib/graphql/subscriptions/cooperative";
 import { restClient } from "@/lib/rest-client";
-import { getTranslations, type Locale } from "@/lib/translations";
+import { useTranslations, type Locale } from "@/lib/translations";
 
 type ActivityItem = {
   id: string;
@@ -79,7 +79,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     params.then(({ locale: resolvedLocale }) => setLocale(resolvedLocale));
   }, [params]);
 
-  const t = getTranslations(locale);
+  const t = useTranslations(locale);
 
   const {
     data: myCooperativesData,
@@ -161,7 +161,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       return {
         id: event.id,
         icon: "money",
-        action: t.dashboard.contribution,
+        action: t("dashboard.contribution"),
         description: amount > 0 ? formatXaf(amount) : undefined,
         amount: amount > 0 ? formatXaf(amount) : undefined,
         user: contributor,
@@ -175,7 +175,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       return {
         id: event.id,
         icon: "vote",
-        action: `${t.dashboard.vote} (${choice})`,
+        action: `${t("dashboard.vote")} (${choice})`,
         description: payload.proposalId
           ? String(payload.proposalId)
           : undefined,
@@ -187,7 +187,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     return {
       id: event.id,
       icon: "proposal",
-      action: t.dashboard.proposalCreated,
+      action: t("dashboard.proposalCreated"),
       description: payload.title ? String(payload.title) : undefined,
       user: String(payload.creator ?? "Member"),
       timestamp: new Date(event.createdAt).toLocaleString(),
@@ -202,9 +202,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     return cooperative.recentActivity.slice(0, 5).map(formatActivity);
   }, [
     cooperative,
-    t.dashboard.contribution,
-    t.dashboard.proposalCreated,
-    t.dashboard.vote,
+    t("dashboard.contribution"),
+    t("dashboard.proposalCreated"),
+    t("dashboard.vote"),
   ]);
 
   const activeProposals = report?.totalProposals ?? 0;
@@ -229,7 +229,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         name: coopName.trim(),
         targetAmountXAF: targetXAF,
       });
-      toast.success(t.toasts.cooperativeCreated);
+      toast.success(t("toasts.cooperativeCreated"));
       setCoopName("");
       setCoopTarget("");
       await refetchMyCooperatives();
@@ -237,7 +237,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to create cooperative.",
+          : t("toasts.cooperativeCreationFailed"),
       );
     } finally {
       setIsCreatingCoop(false);
@@ -248,10 +248,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     <div className="space-y-6 md:space-y-8 px-4 md:px-0">
       <div className="space-y-3 md:space-y-4 animate-in slide-in-from-top-4 duration-700">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-gradient leading-tight">
-          {t.dashboard.welcome}
+          {t("dashboard.welcome")}
         </h1>
         <p className="text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed">
-          {t.dashboard.welcomeDesc}
+          {t("dashboard.welcomeDesc")}
         </p>
       </div>
 
@@ -263,11 +263,11 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 <Building2 className="h-5 w-5 text-primary" />
               </div>
               <CardTitle className="text-xl text-gradient">
-                {t.createCooperative.title}
+                {t("createCooperative.title")}
               </CardTitle>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t.createCooperative.description}
+              {t("createCooperative.description")}
             </p>
           </CardHeader>
           <CardContent>
@@ -277,20 +277,20 @@ export default function DashboardPage({ params }: DashboardPageProps) {
             >
               <div className="space-y-1.5">
                 <Label htmlFor="coop-name">
-                  {t.createCooperative.nameLabel}
+                  {t("createCooperative.nameLabel")}
                 </Label>
                 <Input
                   id="coop-name"
                   value={coopName}
                   onChange={(e) => setCoopName(e.target.value)}
-                  placeholder={t.createCooperative.namePlaceholder}
+                  placeholder={t("createCooperative.namePlaceholder")}
                   disabled={isCreatingCoop}
                   required
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="coop-target">
-                  {t.createCooperative.targetLabel}
+                  {t("createCooperative.targetLabel")}
                 </Label>
                 <Input
                   id="coop-target"
@@ -298,7 +298,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   min="1"
                   value={coopTarget}
                   onChange={(e) => setCoopTarget(e.target.value)}
-                  placeholder={t.createCooperative.targetPlaceholder}
+                  placeholder={t("createCooperative.targetPlaceholder")}
                   disabled={isCreatingCoop}
                   required
                 />
@@ -310,10 +310,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 {isCreatingCoop ? (
                   <>
                     <Spinner className="mr-2" />
-                    {t.createCooperative.submitting}
+                    {t("createCooperative.submitting")}
                   </>
                 ) : (
-                  t.createCooperative.submit
+                  t("createCooperative.submit")
                 )}
               </Button>
             </form>
@@ -335,7 +335,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   {loadingOverview ? "..." : formatXaf(totalCollected)}
                 </div>
                 <p className="text-xs md:text-sm text-muted-foreground font-medium">
-                  {t.dashboard.totalContributions}
+                  {t("dashboard.totalContributions")}
                 </p>
               </CardContent>
             </Card>
@@ -351,7 +351,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   {activeProposals}
                 </div>
                 <p className="text-xs md:text-sm text-muted-foreground font-medium">
-                  {t.dashboard.activeProposals}
+                  {t("dashboard.activeProposals")}
                 </p>
               </CardContent>
             </Card>
@@ -367,7 +367,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   {memberCount}
                 </div>
                 <p className="text-xs md:text-sm text-muted-foreground font-medium">
-                  {t.dashboard.members}
+                  {t("dashboard.members")}
                 </p>
               </CardContent>
             </Card>
@@ -383,7 +383,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   {progress.toFixed(1)}%
                 </div>
                 <p className="text-xs md:text-sm text-muted-foreground font-medium">
-                  {t.dashboard.progress}
+                  {t("dashboard.progress")}
                 </p>
               </CardContent>
             </Card>
@@ -392,14 +392,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
           <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-400">
             <CardHeader className="pb-4 md:pb-6">
               <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
-                {t.dashboard.cooperativeSummary}
+                {t("dashboard.cooperativeSummary")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 text-sm md:text-base">
                 <div>
                   <p className="text-muted-foreground mb-1">
-                    {t.dashboard.cooperativeName}
+                    {t("dashboard.cooperativeName")}
                   </p>
                   <p className="font-semibold text-base md:text-lg wrap-break-word">
                     {cooperativeName}
@@ -407,7 +407,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">
-                    {t.dashboard.targetAmount}
+                    {t("dashboard.targetAmount")}
                   </p>
                   <p className="font-semibold text-base md:text-lg text-gradient-green">
                     {formatXaf(targetAmount)}
@@ -415,7 +415,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">
-                    {t.dashboard.totalCollected}
+                    {t("dashboard.totalCollected")}
                   </p>
                   <p className="font-semibold text-base md:text-lg text-gradient-green">
                     {formatXaf(totalCollected)}
@@ -423,7 +423,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">
-                    {t.dashboard.remainingAmount}
+                    {t("dashboard.remainingAmount")}
                   </p>
                   <p className="font-semibold text-base md:text-lg">
                     {formatXaf(remainingAmount)}
@@ -434,7 +434,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                   <span className="text-sm md:text-base font-medium">
-                    {t.dashboard.progress}
+                    {t("dashboard.progress")}
                   </span>
                   <span className="text-lg md:text-xl font-bold text-gradient-green">
                     {progress.toFixed(1)}%
@@ -445,7 +445,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
               <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
                 <div className="space-y-2">
-                  <p className="text-muted-foreground text-sm">Vault Address</p>
+                  <p className="text-muted-foreground text-sm">{t("dashboard.vaultAddress")}</p>
                   <p className="font-mono text-xs sm:text-sm break-all">
                     {vaultAddress || "-"}
                   </p>
@@ -456,14 +456,25 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                       rel="noreferrer"
                       className="text-sm text-primary hover:underline"
                     >
-                      View on CeloScan
+                      {t("dashboard.viewOnCeloScan")}
                     </a>
                   ) : null}
                 </div>
 
                 {celoScanUrl ? (
                   <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
-                    <QRCodeSVG value={celoScanUrl} size={92} />
+                    <QRCodeSVG value={celoScanUrl} size={92} aria-label={t("dashboard.qrAlt")}/>
+                    <div className="text-xs text-muted-foreground mt-2 text-center">
+                      {t("dashboard.walletAddress")}
+                    </div>
+                    <a
+                      href={celoScanUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-xs text-blue-600 underline mt-1 text-center"
+                    >
+                      {t("dashboard.viewOnCeloScan")}
+                    </a>
                   </div>
                 ) : null}
               </div>
@@ -473,14 +484,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
           <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-500">
             <CardHeader className="pb-4 md:pb-6">
               <CardTitle className="text-xl md:text-2xl font-bold text-gradient">
-                {t.dashboard.recentActivity}
+                {t("dashboard.recentActivity")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 md:space-y-6">
                 {recentActivity.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No recent activity yet.
+                    {t("dashboard.noRecentActivity")}
                   </p>
                 ) : null}
 

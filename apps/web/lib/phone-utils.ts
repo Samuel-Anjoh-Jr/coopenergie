@@ -7,12 +7,19 @@ const ORANGE_PREFIXES = new Set(["69", "655", "656", "657", "658", "659"]);
 export function normalizeCameroonPhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, "");
 
+  // Accept only 9 digits starting with 6
   if (digits.length === 9 && digits.startsWith("6")) {
     return `237${digits}`;
   }
 
+  // Accept 12 digits starting with 2376
   if (digits.length === 12 && digits.startsWith("2376")) {
     return digits;
+  }
+
+  // Accept +2376XXXXXXXX
+  if (digits.length === 13 && digits.startsWith("2376")) {
+    return digits.slice(1);
   }
 
   return null;

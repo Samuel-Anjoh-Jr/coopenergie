@@ -110,7 +110,7 @@ export class ProposalsService {
     const normalizedTitle = title.trim();
     const normalizedDescription = description.trim();
 
-    const proposal = await this.prisma.proposal.create({
+    let proposal = await this.prisma.proposal.create({
       data: {
         cooperativeId,
         creatorId: userId,
@@ -164,6 +164,7 @@ export class ProposalsService {
             data: {
               txHash: relayResult.txHash,
               blockNumber: onChainProposalId,
+              status: ProposalStatus.PENDING,
             },
             include: {
               creator: {
@@ -204,6 +205,26 @@ export class ProposalsService {
             error instanceof Error ? error.message : String(error)
           }`,
         );
+        // Mark proposal as failed and ensure votes/creator are included
+        proposal = await this.prisma.proposal.update({
+          where: { id: proposal.id },
+          data: { status: ProposalStatus.REJECTED },
+          include: {
+            creator: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                celoAddress: true,
+              },
+            },
+            votes: {
+              select: {
+                choice: true,
+              },
+            },
+          },
+        });
         throw new InternalServerErrorException(
           "Failed to create proposal on-chain.",
         );

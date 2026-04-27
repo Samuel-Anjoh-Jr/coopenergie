@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +16,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  buildInvitationAuthPath,
+  buildJoinPath,
+  getInvitationCopy,
+} from "@/lib/invitations";
 import { Locale, useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
 import { Mail, Lock, User, AlertCircle } from "lucide-react";
@@ -22,7 +28,15 @@ import { Mail, Lock, User, AlertCircle } from "lucide-react";
 export default function SignupPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = (params.locale as string) || "en";
+  const { status } = useSession();
+  const invitationToken = searchParams.get("invitationToken");
+  const joinPath = invitationToken ? buildJoinPath(locale, invitationToken) : null;
+  const loginHref = invitationToken
+    ? buildInvitationAuthPath("login", locale, invitationToken)
+    : `/${locale}/login`;
+  const copy = getInvitationCopy(locale as Locale);
   const [isLoading, setIsLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,6 +44,12 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const t = useTranslations(locale as Locale);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(joinPath || `/${locale}/dashboard`);
+    }
+  }, [joinPath, locale, router, status]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +95,12 @@ export default function SignupPage() {
       if (signInResult?.error) {
         // Signup succeeded but auto-login failed — send to login page
         toast.success(t("toasts.signupSuccess"));
-        router.push(`/${locale}/login`);
+        router.push(loginHref);
         return;
       }
 
       toast.success(t("toasts.signupSuccess"));
-      router.push(`/${locale}/dashboard`);
+      router.push(joinPath || `/${locale}/dashboard`);
     } catch {
       const message = t("errors.networkError");
       setError(message);
@@ -159,6 +179,16 @@ export default function SignupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
+            {invitationToken ? (
+              <Alert className="border-primary/20 bg-primary/5">
+                <Mail className="h-4 w-4" />
+                <AlertTitle>{copy.inviteDetectedTitle}</AlertTitle>
+                <AlertDescription>
+                  {copy.inviteDetectedDescription}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <form onSubmit={handleSignup} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
@@ -281,7 +311,7 @@ export default function SignupPage() {
             <p className="text-center text-sm text-muted-foreground">
               {t("auth.alreadyHaveAccount")}{" "}
               <Link
-                href={`/${locale}/login`}
+                href={loginHref}
                 className="text-primary hover:text-primary/80 font-semibold transition-colors"
               >
                 {t("common.login")}
