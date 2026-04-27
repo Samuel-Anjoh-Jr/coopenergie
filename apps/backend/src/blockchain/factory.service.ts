@@ -51,17 +51,22 @@ export class FactoryService {
       kzg: undefined,
     });
 
+
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash: txHash,
     });
+
+    // Clamp to the latest block if the receipt block is ahead
+    const latestBlock = await this.publicClient.getBlockNumber();
+    const safeBlock = receipt.blockNumber > latestBlock ? latestBlock : receipt.blockNumber;
 
     const deploymentLogs = await this.publicClient.getLogs({
       address: factoryAddress,
       event: parseAbiItem(
         "event CooperativeDeployed(address indexed vault, string name, address indexed admin, uint256 timestamp)",
       ),
-      fromBlock: receipt.blockNumber,
-      toBlock: receipt.blockNumber,
+      fromBlock: safeBlock,
+      toBlock: safeBlock,
     });
 
     for (const log of deploymentLogs) {

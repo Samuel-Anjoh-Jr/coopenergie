@@ -600,7 +600,7 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
 
   private async getStartingBlock(
     cooperativeId: string,
-  ): Promise<bigint | undefined> {
+  ): Promise<bigint> {
     const latestLedgerEvent = await this.prisma.ledgerEvent.findFirst({
       where: {
         cooperativeId,
@@ -617,7 +617,8 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
       return BigInt(latestLedgerEvent.blockNumber + 1);
     }
 
-    return undefined;
+    // If no ledger event, use the latest block number from the chain
+    return await this.publicClient.getBlockNumber();
   }
 
   private parseAddress(value: string, label: string): `0x${string}` {
