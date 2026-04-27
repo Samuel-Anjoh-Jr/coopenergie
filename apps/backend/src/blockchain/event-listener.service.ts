@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { getAddress, parseAbi } from "viem";
+import { getEventLogsRobust } from "./getEventLogsRobust";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
 import { publicClient as configuredPublicClient } from "./celo-client";
@@ -142,124 +143,151 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const fromBlock = await this.getStartingBlock(cooperative.id);
-    const onError = (error: Error) => {
-      this.logger.error(
-        `Vault watcher error for ${normalizedVaultAddress}: ${error.message}`,
-      );
+    const pollInterval = process.env.BLOCKCHAIN_POLL_INTERVAL ? parseInt(process.env.BLOCKCHAIN_POLL_INTERVAL, 10) : 15000;
+    const isTestnet = (this.publicClient.chain?.id?.toString() || '').includes('44787') || (this.publicClient.transport?.url || '').includes('sepolia');
+
+    // Helper to poll logs for an event
+    const pollEvent = (abi: any, eventName: string, ledgerType: LedgerEventType, payloadMapper: (args: any, log: any) => any) => {
+      let lastBlock = fromBlock;
+      let stopped = false;
+      const poll = async () => {
+        while (!stopped) {
+          try {
+            const latestBlock = await this.publicClient.getBlockNumber();
+            if (latestBlock > lastBlock) {
+              const logs = await getEventLogsRobust({
+                publicClient: this.publicClient as any, // Cast to fix viem type error
+                address: normalizedVaultAddress,
+                abi,
+                eventName,
+                fromBlock: lastBlock + 1n,
+                toBlock: latestBlock,
+                txHash: undefined,
+                receipt: undefined,
+              });
+              for (const log of logs) {
+                const logWithArgs = log as any;
+                await this.createLedgerEvent({
+                  type: ledgerType,
+                  payload: payloadMapper(logWithArgs.args, logWithArgs),
+                  txHash: logWithArgs.transactionHash,
+                  blockNumber: logWithArgs.blockNumber,
+                  cooperativeId: cooperative.id,
+                });
+              }
+              lastBlock = latestBlock;
+            }
+          } catch (err) {
+            this.logger.error(`[Polling] Error polling ${eventName}: ${err}`);
+          }
+          await new Promise(res => setTimeout(res, pollInterval));
+        }
+      };
+      poll();
+      return () => { stopped = true; };
     };
 
-    const unwatchers: Unwatch[] = [
-      this.publicClient.watchContractEvent({
-        address: normalizedVaultAddress,
-        abi: contributionEventAbi,
-        eventName: "ContributionMade",
-        fromBlock,
-        poll: true,
-        strict: true,
-        onError,
-        onLogs: (logs) => {
-          void Promise.all(
-            logs.map((log) =>
-              this.createLedgerEvent({
-                type: LedgerEventType.CONTRIBUTION,
-                payload: {
-                  member: log.args.member,
-                  amountXAF: Number(log.args.amountXAF),
-                  totalXAF: Number(log.args.totalXAF),
-                },
-                txHash: log.transactionHash,
-                blockNumber: log.blockNumber,
-                cooperativeId: cooperative.id,
-              }),
-            ),
-          );
-        },
-      }),
-      this.publicClient.watchContractEvent({
-        address: normalizedVaultAddress,
-        abi: proposalCreatedEventAbi,
-        eventName: "ProposalCreated",
-        fromBlock,
-        poll: true,
-        strict: true,
-        onError,
-        onLogs: (logs) => {
-          void Promise.all(
-            logs.map((log) =>
-              this.createLedgerEvent({
-                type: LedgerEventType.PROPOSAL,
-                payload: {
-                  proposalId: Number(log.args.proposalId),
-                  creator: log.args.creator,
-                  title: log.args.title,
-                  timestamp: Number(log.args.timestamp),
-                },
-                txHash: log.transactionHash,
-                blockNumber: log.blockNumber,
-                cooperativeId: cooperative.id,
-              }),
-            ),
-          );
-        },
-      }),
-      this.publicClient.watchContractEvent({
-        address: normalizedVaultAddress,
-        abi: voteCastEventAbi,
-        eventName: "VoteCast",
-        fromBlock,
-        poll: true,
-        strict: true,
-        onError,
-        onLogs: (logs) => {
-          void Promise.all(
-            logs.map((log) =>
-              this.createLedgerEvent({
-                type: LedgerEventType.VOTE,
-                payload: {
-                  proposalId: Number(log.args.proposalId),
-                  voter: log.args.voter,
-                  choice: log.args.choice,
-                  yesVotes: Number(log.args.yesVotes),
-                  noVotes: Number(log.args.noVotes),
-                  timestamp: Number(log.args.timestamp),
-                  vaultAddress: normalizedVaultAddress,
-                },
-                txHash: log.transactionHash,
-                blockNumber: log.blockNumber,
-                cooperativeId: cooperative.id,
-              }),
-            ),
-          );
-        },
-      }),
-      this.publicClient.watchContractEvent({
-        address: normalizedVaultAddress,
-        abi: fundsReleasedEventAbi,
-        eventName: "FundsReleased",
-        fromBlock,
-        poll: true,
-        strict: true,
-        onError,
-        onLogs: (logs) => {
-          void Promise.all(
-            logs.map((log) =>
-              this.createLedgerEvent({
-                type: LedgerEventType.PAYMENT,
-                payload: {
-                  recipient: log.args.recipient,
-                  amountXAF: Number(log.args.amountXAF),
-                  proposalId: Number(log.args.proposalId),
-                  timestamp: Number(log.args.timestamp),
-                },
-                txHash: log.transactionHash,
-                blockNumber: log.blockNumber,
-                cooperativeId: cooperative.id,
-              }),
-            ),
-          );
-        },
-      }),
-    ];
+    let unwatchers: Unwatch[] = [];
+
+    if (isTestnet) {
+      // Use polling for testnet
+      unwatchers = [
+        pollEvent(contributionEventAbi, "ContributionMade", LedgerEventType.CONTRIBUTION, (args) => ({
+          member: args.member,
+          amountXAF: Number(args.amountXAF),
+          totalXAF: Number(args.totalXAF),
+        })),
+        pollEvent(proposalCreatedEventAbi, "ProposalCreated", LedgerEventType.PROPOSAL, (args) => ({
+          proposalId: Number(args.proposalId),
+          creator: args.creator,
+          title: args.title,
+          timestamp: Number(args.timestamp),
+        })),
+        pollEvent(voteCastEventAbi, "VoteCast", LedgerEventType.VOTE, (args, log) => ({
+          proposalId: Number(args.proposalId),
+          voter: args.voter,
+          choice: args.choice,
+          yesVotes: Number(args.yesVotes),
+          noVotes: Number(args.noVotes),
+          timestamp: Number(args.timestamp),
+          vaultAddress: normalizedVaultAddress,
+        })),
+        pollEvent(fundsReleasedEventAbi, "FundsReleased", LedgerEventType.PAYMENT, (args) => ({
+          recipient: args.recipient,
+          amountXAF: Number(args.amountXAF),
+          proposalId: Number(args.proposalId),
+          timestamp: Number(args.timestamp),
+        })),
+      ];
+    } else {
+      // Use watchContractEvent for mainnet, with error handling and fallback
+      const makeWatcher = (abi: any, eventName: string, ledgerType: LedgerEventType, payloadMapper: (args: any, log: any) => any) => {
+        let watcher: any;
+        let stopped = false;
+        const startWatcher = () => {
+          watcher = this.publicClient.watchContractEvent({
+            address: normalizedVaultAddress,
+            abi,
+            eventName,
+            fromBlock,
+            poll: true,
+            strict: true,
+            onError: (error: Error) => {
+              this.logger.error(`[Watcher] Error for ${eventName}: ${error.message}`);
+              if (error.message.includes('filter not found') || error.message.includes('Missing or invalid parameters')) {
+                this.logger.warn(`[Watcher] Restarting watcher for ${eventName} due to filter error.`);
+                if (watcher && typeof watcher === 'function') watcher();
+                if (!stopped) setTimeout(startWatcher, pollInterval);
+              }
+            },
+            onLogs: (logs) => {
+              void Promise.all(
+                logs.map((log) => {
+                  const logWithArgs = log as any;
+                  return this.createLedgerEvent({
+                    type: ledgerType,
+                    payload: payloadMapper(logWithArgs.args, logWithArgs),
+                    txHash: logWithArgs.transactionHash,
+                    blockNumber: logWithArgs.blockNumber,
+                    cooperativeId: cooperative.id,
+                  });
+                }),
+              );
+            },
+          });
+        };
+        startWatcher();
+        return () => { stopped = true; if (watcher && typeof watcher === 'function') watcher(); };
+      };
+      unwatchers = [
+        makeWatcher(contributionEventAbi, "ContributionMade", LedgerEventType.CONTRIBUTION, (args) => ({
+          member: args.member,
+          amountXAF: Number(args.amountXAF),
+          totalXAF: Number(args.totalXAF),
+        })),
+        makeWatcher(proposalCreatedEventAbi, "ProposalCreated", LedgerEventType.PROPOSAL, (args) => ({
+          proposalId: Number(args.proposalId),
+          creator: args.creator,
+          title: args.title,
+          timestamp: Number(args.timestamp),
+        })),
+        makeWatcher(voteCastEventAbi, "VoteCast", LedgerEventType.VOTE, (args, log) => ({
+          proposalId: Number(args.proposalId),
+          voter: args.voter,
+          choice: args.choice,
+          yesVotes: Number(args.yesVotes),
+          noVotes: Number(args.noVotes),
+          timestamp: Number(args.timestamp),
+          vaultAddress: normalizedVaultAddress,
+        })),
+        makeWatcher(fundsReleasedEventAbi, "FundsReleased", LedgerEventType.PAYMENT, (args) => ({
+          recipient: args.recipient,
+          amountXAF: Number(args.amountXAF),
+          proposalId: Number(args.proposalId),
+          timestamp: Number(args.timestamp),
+        })),
+      ];
+    }
 
     this.activeWatchers.set(watcherKey, {
       cooperativeId: cooperative.id,
