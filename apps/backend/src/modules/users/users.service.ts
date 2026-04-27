@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { DevicePlatform } from "@prisma/client";
 import { plainToInstance } from "class-transformer";
 
