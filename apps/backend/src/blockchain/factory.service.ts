@@ -56,17 +56,22 @@ export class FactoryService {
       hash: txHash,
     });
 
+
     // Clamp to the latest block if the receipt block is ahead
     const latestBlock = await this.publicClient.getBlockNumber();
     const safeBlock = receipt.blockNumber > latestBlock ? latestBlock : receipt.blockNumber;
+
+    // Loosen block range: search up to 5 blocks before
+    const fromBlock = safeBlock > 5n ? safeBlock - 5n : 0n;
+    const toBlock = safeBlock;
 
     const deploymentLogs = await this.publicClient.getLogs({
       address: factoryAddress,
       event: parseAbiItem(
         "event CooperativeDeployed(address indexed vault, string name, address indexed admin, uint256 timestamp)",
       ),
-      fromBlock: safeBlock,
-      toBlock: safeBlock,
+      fromBlock,
+      toBlock,
     });
 
     for (const log of deploymentLogs) {
@@ -81,6 +86,17 @@ export class FactoryService {
       };
     }
 
+    // Log debug info if not found
+    this.publicClient.getTransaction({ hash: txHash }).then(tx => {
+      // eslint-disable-next-line no-console
+      console.error('[DEBUG] Transaction:', tx);
+    }).catch(() => {});
+    // eslint-disable-next-line no-console
+    console.error('[DEBUG] Receipt:', receipt);
+    // eslint-disable-next-line no-console
+    console.error('[DEBUG] Block range searched:', { fromBlock, toBlock });
+    // eslint-disable-next-line no-console
+    console.error('[DEBUG] deploymentLogs:', deploymentLogs);
     throw new Error(
       `CooperativeDeployed event not found in transaction receipt ${txHash}.`,
     );
