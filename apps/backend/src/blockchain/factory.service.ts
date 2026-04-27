@@ -51,6 +51,12 @@ export class FactoryService {
       kzg: undefined,
     });
 
+    // Debug logs for explorer lookup
+    // eslint-disable-next-line no-console
+    console.log("[DEBUG] Factory address:", factoryAddress);
+    // eslint-disable-next-line no-console
+    console.log("[DEBUG] Transaction hash:", txHash);
+
 
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash: txHash,
