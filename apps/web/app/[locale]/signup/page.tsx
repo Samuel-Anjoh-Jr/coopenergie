@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Locale, useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
-import { Zap, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Mail, Lock, User, AlertCircle } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -104,13 +104,15 @@ export default function SignupPage() {
         <div className="absolute inset-0 bg-linear-to-r from-background via-background/50 to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center p-12">
           <div className="max-w-lg space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-linear-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-foreground">
-                {t("branding.appName")}
-              </span>
+            <div className="flex items-center gap-3.5">
+              <Image
+                src="/logo/coopenergie-logo-full.png"
+                alt={t("branding.appName")}
+                width={728}
+                height={179}
+                className="h-10.5 w-auto drop-shadow-[0_1px_0_rgba(15,23,42,0.08)] dark:drop-shadow-[0_1px_0_rgba(248,250,252,0.12)]"
+                priority
+              />
             </div>
             <h1 className="text-4xl font-bold text-foreground leading-tight">
               <span className="text-gradient">{t("auth.heroTextLine1")}</span>
@@ -131,13 +133,23 @@ export default function SignupPage() {
         <Card className="w-full max-w-md border-border/50 shadow-2xl bg-card/80 backdrop-blur">
           <CardHeader className="text-center space-y-4 pb-2">
             {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-linear-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-foreground">
-                {t("branding.appName")}
-              </span>
+            <div className="lg:hidden flex items-center justify-center gap-2.5 mb-4">
+              <Image
+                src="/logo/coopenergie-logo-icon.png"
+                alt={t("branding.appName")}
+                width={184}
+                height={172}
+                className="h-10 w-auto"
+                priority
+              />
+              <Image
+                src="/logo/coopenergie-logo-full.png"
+                alt={t("branding.appName")}
+                width={728}
+                height={179}
+                className="h-8 w-auto"
+                priority
+              />
             </div>
             <CardTitle className="text-2xl font-bold text-foreground">
               {t("auth.signup")}
@@ -248,7 +260,7 @@ export default function SignupPage() {
                   !password ||
                   !confirmPassword
                 }
-                className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg"
+                className="w-full bg-linear-to-r from-primary to-[#1D4ED8] hover:from-[#1D4ED8] hover:to-[#1E40AF] text-white shadow-lg"
               >
                 {isLoading && <Spinner className="mr-2" />}
                 {t("auth.createAccount")}

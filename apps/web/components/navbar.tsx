@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { Locale, useTranslations } from "@/lib/translations";
@@ -27,7 +28,6 @@ import {
   Moon,
   LogOut,
   User,
-  Zap,
   Menu,
   Home,
   LayoutDashboard,
@@ -257,9 +257,7 @@ export function Navbar({ locale }: NavbarProps) {
                           />
                           <Home
                             className={`h-4 w-4 transition-transform duration-300 ${
-                              activeHash === ""
-                                ? "scale-110 motion-safe:animate-pulse"
-                                : ""
+                              activeHash === "" ? "scale-105" : ""
                             }`}
                           />
                           {t("navbar.home")}
@@ -322,9 +320,7 @@ export function Navbar({ locale }: NavbarProps) {
                               />
                               <Home
                                 className={`h-4 w-4 transition-transform duration-300 ${
-                                  isHomeActive
-                                    ? "scale-110 motion-safe:animate-pulse"
-                                    : ""
+                                  isHomeActive ? "scale-105" : ""
                                 }`}
                               />
                               {t("navbar.home")}
@@ -353,9 +349,7 @@ export function Navbar({ locale }: NavbarProps) {
                               />
                               <LayoutDashboard
                                 className={`h-4 w-4 transition-transform duration-300 ${
-                                  isDashboardActive
-                                    ? "scale-110 motion-safe:animate-pulse"
-                                    : ""
+                                  isDashboardActive ? "scale-105" : ""
                                 }`}
                               />
                               {t("navbar.dashboard")}
@@ -413,14 +407,16 @@ export function Navbar({ locale }: NavbarProps) {
 
           <Link
             href={`/${locale}`}
-            className="flex items-center gap-2 md:gap-3 group"
+            className="flex items-center gap-2.5 md:gap-3 group"
           >
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-linear-to-br from-amber-400 to-amber-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-amber-500/25 transition-all duration-300 group-hover:scale-105">
-              <Zap className="w-4 h-4 md:w-5 md:h-5 text-white" />
-            </div>
-            <span className="text-lg md:text-xl font-bold bg-linear-to-r from-foreground to-foreground/80 bg-clip-text">
-              {t("navbar.logo")}
-            </span>
+            <Image
+              src="/logo/coopenergie-logo-full.png"
+              alt={t("navbar.logo")}
+              width={728}
+              height={179}
+              priority
+              className="h-7.5 w-auto md:h-8 transition-all duration-300 group-hover:opacity-90 drop-shadow-[0_1px_0_rgba(15,23,42,0.08)] dark:drop-shadow-[0_1px_0_rgba(248,250,252,0.12)]"
+            />
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
@@ -441,13 +437,13 @@ export function Navbar({ locale }: NavbarProps) {
               <>
                 <Link
                   href={`/${locale}`}
-                  className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
+                  className="text-foreground/80 hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
                 >
                   {t("navbar.home")}
                 </Link>
                 <Link
                   href={`/${locale}/dashboard`}
-                  className="text-muted-foreground hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
+                  className="text-foreground/80 hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
                 >
                   {t("navbar.dashboard")}
                 </Link>

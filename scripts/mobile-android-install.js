@@ -45,6 +45,27 @@ if (!fs.existsSync(androidDir)) {
   run("bunx expo prebuild --platform android --no-install", { cwd: mobileDir });
 }
 
+// Patch gradle.properties to avoid OOM: limit heap and build only arm64-v8a for debug
+const gradlePropsPath = path.join(androidDir, "gradle.properties");
+if (fs.existsSync(gradlePropsPath)) {
+  let props = fs.readFileSync(gradlePropsPath, "utf8");
+  props = props.replace(
+    /org\.gradle\.jvmargs=.*/,
+    'org.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=256m -Dfile.encoding=UTF-8 -Dkotlin.daemon.jvm.options="-Xmx512m"',
+  );
+  if (!props.includes("org.gradle.internal.http.connectionTimeout")) {
+    props += "\norg.gradle.internal.http.connectionTimeout=120000\norg.gradle.internal.http.socketTimeout=120000\n";
+  }
+  if (!isRelease) {
+    props = props.replace(
+      /reactNativeArchitectures=.*/,
+      "reactNativeArchitectures=arm64-v8a",
+    );
+  }
+  fs.writeFileSync(gradlePropsPath, props);
+  console.log("[mobile] gradle.properties patched (heap limited, arm64-v8a only for debug).");
+}
+
 // Step 2: Build APK via Gradle
 console.log(`[mobile] Building ${variant} APK…`);
 run(`cmd /c gradlew.bat assemble${variant}`, { cwd: androidDir });

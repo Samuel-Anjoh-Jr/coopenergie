@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import Image from "next/image";
 import {
-  Zap,
   LogOut,
   BarChart3,
   Building2,
@@ -130,14 +130,18 @@ export default function AdminLayout({
       </Sheet>
 
       <aside className="hidden w-64 flex-col border-r border-border/50 bg-card/98 lg:flex">
-        <div className="p-6 border-b border-border/50 flex items-center gap-3">
-          <div className="w-9 h-9 bg-linear-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="font-bold text-foreground text-sm">CoopEnergie</p>
-            <p className="text-xs text-muted-foreground">Platform Admin</p>
-          </div>
+        <div className="p-6 border-b border-border/50 space-y-3">
+          <Image
+            src="/logo/coopenergie-logo-full.png"
+            alt="CoopEnergie"
+            width={728}
+            height={179}
+            className="h-8 w-auto drop-shadow-[0_1px_0_rgba(15,23,42,0.08)] dark:drop-shadow-[0_1px_0_rgba(248,250,252,0.12)]"
+            priority
+          />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Platform Admin
+          </p>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">

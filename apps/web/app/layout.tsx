@@ -14,22 +14,26 @@ export const metadata: Metadata = {
   title: "CoopEnergie",
   description: "Fund solar energy cooperatively in Cameroon",
   generator: "v0.app",
+  applicationName: "CoopEnergie",
+  manifest: "/manifest",
+  themeColor: "#2563EB",
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        url: "/logo/coopenergie-logo-icon.svg",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/favicon-32x32.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-dark-32x32.png",
+        url: "/favicon-32x32.png",
         media: "(prefers-color-scheme: dark)",
       },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
     ],
-    apple: "/apple-icon.png",
+    apple: "/apple-touch-icon.png",
+    shortcut: ["/favicon-16x16.png", "/favicon-32x32.png"],
   },
 };
 

@@ -2,6 +2,7 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Alert,
   Pressable,
   Text,
@@ -58,7 +59,19 @@ export default function RegisterScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
-        <Text className="text-3xl font-bold text-[#1B5E20] mb-2">
+        <View className="mb-3 flex-row items-center gap-3">
+          <Image
+            source={require("../../assets/icon.png")}
+            style={{ width: 42, height: 42 }}
+            resizeMode="contain"
+          />
+          <Image
+            source={require("../../assets/logo-full.png")}
+            style={{ width: 176, height: 44 }}
+            resizeMode="contain"
+          />
+        </View>
+        <Text className="text-2xl font-bold text-[#1B5E20] mb-2">
           {t("auth.registerTitle")}
         </Text>
         <Text className="text-base text-slate-600 mb-6">
