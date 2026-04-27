@@ -51,6 +51,30 @@ export class UsersService {
   }
 
   async updateProfile(id: string, data: ProfileUpdateInput) {
+    // Fetch user and check if celoAddress is being changed
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id },
+      select: { celoAddress: true },
+    });
+    let newCeloAddress = data.celoAddress;
+    if (
+      newCeloAddress &&
+      existingUser?.celoAddress &&
+      newCeloAddress !== existingUser.celoAddress
+    ) {
+      // Check if user is a COOP_ADMIN or has any on-chain role
+      const hasOnChainRole = await this.prisma.membership.findFirst({
+        where: {
+          userId: id,
+          role: { in: ["COOP_ADMIN"] },
+        },
+      });
+      if (hasOnChainRole) {
+        throw new ForbiddenException(
+          "You cannot change your CELO address while you are an on-chain admin. Contact support."
+        );
+      }
+    }
     const user = await this.prisma.user.update({
       where: { id },
       data: {

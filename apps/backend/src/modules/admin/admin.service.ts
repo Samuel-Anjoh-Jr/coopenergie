@@ -462,4 +462,58 @@ export class AdminService {
 
     return updated;
   }
+
+  async getCooperativesAdminKeyHealth() {
+    // Find all cooperatives with a vaultAdminAddress
+    const cooperatives = await this.prisma.cooperative.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        vaultAdminAddress: true,
+        vaultAddress: true,
+        createdAt: true,
+      },
+    });
+
+    const results = [];
+    for (const coop of cooperatives) {
+      if (!coop.vaultAdminAddress) {
+        results.push({
+          ...coop,
+          health: 'no-vault-admin-address',
+          message: 'No vault admin address recorded.'
+        });
+        continue;
+      }
+      const user = await this.prisma.user.findFirst({
+        where: { celoAddress: coop.vaultAdminAddress },
+        select: { id: true, name: true, email: true, celoKeyEncrypted: true },
+      });
+      if (!user) {
+        results.push({
+          ...coop,
+          health: 'no-local-user',
+          message: 'No local user with this vault admin address.'
+        });
+        continue;
+      }
+      if (!user.celoKeyEncrypted) {
+        results.push({
+          ...coop,
+          health: 'missing-key',
+          message: 'Vault admin user exists but has no stored CELO key.',
+          user,
+        });
+        continue;
+      }
+      results.push({
+        ...coop,
+        health: 'ok',
+        message: 'Vault admin key is present.',
+        user,
+      });
+    }
+    return results;
+  }
 }

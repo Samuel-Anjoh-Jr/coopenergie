@@ -22,8 +22,8 @@ export async function getEventLogsRobust({
   eventName: string;
   fromBlock: bigint;
   toBlock: bigint;
-  txHash: string;
-  receipt: any;
+  txHash?: string;
+  receipt?: { logs?: readonly any[] } | null;
 }): Promise<any[]> {
   // Try getLogs first
   let logs: any[] = [];
@@ -40,21 +40,22 @@ export async function getEventLogsRobust({
   }
   if (logs.length) return logs;
 
-  // Fallback: parse receipt.logs
-  
-  console.warn(`[getEventLogsRobust] getLogs returned empty, falling back to receipt.logs for ${eventName}`);
-  const eventAbi = abi.find((item: any) => item.name === eventName);
-  const eventTopic = eventAbi && eventAbi.type === "event"
-    ? eventAbi.signature || undefined
-    : undefined;
+  if (!txHash || !receipt?.logs?.length) {
+    return [];
+  }
+
+  console.warn(
+    `[getEventLogsRobust] getLogs returned empty, falling back to receipt.logs for ${eventName}`,
+  );
   const decodedLogs: any[] = [];
   for (const log of (receipt?.logs || []) as any[]) {
     try {
       if (
+        typeof log.address === "string" &&
+        typeof log.transactionHash === "string" &&
         log.address.toLowerCase() === address.toLowerCase() &&
         log.transactionHash === txHash
       ) {
-        // Try to decode with viem
         const decoded = decodeEventLog({
           abi,
           data: log.data,
@@ -65,7 +66,6 @@ export async function getEventLogsRobust({
         }
       }
     } catch (err) {
-      
       console.error(`[getEventLogsRobust] Error decoding log:`, err, log);
     }
   }

@@ -100,6 +100,7 @@ export class ProposalsService {
       select: {
         id: true,
         celoAddress: true,
+        celoKeyEncrypted: true,
       },
     });
 
@@ -139,9 +140,9 @@ export class ProposalsService {
     const vaultReady = !!cooperative.vaultAddress;
 
     if (blockchainEnabled && vaultReady) {
-      if (!user.celoAddress) {
+      if (!user.celoAddress || !user.celoKeyEncrypted) {
         throw new BadRequestException(
-          "User must have a CELO address before creating a proposal.",
+          "User must have a CELO wallet before creating a proposal.",
         );
       }
 
@@ -149,6 +150,7 @@ export class ProposalsService {
         const relayResult = await this.relayerService.relayCreateProposal(
           cooperative.vaultAddress,
           user.celoAddress,
+          user.celoKeyEncrypted,
           normalizedTitle,
           normalizedDescription,
         );

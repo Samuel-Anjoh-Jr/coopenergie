@@ -87,6 +87,7 @@ export class CooperativesService {
         data: {
           vaultAddress: deployment.vaultAddress,
           celoScanUrl: deployment.celoScanUrl,
+          vaultAdminAddress: user.celoAddress, // Persist admin address
         },
       });
 

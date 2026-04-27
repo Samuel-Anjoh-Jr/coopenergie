@@ -44,6 +44,13 @@ export const cooperativeVaultAbi = [
   },
   {
     type: "function",
+    name: "admin",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
     name: "totalContributedXAF",
     stateMutability: "view",
     inputs: [],
@@ -130,6 +137,41 @@ export const cooperativeVaultAbi = [
       { indexed: true, name: "proposalId", type: "uint256" },
       { indexed: false, name: "timestamp", type: "uint256" },
     ],
+  },
+  {
+    type: "error",
+    name: "UnauthorizedCaller",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidAmount",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidProposal",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ProposalAlreadyResolved",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "AlreadyVoted",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ProposalNotApproved",
+    inputs: [],
   },
 ] as const;
 

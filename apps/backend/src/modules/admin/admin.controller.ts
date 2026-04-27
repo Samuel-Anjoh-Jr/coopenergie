@@ -1,4 +1,4 @@
-import {
+ import {
   Body,
   Controller,
   Get,
@@ -136,5 +136,10 @@ export class AdminController {
     @Body() dto: UpdatePlatformSettingsDto,
   ) {
     return this.platformSettingsService.updateSettings(user.userId, dto);
+  }
+  @UseGuards(JwtAuthGuard, PlatformAdminGuard)
+  @Get("cooperatives/admin-key-health")
+  async cooperativesAdminKeyHealth() {
+    return this.adminService.getCooperativesAdminKeyHealth();
   }
 }

@@ -104,6 +104,7 @@ export class WithdrawalsService {
       select: {
         id: true,
         celoAddress: true,
+        celoKeyEncrypted: true,
       },
     });
 
@@ -149,9 +150,9 @@ export class WithdrawalsService {
     const vaultReady = !!cooperative.vaultAddress;
 
     if (blockchainEnabled && vaultReady) {
-      if (!adminUser.celoAddress) {
+      if (!adminUser.celoAddress || !adminUser.celoKeyEncrypted) {
         throw new BadRequestException(
-          "User must have a CELO address before creating a withdrawal proposal.",
+          "User must have a CELO wallet before creating a withdrawal proposal.",
         );
       }
 
@@ -159,6 +160,7 @@ export class WithdrawalsService {
         const relayResult = await this.relayerService.relayCreateProposal(
           cooperative.vaultAddress,
           adminUser.celoAddress,
+          adminUser.celoKeyEncrypted,
           proposalTitle,
           dto.reason.trim(),
         );

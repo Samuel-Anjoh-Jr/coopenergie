@@ -112,6 +112,7 @@ export class VotesService {
       select: {
         id: true,
         celoAddress: true,
+        celoKeyEncrypted: true,
         name: true,
       },
     });
@@ -148,9 +149,9 @@ export class VotesService {
       let updatedVote;
 
       if (blockchainEnabled && vaultReady) {
-        if (!user.celoAddress) {
+        if (!user.celoAddress || !user.celoKeyEncrypted) {
           throw new BadRequestException(
-            "User must have a CELO address before casting a vote.",
+            "User must have a CELO wallet before casting a vote.",
           );
         }
 
@@ -163,6 +164,7 @@ export class VotesService {
         const relayResult = await this.relayerService.relayVote(
           cooperative.vaultAddress,
           user.celoAddress,
+          user.celoKeyEncrypted,
           proposal.blockNumber,
           choice,
         );

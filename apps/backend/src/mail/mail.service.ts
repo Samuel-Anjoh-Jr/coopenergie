@@ -146,10 +146,14 @@ export class MailService {
         return null;
       }
 
-      const info = await transporter.sendMail({
-        from: this.getFromAddress(),
-        ...options,
-      });
+      const info = await this.withTimeout(
+        transporter.sendMail({
+          from: this.getFromAddress(),
+          ...options,
+        }),
+        this.getMailSendTimeoutMs(),
+        `Timed out while sending ${context}.`,
+      );
 
       return {
         messageId: info.messageId,
@@ -181,6 +185,18 @@ export class MailService {
       port,
       secure,
       auth: { user, pass },
+      connectionTimeout: this.parsePositiveInteger(
+        process.env.SMTP_CONNECTION_TIMEOUT_MS,
+        15000,
+      ),
+      greetingTimeout: this.parsePositiveInteger(
+        process.env.SMTP_GREETING_TIMEOUT_MS,
+        10000,
+      ),
+      socketTimeout: this.parsePositiveInteger(
+        process.env.SMTP_SOCKET_TIMEOUT_MS,
+        20000,
+      ),
     });
   }
 
@@ -274,6 +290,38 @@ export class MailService {
         </body>
       </html>
     `;
+  }
+
+  private getMailSendTimeoutMs() {
+    return this.parsePositiveInteger(process.env.SMTP_SEND_TIMEOUT_MS, 20000);
+  }
+
+  private parsePositiveInteger(value: string | undefined, fallback: number) {
+    const parsed = Number.parseInt(value ?? "", 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    errorMessage: string,
+  ): Promise<T> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timeoutHandle = setTimeout(() => {
+            reject(new Error(errorMessage));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    }
   }
 }
 

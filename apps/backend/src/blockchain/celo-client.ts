@@ -78,3 +78,4 @@ export const walletClient = relayerAccount
   : undefined;
 
 export { chain as celoChain };
+export const celoRpcUrl = rpcUrl;

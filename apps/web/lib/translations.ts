@@ -1,5 +1,19 @@
 const translations = {
   en: {
+    admin: {
+      coopAdminHealth: {
+        title: "Cooperative Admin Key Health",
+        cooperative: "Cooperative",
+        vaultAdminAddress: "Vault Admin Address",
+        status: "Status",
+        message: "Message",
+        user: "User",
+        ok: "OK",
+        missingKey: "Missing Key",
+        noVaultAdminAddress: "No Vault Admin Address",
+        noLocalUser: "No Local User",
+      },
+    },
     branding: {
       appName: "CoopEnergie",
       heroTagline1: "The power of the sun,",
@@ -507,6 +521,20 @@ const translations = {
     },
   },
   fr: {
+        admin: {
+          coopAdminHealth: {
+            title: "Santé de la clé admin de la coopérative",
+            cooperative: "Coopérative",
+            vaultAdminAddress: "Adresse admin du coffre",
+            status: "Statut",
+            message: "Message",
+            user: "Utilisateur",
+            ok: "OK",
+            missingKey: "Clé manquante",
+            noVaultAdminAddress: "Pas d'adresse admin de coffre",
+            noLocalUser: "Pas d'utilisateur local",
+          },
+        },
     branding: {
       appName: "CoopEnergie",
       heroTagline1: "La puissance du soleil,",
@@ -761,14 +789,13 @@ const translations = {
     },
     navbar: {
       logo: "CoopEnergie",
-      common: {
-        submit: "Valider",
-        cancel: "Annuler",
-        next: "Suivant",
-        back: "Retour",
-        home: "Accueil",
-        dashboard: "Tableau de bord",
-        en: "EN",
+      submit: "Valider",
+      cancel: "Annuler",
+      next: "Suivant",
+      back: "Retour",
+      home: "Accueil",
+      dashboard: "Tableau de bord",
+      en: "EN",
       fr: "FR",
       navVision: "Vision",
       navProblem: "Problème",
@@ -809,7 +836,6 @@ const translations = {
         warning: "Attention",
         defaultMemberLabel: "Membre",
         defaultCooperativeName: "Coopérative",
-      },
         learnMore: "En savoir plus",
         heroAlt:
           "Communaute cooperative solaire - panneaux solaires sur les toits d'un village camerounais",

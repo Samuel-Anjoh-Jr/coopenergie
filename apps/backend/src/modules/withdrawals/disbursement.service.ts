@@ -12,7 +12,7 @@ import { WithdrawalDestinationType, WithdrawalStatus } from "@prisma/client";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PubSub } from "graphql-subscriptions";
 
-import { RelayerService } from "../../blockchain/relayer.service";
+import { VaultService } from "../../blockchain/vault.service";
 import { PUBSUB } from "../../graphql/graphql.tokens";
 import { MailService } from "../../mail/mail.service";
 import { NotificationsService } from "../../notifications/notifications.service";
@@ -32,7 +32,7 @@ export class DisbursementService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly relayerService: RelayerService,
+    private readonly vaultService: VaultService,
     private readonly eventEmitter: EventEmitter2,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
@@ -149,7 +149,7 @@ export class DisbursementService {
       });
 
       const releaseTxHash =
-        await this.tryRelayFundsReleased(disbursedWithdrawal);
+        await this.tryReleaseFundsOnChain(disbursedWithdrawal);
       const adminEmails = await this.getCooperativeAdminEmails(
         disbursedWithdrawal.cooperativeId,
       );
@@ -358,7 +358,7 @@ export class DisbursementService {
       });
 
       if (!alreadyDisbursed) {
-        const releaseTxHash = await this.tryRelayFundsReleased(updated);
+        const releaseTxHash = await this.tryReleaseFundsOnChain(updated);
         const adminEmails = await this.getCooperativeAdminEmails(
           updated.cooperativeId,
         );
@@ -564,7 +564,10 @@ export class DisbursementService {
     };
   }
 
-  private async tryRelayFundsReleased(withdrawalRequest: {
+  private async tryReleaseFundsOnChain(withdrawalRequest: {
+    id: string;
+    cooperativeId: string;
+    proposalId: string;
     amountXAF: number;
     cooperative: {
       vaultAddress: string | null;
@@ -587,17 +590,58 @@ export class DisbursementService {
     }
 
     try {
-      const relayResult = await this.relayerService.relayFundsReleased(
+      const vaultAdminAddress = await this.vaultService.getAdmin(
         withdrawalRequest.cooperative.vaultAddress,
+      );
+      const adminUser = await this.prisma.user.findFirst({
+        where: {
+          celoAddress: {
+            equals: vaultAdminAddress,
+            mode: "insensitive",
+          },
+        },
+        select: {
+          id: true,
+          celoKeyEncrypted: true,
+        },
+      });
+
+      if (!adminUser?.celoKeyEncrypted) {
+        this.logger.warn(
+          `Skipping on-chain withdrawal release for ${withdrawalRequest.id}: no stored CELO key for vault admin ${vaultAdminAddress}.`,
+        );
+        return null;
+      }
+
+      const releaseResult = await this.vaultService.releaseFundsAsAdmin(
+        withdrawalRequest.cooperative.vaultAddress,
+        adminUser.celoKeyEncrypted,
         withdrawalRequest.recipientPhone ??
           `beneficiary:${withdrawalRequest.recipientName}`,
         withdrawalRequest.amountXAF,
         withdrawalRequest.proposal.blockNumber,
       );
-      return relayResult.txHash;
+
+      await this.prisma.auditLog.create({
+        data: {
+          action: "withdrawal.released_on_chain",
+          entity: "withdrawal",
+          entityId: withdrawalRequest.id,
+          userId: adminUser.id,
+          cooperativeId: withdrawalRequest.cooperativeId,
+          metadata: {
+            proposalId: withdrawalRequest.proposalId,
+            amountXAF: withdrawalRequest.amountXAF,
+            vaultAdminAddress,
+            releaseTxHash: releaseResult.txHash,
+          },
+        },
+      });
+
+      return releaseResult.txHash;
     } catch (error) {
       this.logger.error(
-        `On-chain withdrawal release relay failed: ${
+        `On-chain withdrawal release failed for ${withdrawalRequest.id}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );

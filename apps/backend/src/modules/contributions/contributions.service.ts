@@ -76,6 +76,7 @@ export class ContributionsService {
       select: {
         id: true,
         celoAddress: true,
+        celoKeyEncrypted: true,
         name: true,
       },
     });
@@ -100,10 +101,10 @@ export class ContributionsService {
     let finalizedContribution;
 
     if (blockchainEnabled && vaultReady) {
-      if (!user.celoAddress) {
+      if (!user.celoAddress || !user.celoKeyEncrypted) {
         await this.markContributionFailed(contribution.id);
         throw new BadRequestException(
-          "User must have a CELO address before contributing.",
+          "User must have a CELO wallet before contributing.",
         );
       }
 
@@ -111,6 +112,7 @@ export class ContributionsService {
         const relayResult = await this.relayerService.relayContribute(
           cooperative.vaultAddress,
           user.celoAddress,
+          user.celoKeyEncrypted,
           amountXAF,
         );
 
