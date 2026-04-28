@@ -13,6 +13,6 @@ import { PaymentsService } from "./payments.service";
   imports: [AuthModule, ContributionsModule],
   controllers: [PaymentsController, PaymentsWebhookController],
   providers: [CampayService, PaymentsService],
-  exports: [PaymentsService],
+  exports: [PaymentsService, CampayService],
 })
 export class PaymentsModule {}
