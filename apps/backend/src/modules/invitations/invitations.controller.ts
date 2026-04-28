@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   UseGuards,
+  HttpCode,
 } from "@nestjs/common";
 
 import { CoopAdminGuard } from "../../common/guards/coop-admin.guard";
