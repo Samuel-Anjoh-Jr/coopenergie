@@ -8,7 +8,8 @@
     "start": "node dist/main",
     "lint": "eslint src --ext .ts",
     "typecheck": "bunx prisma generate --schema prisma/schema.prisma && tsc --noEmit",
-    "prisma:seed": "bun run src/prisma/seed.ts"
+    "prisma:seed": "bun run src/prisma/seed.ts",
+    "migrate:vault": "bun run src/prisma/migrate-cooperative-vault.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.5.0",

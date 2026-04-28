@@ -202,9 +202,12 @@ export class ProposalsService {
 
         return createdProposal;
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
         this.logger.error(
           `Failed to relay proposal ${proposal.id}: ${
-            error instanceof Error ? error.message : String(error)
+            errorMessage
           }`,
         );
 
@@ -215,7 +218,7 @@ export class ProposalsService {
         });
 
         throw new InternalServerErrorException(
-          "Failed to create proposal on-chain.",
+          `Failed to create proposal on-chain: ${errorMessage}`,
         );
       }
     }

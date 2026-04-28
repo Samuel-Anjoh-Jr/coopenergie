@@ -174,6 +174,8 @@ export class RelayerService {
       );
     }
 
+    await this.assertRelayerReady(relayerAddress, request.to, walletClient);
+
     let signature = options.userSignature;
 
     if (!signature && options.signerEncryptedPrivateKey) {
@@ -190,16 +192,26 @@ export class RelayerService {
       signature = await this.signRequestWithRelayerWallet(request);
     }
 
-    const txHash = await this.withRetry(() =>
-      walletClient.writeContract({
-        account: walletClient.account,
-        address: relayerAddress,
-        abi: gasRelayerAbi,
-        functionName: "execute",
-        args: [request, signature],
-        chain: walletClient.chain,
-      }),
-    );
+    const txHash = await this.withRetry(async () => {
+      try {
+        return await walletClient.writeContract({
+          account: walletClient.account,
+          address: relayerAddress,
+          abi: gasRelayerAbi,
+          functionName: "execute",
+          args: [request, signature],
+          chain: walletClient.chain,
+        });
+      } catch (error) {
+        if (this.isOwnableUnauthorizedError(error)) {
+          throw new Error(
+            "GasRelayer execution rejected: CELO_RELAYER_PRIVATE_KEY does not match GasRelayer owner().",
+          );
+        }
+
+        throw error;
+      }
+    });
 
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash: txHash,
@@ -312,6 +324,44 @@ export class RelayerService {
     return this.walletClient;
   }
 
+  private async assertRelayerReady(
+    relayerAddress: `0x${string}`,
+    targetAddress: `0x${string}`,
+    walletClient: NonNullable<BlockchainWalletClient>,
+  ) {
+    const [owner, whitelisted] = await Promise.all([
+      this.publicClient.readContract({
+        address: relayerAddress,
+        abi: gasRelayerAbi,
+        functionName: "owner",
+        args: [],
+        authorizationList: undefined,
+      }) as Promise<`0x${string}`>,
+      this.publicClient.readContract({
+        address: relayerAddress,
+        abi: gasRelayerAbi,
+        functionName: "whitelistedTargets",
+        args: [targetAddress],
+        authorizationList: undefined,
+      }) as Promise<boolean>,
+    ]);
+
+    const callerAddress = getAddress(walletClient.account.address);
+    const ownerAddress = getAddress(owner);
+
+    if (callerAddress !== ownerAddress) {
+      throw new Error(
+        `GasRelayer owner mismatch. owner=${ownerAddress}, configuredRelayerSigner=${callerAddress}.`,
+      );
+    }
+
+    if (!whitelisted) {
+      throw new Error(
+        `GasRelayer target not whitelisted: ${targetAddress}. Add it via addWhitelisted().`,
+      );
+    }
+  }
+
   private getConfiguredGasRelayerAddress(): `0x${string}` | undefined {
     try {
       return getAddress(this.gasRelayerAddress);
@@ -363,6 +413,16 @@ export class RelayerService {
       message.includes("max fee per gas") ||
       message.includes("underpriced") ||
       message.includes("replacement transaction")
+    );
+  }
+
+  private isOwnableUnauthorizedError(error: unknown): boolean {
+    const message =
+      error instanceof Error ? error.message.toLowerCase() : String(error);
+
+    return (
+      message.includes("0x118cdaa7") ||
+      message.includes("ownableunauthorizedaccount")
     );
   }
 

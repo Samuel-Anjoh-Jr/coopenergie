@@ -1,4 +1,4 @@
-import { Controller, Get, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 import { ConfigModule } from "@nestjs/config";
 import { EventEmitterModule } from "@nestjs/event-emitter";
@@ -15,6 +15,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { ContributionsModule } from "./modules/contributions/contributions.module";
 import { CooperativesModule } from "./modules/cooperatives/cooperatives.module";
 import { InvitationsModule } from "./modules/invitations/invitations.module";
+import { HealthModule } from "./modules/health/health.module";
 import { LedgerModule } from "./modules/ledger/ledger.module";
 import { MembershipsModule } from "./modules/memberships/memberships.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -27,19 +28,7 @@ import { WithdrawalsModule } from "./modules/withdrawals/withdrawals.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
-@Controller("health")
-class HealthController {
-  @Get()
-  getHealth() {
-    return {
-      status: "ok",
-      timestamp: new Date(),
-    };
-  }
-}
-
 @Module({
-  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -81,6 +70,7 @@ class HealthController {
     AuthModule,
     ContributionsModule,
     CooperativesModule,
+    HealthModule,
     InvitationsModule,
     LedgerModule,
     MembershipsModule,

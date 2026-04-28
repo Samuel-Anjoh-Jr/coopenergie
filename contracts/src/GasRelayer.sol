@@ -39,7 +39,7 @@ contract GasRelayer is Ownable {
     function execute(
         ForwardRequest calldata req,
         bytes calldata signature
-    ) external onlyOwner returns (bool, bytes memory) {
+    ) external returns (bool, bytes memory) {
         if (!whitelistedTargets[req.to]) {
             revert TargetNotWhitelisted();
         }

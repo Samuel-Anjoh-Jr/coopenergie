@@ -123,14 +123,17 @@ export class ContributionsService {
           Number(relayResult.blockNumber),
         );
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
         await this.markContributionFailed(contribution.id);
         this.logger.error(
           `Failed to relay contribution ${contribution.id}: ${
-            error instanceof Error ? error.message : String(error)
+            errorMessage
           }`,
         );
         throw new InternalServerErrorException(
-          "Failed to process contribution on-chain.",
+          `Failed to process contribution on-chain: ${errorMessage}`,
         );
       }
     } else if (blockchainEnabled && !vaultReady) {

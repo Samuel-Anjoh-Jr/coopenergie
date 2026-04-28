@@ -1,6 +1,6 @@
 {
   "network": "celoSepolia",
-  "GasRelayer": "0x38eEF611B31EcFEa7E98e802aD754bc72cE5006B",
-  "CoopFactory": "0x07FCDCeEb9EC39e181E37794415B0f097747b9D8",
-  "deployedAt": "2026-04-25T23:05:59.897Z"
+  "GasRelayer": "0x131fB19f443A3e00d2bE4e1805B807bb4Ff62550",
+  "CoopFactory": "0xeBD3C13d62cb468aa932D7FD8eC1A6bb54b3dC60",
+  "deployedAt": "2026-04-28T15:58:45.233Z"
 }

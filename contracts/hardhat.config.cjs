@@ -9,7 +9,7 @@ require("hardhat-celo");
 // We use the standard __dirname instead.
 const currentDir = __dirname;
 
-function loadEnvFile(filePath) {
+function loadEnvFile(filePath, override = false) {
   if (!existsSync(filePath)) return;
   const contents = readFileSync(filePath, "utf8");
   for (const rawLine of contents.split(/\r?\n/)) {
@@ -25,11 +25,12 @@ function loadEnvFile(filePath) {
     ) {
       value = value.slice(1, -1);
     }
-    if (!(key in process.env)) process.env[key] = value;
+    if (override || !(key in process.env)) process.env[key] = value;
   }
 }
 
 loadEnvFile(resolve(currentDir, "..", ".env"));
+loadEnvFile(resolve(currentDir, "..", ".env.production"), true);
 
 const CELO_SEPOLIA_RPC_URL = "https://forno.celo-sepolia.celo-testnet.org";
 const deprecatedTestnetRpcUrls = new Set([

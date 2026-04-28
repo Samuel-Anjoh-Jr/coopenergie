@@ -16,6 +16,73 @@ type CampayCollectResponse = {
 
 @Injectable()
 export class CampayService {
+  async getHealthStatus() {
+    const apiKey = this.readApiKey(process.env.CAMPAY_API_KEY);
+    const baseUrl = this.readSecret(process.env.CAMPAY_BASE_URL);
+    const webhookSecret = this.readSecret(process.env.CAMPAY_WEBHOOK_SECRET);
+    const webhookUrl = this.readSecret(process.env.CAMPAY_WEBHOOK_URL);
+
+    if (!apiKey || !baseUrl) {
+      return {
+        ready: false,
+        configured: false,
+        mode: this.resolveMode(baseUrl),
+        baseUrl: baseUrl ?? null,
+        webhookUrl: webhookUrl ?? null,
+        webhookSecretConfigured: !!webhookSecret,
+        authReady: false,
+        statusCode: null,
+        providerMessage: "CamPay configuration is missing.",
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `${baseUrl.replace(/\/+$/, "")}/transaction/healthcheck/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Token ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const text = await response.text();
+      const payload = this.tryParseJson(text);
+      const providerMessage =
+        this.readString(payload?.message) ||
+        this.readString(payload?.detail) ||
+        response.statusText ||
+        null;
+      const authReady = !this.isInvalidTokenResponse(response.status, providerMessage);
+
+      return {
+        ready: authReady,
+        configured: true,
+        mode: this.resolveMode(baseUrl),
+        baseUrl,
+        webhookUrl: webhookUrl ?? null,
+        webhookSecretConfigured: !!webhookSecret,
+        authReady,
+        statusCode: response.status,
+        providerMessage,
+      };
+    } catch (error) {
+      return {
+        ready: false,
+        configured: true,
+        mode: this.resolveMode(baseUrl),
+        baseUrl,
+        webhookUrl: webhookUrl ?? null,
+        webhookSecretConfigured: !!webhookSecret,
+        authReady: false,
+        statusCode: null,
+        providerMessage: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
   async initiatePayment(
     amount: number,
     currency: string,
@@ -118,6 +185,24 @@ export class CampayService {
   private readApiKey(value: string | undefined) {
     const sanitized = this.readSecret(value);
     return sanitized ? sanitized.replace(/\s+/g, "") : undefined;
+  }
+
+  private isInvalidTokenResponse(statusCode: number, message: string | null) {
+    const normalizedMessage = message?.toLowerCase() || "";
+
+    return (
+      statusCode === 401 ||
+      statusCode === 403 ||
+      normalizedMessage.includes("invalid token")
+    );
+  }
+
+  private resolveMode(baseUrl: string | undefined) {
+    if (!baseUrl) {
+      return null;
+    }
+
+    return baseUrl.includes("demo.campay.net") ? "sandbox" : "live";
   }
 
   private readSecret(value: string | undefined) {

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
@@ -165,10 +166,11 @@ export class PaymentsService {
         reference,
       );
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       this.logger.warn(
-        `CamPay initiate failed for payment ${payment.id} (${normalizedPhoneNumber}): ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `CamPay initiate failed for payment ${payment.id} (${normalizedPhoneNumber}): ${errorMessage}`,
       );
 
       await this.prisma.payment.update({
@@ -179,6 +181,13 @@ export class PaymentsService {
           status: PaymentStatus.FAILED,
         },
       });
+
+      if (errorMessage.toLowerCase().includes("invalid token")) {
+        throw new InternalServerErrorException(
+          "Payment provider configuration error. Verify CAMPAY_API_KEY and CAMPAY_BASE_URL.",
+        );
+      }
+
       throw error;
     }
 

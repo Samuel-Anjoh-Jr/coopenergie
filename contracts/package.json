@@ -6,7 +6,11 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:celoSepolia": "hardhat run scripts/deploy.ts --network celoSepolia",
-    "deploy:mainnet": "hardhat run scripts/deploy.ts --network celo"
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network celo",
+    "deploy:replacement:celoSepolia": "hardhat run scripts/deploy-replacement-vault.ts --network celoSepolia",
+    "deploy:replacement:mainnet": "hardhat run scripts/deploy-replacement-vault.ts --network celo",
+    "whitelist:celoSepolia": "hardhat run scripts/whitelist-vaults.ts --network celoSepolia",
+    "whitelist:mainnet": "hardhat run scripts/whitelist-vaults.ts --network celo"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "2.0.2",

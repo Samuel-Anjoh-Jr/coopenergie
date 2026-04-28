@@ -12,6 +12,102 @@ type MailResult = {
 export class MailService {
   private readonly logger = new Logger(MailService.name);
 
+  async getHealthStatus() {
+    const config = this.getSmtpConfig();
+
+    if (!config) {
+      return {
+        ready: false,
+        configured: false,
+        host: null,
+        port: null,
+        secure: null,
+        fromAddress: this.getFromAddress(),
+        error: "SMTP configuration is missing.",
+      };
+    }
+
+    const verifyTransport = async (port: number, secure: boolean) => {
+      const transporter = nodemailer.createTransport(
+        this.buildTransportOptions({
+          ...config,
+          port,
+          secure,
+        }),
+      );
+
+      await this.withTimeout(
+        transporter.verify(),
+        this.getMailSendTimeoutMs(),
+        `Timed out while verifying SMTP connectivity on port ${port}.`,
+      );
+
+      return {
+        port,
+        secure,
+      };
+    };
+
+    try {
+      const verifiedTransport = await verifyTransport(config.port, config.secure);
+
+      return {
+        ready: true,
+        configured: true,
+        host: config.host,
+        port: verifiedTransport.port,
+        secure: verifiedTransport.secure,
+        fromAddress: this.getFromAddress(),
+        error: null,
+      };
+    } catch (error) {
+      const fallbackAvailable =
+        config.host.toLowerCase() === "smtp.gmail.com" &&
+        !config.secure &&
+        config.port === 587 &&
+        this.isSmtpNetworkError(error);
+
+      if (fallbackAvailable) {
+        try {
+          const verifiedFallback = await verifyTransport(465, true);
+
+          return {
+            ready: true,
+            configured: true,
+            host: config.host,
+            port: verifiedFallback.port,
+            secure: verifiedFallback.secure,
+            fromAddress: this.getFromAddress(),
+            error: null,
+          };
+        } catch (fallbackError) {
+          return {
+            ready: false,
+            configured: true,
+            host: config.host,
+            port: config.port,
+            secure: config.secure,
+            fromAddress: this.getFromAddress(),
+            error:
+              fallbackError instanceof Error
+                ? fallbackError.message
+                : String(fallbackError),
+          };
+        }
+      }
+
+      return {
+        ready: false,
+        configured: true,
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        fromAddress: this.getFromAddress(),
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
   async sendInvitationEmail(
     to: string,
     cooperativeName: string,
@@ -268,7 +364,7 @@ export class MailService {
       isGmail &&
       !config.secure &&
       config.port === 587 &&
-      this.isConnectionRefusedError(error);
+      this.isSmtpNetworkError(error);
 
     if (!shouldRetryGmailSsl) {
       return null;
@@ -288,10 +384,18 @@ export class MailService {
       return false;
     }
 
+    const message = error.message.toLowerCase();
+
     return (
-      error.message.includes("ECONNREFUSED") ||
-      error.message.includes("connect ECONNREFUSED")
+      message.includes("econnrefused") ||
+      message.includes("connect econnrefused") ||
+      message.includes("etimedout") ||
+      message.includes("connection timeout")
     );
+  }
+
+  private isSmtpNetworkError(error: unknown) {
+    return this.isConnectionRefusedError(error);
   }
 
   private readEnvValue(value: string | undefined) {
