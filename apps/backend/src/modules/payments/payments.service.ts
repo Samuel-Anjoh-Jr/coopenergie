@@ -9,6 +9,7 @@ import {
 import { PaymentProvider, PaymentStatus, Prisma } from "@prisma/client";
 import { PubSub } from "graphql-subscriptions";
 
+import { detectCameroonCarrier } from "../../common/phone-utils";
 import { PUBSUB } from "../../graphql/graphql.tokens";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -34,6 +35,16 @@ export class PaymentsService {
     amountXAF: number,
     phoneNumber: string,
   ) {
+    const detectedCarrier = detectCameroonCarrier(phoneNumber);
+
+    if (!detectedCarrier) {
+      throw new BadRequestException(
+        "A valid MTN or Orange Cameroon mobile money number is required.",
+      );
+    }
+
+    const normalizedPhoneNumber = detectedCarrier.normalizedPhone;
+
     const [user, cooperative, membership] = await Promise.all([
       this.prisma.user.findUnique({
         where: {
@@ -112,7 +123,7 @@ export class PaymentsService {
           provider: PaymentProvider.CAMPAY,
           reference,
           idempotencyKey,
-          phoneNumber,
+          phoneNumber: normalizedPhoneNumber,
         },
       });
     } catch (error) {
@@ -149,11 +160,17 @@ export class PaymentsService {
       await this.campayService.initiatePayment(
         amountXAF,
         "XAF",
-        phoneNumber,
+        normalizedPhoneNumber,
         `Contribution for cooperative ${cooperative.name}`,
         reference,
       );
     } catch (error) {
+      this.logger.warn(
+        `CamPay initiate failed for payment ${payment.id} (${normalizedPhoneNumber}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+
       await this.prisma.payment.update({
         where: {
           id: payment.id,
@@ -166,6 +183,42 @@ export class PaymentsService {
     }
 
     return this.buildInitiateResponse(payment);
+  }
+
+  async getPayment(userId: string, paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: {
+        id: paymentId,
+      },
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        amountXAF: true,
+        cooperativeId: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!payment) {
+      throw new NotFoundException("Payment not found.");
+    }
+
+    if (payment.userId !== userId) {
+      throw new ForbiddenException("You do not have access to this payment.");
+    }
+
+    return {
+      paymentId: payment.id,
+      reference: payment.reference,
+      status: payment.status,
+      amountXAF: payment.amountXAF,
+      cooperativeId: payment.cooperativeId,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+    };
   }
 
   async handleWebhook(

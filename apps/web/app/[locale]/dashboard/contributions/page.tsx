@@ -52,6 +52,8 @@ type InitiatePaymentResponse = {
   message: string;
 };
 
+const MIN_CONTRIBUTION_XAF = 25;
+
 function formatXaf(amount: number): string {
   return `${new Intl.NumberFormat("fr-FR").format(amount)} FCFA`;
 }
@@ -129,8 +131,16 @@ export default function ContributionsPage() {
     const amountNumber = Number(amount);
     const detectedCarrier = detectCameroonMobileMoney(phoneNumber);
 
-    if (!cooperativeId || !amountNumber || amountNumber <= 0) {
-      toast.error(t("errors.invalidAmount"));
+    if (
+      !cooperativeId ||
+      !Number.isFinite(amountNumber) ||
+      amountNumber < MIN_CONTRIBUTION_XAF
+    ) {
+      toast.error(
+        locale === "fr"
+          ? `La cotisation minimum est de ${MIN_CONTRIBUTION_XAF} FCFA.`
+          : `Minimum contribution is ${MIN_CONTRIBUTION_XAF} XAF.`,
+      );
       return;
     }
 
@@ -193,7 +203,7 @@ export default function ContributionsPage() {
           <Button
             onClick={() => setIsOpen(true)}
             disabled={!cooperativeId}
-            className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-[44px] active:animate-button-press ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+            className="bg-linear-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg btn-glow w-full sm:w-fit group min-h-11 active:animate-button-press ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
           >
             <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
             {t("contributions.addContribution")}
@@ -201,8 +211,8 @@ export default function ContributionsPage() {
         </div>
       </div>
 
-      <Card className="border-border/50 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
+      <Card className="border-border/50 bg-linear-to-br from-card via-card to-primary/5 overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
         <CardContent className="p-4 md:p-6 relative">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -215,7 +225,7 @@ export default function ContributionsPage() {
             </div>
             <div className="w-full h-3 md:h-4 bg-muted rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-emerald-500 via-green-500 to-amber-500 rounded-full shadow-lg transition-all duration-300"
+                className="h-full bg-linear-to-r from-emerald-500 via-green-500 to-amber-500 rounded-full shadow-lg transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -233,7 +243,7 @@ export default function ContributionsPage() {
       </Card>
 
       <Card className="border-border/50 bg-card/50 backdrop-blur overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
         <CardHeader className="relative p-4 md:p-6">
           <CardTitle className="text-lg md:text-xl">
             {t("contributions.title")}
@@ -337,7 +347,7 @@ export default function ContributionsPage() {
                           {contribution.userName ||
                             t("common.defaultMemberLabel")}
                         </span>
-                        <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0">
+                        <Badge className="bg-linear-to-r from-emerald-500 to-green-600 text-white border-0">
                           {formatXaf(contribution.amountXAF)}
                         </Badge>
                       </div>
@@ -416,13 +426,18 @@ export default function ContributionsPage() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="pr-16 bg-input border-border text-foreground h-12 text-base"
-                  min="100"
-                  step="100"
+                  min={String(MIN_CONTRIBUTION_XAF)}
+                  step="1"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">
                   FCFA
                 </span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {locale === "fr"
+                  ? `Minimum: ${MIN_CONTRIBUTION_XAF} FCFA`
+                  : `Minimum: ${MIN_CONTRIBUTION_XAF} XAF`}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -440,13 +455,18 @@ export default function ContributionsPage() {
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 className="bg-input border-border text-foreground h-12 text-base"
               />
+              <p className="text-xs text-muted-foreground">
+                {locale === "fr"
+                  ? "Formats acceptes: 6XXXXXXXX, 2376XXXXXXXX"
+                  : "Accepted formats: 6XXXXXXXX, 2376XXXXXXXX"}
+              </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 variant="outline"
                 onClick={() => setIsOpen(false)}
-                className="flex-1 border-border hover:bg-muted min-h-[44px]"
+                className="flex-1 border-border hover:bg-muted min-h-11"
                 disabled={isSubmitting}
               >
                 {t("common.cancel")}
@@ -459,7 +479,7 @@ export default function ContributionsPage() {
                   isSubmitting ||
                   !cooperativeId
                 }
-                className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-[44px] active:animate-button-press"
+                className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-11 active:animate-button-press"
               >
                 {isSubmitting ? (
                   <>

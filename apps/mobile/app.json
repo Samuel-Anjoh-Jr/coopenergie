@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.coopenergie.app",
+      "minSdkVersion": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2563EB"

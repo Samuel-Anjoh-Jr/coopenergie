@@ -19,11 +19,16 @@ const adb = `${process.env.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe`
 
 // Update this to match the applicationId in android/app/build.gradle
 // after running expo prebuild for the first time.
-const PACKAGE_NAME = "com.coopenergie";
+const PACKAGE_NAME = "com.coopenergie.app";
 
 const isRelease = process.argv.includes("--release");
 const variant = isRelease ? "Release" : "Debug";
 const variantLower = variant.toLowerCase();
+
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = isRelease ? "production" : "development";
+}
+
 const apkPath = path.join(
   androidDir,
   "app",
@@ -61,9 +66,13 @@ if (fs.existsSync(gradlePropsPath)) {
       /reactNativeArchitectures=.*/,
       "reactNativeArchitectures=arm64-v8a",
     );
+    props = props.replace(/newArchEnabled=.*/, "newArchEnabled=true");
+    props = props.replace(/hermesEnabled=.*/, "hermesEnabled=true");
   }
   fs.writeFileSync(gradlePropsPath, props);
-  console.log("[mobile] gradle.properties patched (heap limited, arm64-v8a only for debug).");
+  console.log(
+    "[mobile] gradle.properties patched (heap limited, arm64-v8a only for debug).",
+  );
 }
 
 // Step 2: Build APK via Gradle

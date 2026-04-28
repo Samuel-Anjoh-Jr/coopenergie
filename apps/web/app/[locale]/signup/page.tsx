@@ -155,14 +155,6 @@ export default function SignupPage() {
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-2.5 mb-4">
               <Image
-                src="/logo/coopenergie-logo-icon.png"
-                alt={t("branding.appName")}
-                width={184}
-                height={172}
-                className="h-10 w-auto"
-                priority
-              />
-              <Image
                 src="/logo/coopenergie-logo-full.png"
                 alt={t("branding.appName")}
                 width={728}

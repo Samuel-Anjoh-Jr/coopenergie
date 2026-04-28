@@ -58,6 +58,7 @@ export class InvitationsController {
   }
 
   @Post("lookup")
+  @HttpCode(200)
   getInvitationByToken(@Body() dto: GetInvitationByTokenDto) {
     return this.invitationsService.findByToken(dto.token);
   }

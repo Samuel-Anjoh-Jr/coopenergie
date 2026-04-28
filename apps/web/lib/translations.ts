@@ -360,6 +360,7 @@ const translations = {
       viewOnCeloScan: "View on CeloScan",
       noRecentActivity: "No recent activity.",
       qrAlt: "QR code for wallet address",
+      vaultAddress: "Vault Address",
     },
     contributions: {
       title: "My Contributions",
@@ -911,10 +912,11 @@ const translations = {
       currentCooperative: "Cooperative Actuelle",
       loggedInAs: "Connecte en tant que",
       votedOn: "A vote sur",
-     walletAddress: "Adresse du coffre",
+      walletAddress: "Adresse du coffre",
       viewOnCeloScan: "Voir sur CeloScan",
       noRecentActivity: "Aucune activité récente.",
       qrAlt: "QR code pour l'adresse du wallet",
+      vaultAddress: "Adresse du coffre",
     },
     contributions: {
       title: "Mes contributions",

@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -29,6 +31,15 @@ export class PaymentsController {
       body.amountXAF,
       body.phoneNumber,
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(":id")
+  getPayment(
+    @CurrentUser() user: { userId: string },
+    @Param("id") id: string,
+  ) {
+    return this.paymentsService.getPayment(user.userId, id);
   }
 }
 

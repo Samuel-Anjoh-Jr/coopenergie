@@ -13,7 +13,7 @@ export class InitiatePaymentDto {
 
   @Type(() => Number)
   @IsInt()
-  @Min(100)
+  @Min(25)
   amountXAF!: number;
 
   @IsString()

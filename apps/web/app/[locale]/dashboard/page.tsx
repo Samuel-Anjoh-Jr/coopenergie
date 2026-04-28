@@ -463,7 +463,16 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
                 {celoScanUrl ? (
                   <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
-                    <QRCodeSVG value={celoScanUrl} size={92} aria-label={t("dashboard.qrAlt")}/>
+                    <div className="rounded-lg bg-white p-2 shadow-sm">
+                      <QRCodeSVG
+                        value={celoScanUrl}
+                        size={92}
+                        bgColor="#FFFFFF"
+                        fgColor="#000000"
+                        includeMargin
+                        aria-label={t("dashboard.qrAlt")}
+                      />
+                    </div>
                     <div className="text-xs text-muted-foreground mt-2 text-center">
                       {t("dashboard.walletAddress")}
                     </div>

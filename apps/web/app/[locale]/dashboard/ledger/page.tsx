@@ -308,11 +308,16 @@ export default function LedgerPage() {
                 </div>
 
                 <div className="rounded-xl border border-border p-3 bg-card/80 w-fit">
-                  <QRCodeSVG
-                    value={celoScanAddressUrl || vaultAddress}
-                    size={96}
-                    aria-label={t("dashboard.qrAlt")}
-                  />
+                  <div className="rounded-lg bg-white p-2 shadow-sm">
+                    <QRCodeSVG
+                      value={celoScanAddressUrl || vaultAddress}
+                      size={96}
+                      bgColor="#FFFFFF"
+                      fgColor="#000000"
+                      includeMargin
+                      aria-label={t("dashboard.qrAlt")}
+                    />
+                  </div>
                   <div className="text-xs text-muted-foreground mt-2 text-center">
                     {t("dashboard.walletAddress")}
                   </div>

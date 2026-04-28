@@ -126,7 +126,9 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
         }
 
         setLookupError(
-          error instanceof Error ? error.message : t("errors.invalidInvitation"),
+          error instanceof Error
+            ? error.message
+            : t("errors.invalidInvitation"),
         );
       } finally {
         if (!cancelled) {
@@ -141,6 +143,16 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
       cancelled = true;
     };
   }, [t, token]);
+
+  // Loader timeout to prevent infinite spinner if backend never responds with inactive invitation
+  useEffect(() => {
+    if (!isLoading) return;
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      setLookupError("Request timed out. Please try again.");
+    }, 15000); // 15 seconds
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
 
   useEffect(() => {
     if (
@@ -160,7 +172,10 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
       try {
         const response = await acceptInvitation(token);
         toast.success(
-          copy.joinedSuccess.replace("{cooperative}", response.cooperative.name),
+          copy.joinedSuccess.replace(
+            "{cooperative}",
+            response.cooperative.name,
+          ),
         );
         router.replace(`/${locale}/dashboard`);
       } catch (error) {
@@ -369,9 +384,7 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
               </span>
             </h1>
 
-            <p className="text-lg text-muted-foreground">
-              {copy.description}
-            </p>
+            <p className="text-lg text-muted-foreground">{copy.description}</p>
           </div>
         </div>
       </div>
@@ -380,14 +393,6 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
         <Card className="w-full max-w-xl border-border/50 shadow-2xl bg-card/85 backdrop-blur">
           <CardHeader className="space-y-4 pb-2">
             <div className="lg:hidden flex items-center justify-center gap-2.5 mb-2">
-              <Image
-                src="/logo/coopenergie-logo-icon.png"
-                alt={t("branding.appName")}
-                width={184}
-                height={172}
-                className="h-10 w-auto"
-                priority
-              />
               <Image
                 src="/logo/coopenergie-logo-full.png"
                 alt={t("branding.appName")}
@@ -481,13 +486,17 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
                     </Link>
                   </Button>
                   <Button asChild variant="secondary" className="w-full">
-                    <Link href={session?.user ? `/${locale}/dashboard` : loginHref}>
+                    <Link
+                      href={session?.user ? `/${locale}/dashboard` : loginHref}
+                    >
                       {session?.user ? (
                         <CheckCircle2 className="mr-2 h-4 w-4" />
                       ) : (
                         <LogIn className="mr-2 h-4 w-4" />
                       )}
-                      {session?.user ? copy.continueToDashboard : copy.loginToContinue}
+                      {session?.user
+                        ? copy.continueToDashboard
+                        : copy.loginToContinue}
                     </Link>
                   </Button>
                 </div>

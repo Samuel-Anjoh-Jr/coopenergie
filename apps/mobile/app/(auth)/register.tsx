@@ -61,11 +61,6 @@ export default function RegisterScreen() {
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
         <View className="mb-3 flex-row items-center gap-3">
           <Image
-            source={require("../../assets/icon.png")}
-            style={{ width: 42, height: 42 }}
-            resizeMode="contain"
-          />
-          <Image
             source={require("../../assets/logo-full.png")}
             style={{ width: 176, height: 44 }}
             resizeMode="contain"
