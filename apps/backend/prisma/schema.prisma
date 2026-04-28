@@ -140,6 +140,7 @@ model Cooperative {
   settings             CooperativeSettings?
   confirmedBalanceXAF  Int                   @default(0)
   withdrawalRequests   WithdrawalRequest[]
+  vaultAdminAddress    String?               // Persisted on-chain admin address for diagnostics
 }
 
 model Membership {

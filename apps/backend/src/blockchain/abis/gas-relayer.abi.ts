@@ -43,6 +43,31 @@ export const gasRelayerAbi = [
     inputs: [{ name: "target", type: "address" }],
     outputs: [],
   },
+  {
+    type: "error",
+    name: "InvalidSigner",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidNonce",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RequestExpired",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "TargetNotWhitelisted",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ZeroAddressTarget",
+    inputs: [],
+  },
 ] as const;
 
 export default gasRelayerAbi;

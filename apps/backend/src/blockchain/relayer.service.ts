@@ -1,13 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import {
-  encodeAbiParameters,
-  encodeFunctionData,
-  getAddress,
-  Hex,
-  keccak256,
-  publicActions,
-  walletActions,
-} from "viem";
+import { encodeFunctionData, getAddress, Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
 import { gasRelayerAbi } from "./abis/gas-relayer.abi";
@@ -21,6 +14,7 @@ import {
   GAS_RELAYER_ADDRESS,
 } from "./blockchain.tokens";
 import { createForwardRequestDigest, ForwardRequest } from "./signature-helper";
+import { WalletService } from "./wallet.service";
 
 type BlockchainPublicClient = typeof configuredPublicClient;
 type BlockchainWalletClient = typeof configuredWalletClient;
@@ -28,6 +22,11 @@ type BlockchainWalletClient = typeof configuredWalletClient;
 type RelayResult = {
   txHash: `0x${string}`;
   blockNumber: bigint;
+};
+
+type RelaySigningOptions = {
+  signerEncryptedPrivateKey?: string | null;
+  userSignature?: Hex;
 };
 
 @Injectable()
@@ -41,11 +40,13 @@ export class RelayerService {
     private readonly walletClient: BlockchainWalletClient,
     @Inject(GAS_RELAYER_ADDRESS)
     private readonly gasRelayerAddress: string,
+    private readonly walletService: WalletService,
   ) {}
 
   async relayContribute(
     vaultAddress: string,
     userAddress: string,
+    signerEncryptedPrivateKey: string,
     amountXAF: number,
   ): Promise<RelayResult> {
     const member = this.parseAddress(userAddress, "userAddress");
@@ -56,12 +57,13 @@ export class RelayerService {
     });
 
     const request = await this.buildForwardRequest(vaultAddress, member, data);
-    return this.signAndSubmit(request);
+    return this.signAndSubmit(request, { signerEncryptedPrivateKey });
   }
 
   async relayCreateProposal(
     vaultAddress: string,
     creatorAddress: string,
+    signerEncryptedPrivateKey: string,
     title: string,
     description: string,
   ): Promise<RelayResult> {
@@ -73,12 +75,13 @@ export class RelayerService {
     });
 
     const request = await this.buildForwardRequest(vaultAddress, creator, data);
-    return this.signAndSubmit(request);
+    return this.signAndSubmit(request, { signerEncryptedPrivateKey });
   }
 
   async relayVote(
     vaultAddress: string,
     voterAddress: string,
+    signerEncryptedPrivateKey: string,
     proposalId: number,
     choice: boolean,
   ): Promise<RelayResult> {
@@ -90,7 +93,7 @@ export class RelayerService {
     });
 
     const request = await this.buildForwardRequest(vaultAddress, voter, data);
-    return this.signAndSubmit(request);
+    return this.signAndSubmit(request, { signerEncryptedPrivateKey });
   }
 
   async relayFundsReleased(
@@ -99,32 +102,14 @@ export class RelayerService {
     amountXAF: number,
     proposalId: number,
   ): Promise<RelayResult> {
-    const relayerAddress = this.getConfiguredGasRelayerAddress();
-    if (!relayerAddress) {
-      throw new Error(
-        "GasRelayer not configured. Cannot execute funds release via meta-transaction.",
-      );
-    }
+    void vaultAddress;
+    void recipient;
+    void amountXAF;
+    void proposalId;
 
-    const data = encodeFunctionData({
-      abi: cooperativeVaultAbi,
-      functionName: "releaseFunds",
-      args: [
-        this.parseFundsRecipient(recipient),
-        BigInt(amountXAF),
-        BigInt(proposalId),
-      ],
-    });
-
-    // Use relayer wallet as the sender for funds release (backend operation)
-    const walletClient = this.getWalletClient();
-    const request = await this.buildForwardRequest(
-      vaultAddress,
-      walletClient.account.address,
-      data,
+    throw new Error(
+      "CooperativeVault.releaseFunds is admin-only and cannot be executed through GasRelayer. Use VaultService.releaseFundsAsAdmin instead.",
     );
-
-    return this.signAndSubmit(request);
   }
 
   private async buildForwardRequest(
@@ -178,9 +163,10 @@ export class RelayerService {
 
   private async signAndSubmit(
     request: ForwardRequest,
-    userSignature?: Hex,
+    options: RelaySigningOptions = {},
   ): Promise<RelayResult> {
     const relayerAddress = this.getConfiguredGasRelayerAddress();
+    const walletClient = this.getWalletClient();
 
     if (!relayerAddress) {
       throw new Error(
@@ -188,20 +174,30 @@ export class RelayerService {
       );
     }
 
-    // If no user signature provided, use relayer wallet to sign (for backward compatibility)
-    let signature = userSignature;
+    let signature = options.userSignature;
+
+    if (!signature && options.signerEncryptedPrivateKey) {
+      signature = await this.signRequestWithUserWallet(
+        request,
+        options.signerEncryptedPrivateKey,
+      );
+    }
+
     if (!signature) {
+      this.logger.warn(
+        `Falling back to relayer signature for request from ${request.from}.`,
+      );
       signature = await this.signRequestWithRelayerWallet(request);
     }
 
     const txHash = await this.withRetry(() =>
-      this.walletClient.writeContract({
-        account: this.walletClient.account,
+      walletClient.writeContract({
+        account: walletClient.account,
         address: relayerAddress,
         abi: gasRelayerAbi,
         functionName: "execute",
         args: [request, signature],
-        chain: this.walletClient.chain,
+        chain: walletClient.chain,
       }),
     );
 
@@ -226,15 +222,38 @@ export class RelayerService {
   private async signRequestWithRelayerWallet(
     request: ForwardRequest,
   ): Promise<Hex> {
+    const walletClient = this.getWalletClient();
     const digest = this.createDigestForRequest(request);
 
-    // Sign with relayer wallet
-    const signature = await this.walletClient.signMessage({
-      account: this.walletClient.account,
+    const signature = await walletClient.signMessage({
+      account: walletClient.account,
       message: { raw: digest },
     });
 
     return signature;
+  }
+
+  private async signRequestWithUserWallet(
+    request: ForwardRequest,
+    encryptedPrivateKey: string,
+  ): Promise<Hex> {
+    const decryptedPrivateKey = this.walletService.getDecryptedPrivateKey(
+      encryptedPrivateKey,
+    );
+    const account = privateKeyToAccount(
+      this.normalizePrivateKey(decryptedPrivateKey),
+    );
+
+    if (getAddress(account.address) !== request.from) {
+      throw new Error(
+        "Stored CELO key does not match the authenticated user's CELO address.",
+      );
+    }
+
+    const digest = this.createDigestForRequest(request);
+    return account.signMessage({
+      message: { raw: digest },
+    });
   }
 
   /**
@@ -247,7 +266,11 @@ export class RelayerService {
       throw new Error("GasRelayer address not configured.");
     }
 
-    return createForwardRequestDigest(request, relayerAddress, 42220); // 42220 is Celo mainnet
+    return createForwardRequestDigest(
+      request,
+      relayerAddress,
+      this.getConfiguredChainId(),
+    );
   }
 
   private async withRetry<T>(
@@ -305,12 +328,28 @@ export class RelayerService {
     }
   }
 
-  private parseFundsRecipient(value: string): `0x${string}` {
-    try {
-      return getAddress(value);
-    } catch {
-      return "0x000000000000000000000000000000000000dEaD";
+  private normalizePrivateKey(value: string): `0x${string}` {
+    const trimmedValue = value.trim();
+
+    if (/^0x[0-9a-fA-F]{64}$/.test(trimmedValue)) {
+      return trimmedValue as `0x${string}`;
     }
+
+    if (/^[0-9a-fA-F]{64}$/.test(trimmedValue)) {
+      return `0x${trimmedValue}` as `0x${string}`;
+    }
+
+    throw new Error("Invalid CELO private key format.");
+  }
+
+  private getConfiguredChainId(): number {
+    const chainId = this.publicClient.chain?.id ?? this.walletClient?.chain?.id;
+
+    if (!chainId) {
+      throw new Error("CELO chain ID is not configured.");
+    }
+
+    return chainId;
   }
 
   private isRetryableError(error: unknown): boolean {
