@@ -79,6 +79,11 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
   const { data: session, status } = useSession();
   const t = useTranslations(locale);
   const copy = getInvitationCopy(locale);
+  const invalidInvitationText = t("errors.invalidInvitation");
+  const timedOutText =
+    locale === "fr"
+      ? "La requete a expire. Veuillez reessayer."
+      : "Request timed out. Please try again.";
   const [invitation, setInvitation] = useState<InvitationLookupResponse | null>(
     null,
   );
@@ -126,9 +131,7 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
         }
 
         setLookupError(
-          error instanceof Error
-            ? error.message
-            : t("errors.invalidInvitation"),
+          error instanceof Error ? error.message : invalidInvitationText,
         );
       } finally {
         if (!cancelled) {
@@ -142,17 +145,17 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
     return () => {
       cancelled = true;
     };
-  }, [t, token]);
+  }, [invalidInvitationText, token]);
 
   // Loader timeout to prevent infinite spinner if backend never responds with inactive invitation
   useEffect(() => {
     if (!isLoading) return;
     const timeout = setTimeout(() => {
       setIsLoading(false);
-      setLookupError("Request timed out. Please try again.");
+      setLookupError(timedOutText);
     }, 15000); // 15 seconds
     return () => clearTimeout(timeout);
-  }, [isLoading]);
+  }, [isLoading, timedOutText]);
 
   useEffect(() => {
     if (

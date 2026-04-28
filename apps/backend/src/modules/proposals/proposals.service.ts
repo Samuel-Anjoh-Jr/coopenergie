@@ -207,26 +207,13 @@ export class ProposalsService {
             error instanceof Error ? error.message : String(error)
           }`,
         );
-        // Mark proposal as failed and ensure votes/creator are included
-        proposal = await this.prisma.proposal.update({
-          where: { id: proposal.id },
-          data: { status: ProposalStatus.REJECTED },
-          include: {
-            creator: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-                celoAddress: true,
-              },
-            },
-            votes: {
-              select: {
-                choice: true,
-              },
-            },
+
+        await this.prisma.proposal.delete({
+          where: {
+            id: proposal.id,
           },
         });
+
         throw new InternalServerErrorException(
           "Failed to create proposal on-chain.",
         );

@@ -146,14 +146,38 @@ export class MailService {
         return null;
       }
 
-      const info = await this.withTimeout(
-        transporter.sendMail({
-          from: this.getFromAddress(),
-          ...options,
-        }),
-        this.getMailSendTimeoutMs(),
-        `Timed out while sending ${context}.`,
-      );
+      const sendAttempt = () =>
+        this.withTimeout(
+          transporter.sendMail({
+            from: this.getFromAddress(),
+            ...options,
+          }),
+          this.getMailSendTimeoutMs(),
+          `Timed out while sending ${context}.`,
+        );
+
+      let info;
+
+      try {
+        info = await sendAttempt();
+      } catch (error) {
+        const fallbackTransporter = this.getGmailFallbackTransporter(error);
+
+        if (!fallbackTransporter) {
+          throw error;
+        }
+
+        this.logger.warn(`Retrying ${context} using Gmail SSL fallback (465).`);
+
+        info = await this.withTimeout(
+          fallbackTransporter.sendMail({
+            from: this.getFromAddress(),
+            ...options,
+          }),
+          this.getMailSendTimeoutMs(),
+          `Timed out while sending ${context} (fallback).`,
+        );
+      }
 
       return {
         messageId: info.messageId,
@@ -169,22 +193,54 @@ export class MailService {
   }
 
   private getTransporter() {
-    const host = process.env.SMTP_HOST?.trim();
-    const port = parseInt(process.env.SMTP_PORT || "587", 10);
-    const secure = process.env.SMTP_SECURE === "true";
-    const user = process.env.SMTP_USER?.trim();
-    const pass = process.env.SMTP_PASS?.trim();
+    const config = this.getSmtpConfig();
 
-    if (!host || !user || !pass) {
+    if (!config) {
       this.logger.warn("SMTP is not configured - email delivery disabled.");
       return null;
     }
 
-    return nodemailer.createTransport({
+    return nodemailer.createTransport(this.buildTransportOptions(config));
+  }
+
+  private getFromAddress() {
+    return (
+      this.readEnvValue(process.env.EMAIL_FROM) ||
+      "CoopEnergie <noreply@coopenergie.cm>"
+    );
+  }
+
+  private getSmtpConfig() {
+    const host = this.readEnvValue(process.env.SMTP_HOST);
+    const user = this.readEnvValue(process.env.SMTP_USER);
+    const pass = this.readPassword(process.env.SMTP_PASS);
+
+    if (!host || !user || !pass) {
+      return null;
+    }
+
+    return {
       host,
-      port,
-      secure,
-      auth: { user, pass },
+      port: parseInt(this.readEnvValue(process.env.SMTP_PORT) || "587", 10),
+      secure: this.readEnvValue(process.env.SMTP_SECURE) === "true",
+      user,
+      pass,
+    };
+  }
+
+  private buildTransportOptions(config: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    pass: string;
+  }) {
+    return {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      requireTLS: !config.secure,
+      auth: { user: config.user, pass: config.pass },
       connectionTimeout: this.parsePositiveInteger(
         process.env.SMTP_CONNECTION_TIMEOUT_MS,
         15000,
@@ -197,13 +253,68 @@ export class MailService {
         process.env.SMTP_SOCKET_TIMEOUT_MS,
         20000,
       ),
-    });
+    };
   }
 
-  private getFromAddress() {
-    return (
-      process.env.EMAIL_FROM?.trim() || "CoopEnergie <noreply@coopenergie.cm>"
+  private getGmailFallbackTransporter(error: unknown) {
+    const config = this.getSmtpConfig();
+
+    if (!config) {
+      return null;
+    }
+
+    const isGmail = config.host.toLowerCase() === "smtp.gmail.com";
+    const shouldRetryGmailSsl =
+      isGmail &&
+      !config.secure &&
+      config.port === 587 &&
+      this.isConnectionRefusedError(error);
+
+    if (!shouldRetryGmailSsl) {
+      return null;
+    }
+
+    return nodemailer.createTransport(
+      this.buildTransportOptions({
+        ...config,
+        port: 465,
+        secure: true,
+      }),
     );
+  }
+
+  private isConnectionRefusedError(error: unknown) {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    return (
+      error.message.includes("ECONNREFUSED") ||
+      error.message.includes("connect ECONNREFUSED")
+    );
+  }
+
+  private readEnvValue(value: string | undefined) {
+    if (!value) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      const unwrapped = trimmed.slice(1, -1).trim();
+      return unwrapped || undefined;
+    }
+
+    return trimmed || undefined;
+  }
+
+  private readPassword(value: string | undefined) {
+    const sanitized = this.readEnvValue(value);
+    return sanitized ? sanitized.replace(/\s+/g, "") : undefined;
   }
 
   private buildFailureHtml(

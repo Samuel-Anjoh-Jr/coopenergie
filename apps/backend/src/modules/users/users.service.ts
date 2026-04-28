@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { DevicePlatform } from "@prisma/client";
 import { plainToInstance } from "class-transformer";
 
+import { normalizeCameroonPhone } from "../../common/phone-utils";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UserResponseDto } from "./dto/user-response.dto";
 
@@ -71,17 +77,25 @@ export class UsersService {
       });
       if (hasOnChainRole) {
         throw new ForbiddenException(
-          "You cannot change your CELO address while you are an on-chain admin. Contact support."
+          "You cannot change your CELO address while you are an on-chain admin. Contact support.",
         );
       }
     }
+    const normalizedWithdrawalPhone = data.withdrawalPhone
+      ? normalizeCameroonPhone(data.withdrawalPhone)
+      : undefined;
+
+    if (data.withdrawalPhone && !normalizedWithdrawalPhone) {
+      throw new BadRequestException("Invalid Cameroonian phone number.");
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
       data: {
         name: data.name,
         celoAddress: data.celoAddress,
         withdrawalOperator: data.preferredWithdrawalMethod,
-        withdrawalPhone: data.withdrawalPhone,
+        withdrawalPhone: normalizedWithdrawalPhone,
         withdrawalBankName: data.withdrawalBankName,
         withdrawalBankAccount: data.withdrawalBankAccount,
       },

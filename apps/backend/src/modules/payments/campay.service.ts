@@ -44,7 +44,7 @@ export class CampayService {
   }
 
   verifyWebhookSignature(payload: string, signature: string) {
-    const secret = process.env.CAMPAY_WEBHOOK_SECRET?.trim();
+    const secret = this.readSecret(process.env.CAMPAY_WEBHOOK_SECRET);
 
     if (!secret || !signature) {
       return false;
@@ -67,8 +67,8 @@ export class CampayService {
       body?: string;
     },
   ) {
-    const apiKey = process.env.CAMPAY_API_KEY?.trim();
-    const baseUrl = process.env.CAMPAY_BASE_URL?.trim();
+    const apiKey = this.readApiKey(process.env.CAMPAY_API_KEY);
+    const baseUrl = this.readSecret(process.env.CAMPAY_BASE_URL);
 
     if (!apiKey || !baseUrl) {
       throw new InternalServerErrorException(
@@ -113,5 +113,28 @@ export class CampayService {
 
   private readString(value: unknown) {
     return typeof value === "string" ? value : undefined;
+  }
+
+  private readApiKey(value: string | undefined) {
+    const sanitized = this.readSecret(value);
+    return sanitized ? sanitized.replace(/\s+/g, "") : undefined;
+  }
+
+  private readSecret(value: string | undefined) {
+    if (!value) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      const unwrapped = trimmed.slice(1, -1).trim();
+      return unwrapped || undefined;
+    }
+
+    return trimmed || undefined;
   }
 }

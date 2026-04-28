@@ -30,9 +30,9 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^6\d{8}$/, {
+  @Matches(/^(?:\+?237)?6\d{8}$/, {
     message:
-      "momoNumber must be a valid 9-digit Cameroonian phone number starting with 6",
+      "momoNumber must be a valid Cameroonian phone number (670123456 or 237670123456)",
   })
   withdrawalPhone?: string;
 
