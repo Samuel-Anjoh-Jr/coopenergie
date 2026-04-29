@@ -27,7 +27,11 @@ import {
 const navItems = [
   { key: "Metrics", icon: BarChart3, href: "/admin" },
   { key: "Cooperatives", icon: Building2, href: "/admin/cooperatives" },
-  { key: "Admin Key Health", icon: ShieldCheck, href: "/admin/coop-admin-health" },
+  {
+    key: "Admin Key Health",
+    icon: ShieldCheck,
+    href: "/admin/coop-admin-health",
+  },
   { key: "Users & Audit", icon: ShieldCheck, href: "/admin/users" },
   { key: "Settings", icon: Settings, href: "/admin/settings" },
 ];

@@ -21,8 +21,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     vaults.push(current);
   }
 
-  const envVaults = process.env.VAULT_ADDRESSES
-    ?.split(",")
+  const envVaults = process.env.VAULT_ADDRESSES?.split(",")
     .map((value) => value.trim())
     .filter(Boolean);
 
@@ -56,7 +55,11 @@ async function main() {
     );
   }
 
-  const gasRelayer = await ethers.getContractAt("GasRelayer", relayerAddress, deployer);
+  const gasRelayer = await ethers.getContractAt(
+    "GasRelayer",
+    relayerAddress,
+    deployer,
+  );
   const owner = await gasRelayer.owner();
 
   console.log(`Network: ${hre.network.name}`);
@@ -72,7 +75,9 @@ async function main() {
 
   for (const vaultAddress of vaults) {
     const normalizedVault = ethers.utils.getAddress(vaultAddress);
-    const alreadyWhitelisted = await gasRelayer.whitelistedTargets(normalizedVault);
+    const alreadyWhitelisted = await gasRelayer.whitelistedTargets(
+      normalizedVault,
+    );
 
     if (alreadyWhitelisted) {
       console.log(`Already whitelisted: ${normalizedVault}`);

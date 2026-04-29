@@ -88,7 +88,9 @@ if (fs.existsSync(bunCacheDir)) {
             /arguments\s+"-DANDROID_STL=c\+\+_shared",\s*"-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"/g,
             'arguments "-DANDROID_PLATFORM=android-24", "-DCMAKE_SYSTEM_VERSION=24", "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"',
           );
-          if (!patched.includes("layout.buildDirectory.set(file(\"C:/.b/nitro\"))")) {
+          if (
+            !patched.includes('layout.buildDirectory.set(file("C:/.b/nitro"))')
+          ) {
             patched = patched.replace(
               /apply from: "\.\/fix-prefab\.gradle"\r?\n/,
               'apply from: "./fix-prefab.gradle"\n\nif (System.properties["os.name"].toLowerCase().contains("windows")) {\n  // Keep generated code paths short enough for Windows MAX_PATH constraints.\n  layout.buildDirectory.set(file("C:/.b/nitro"))\n}\n',
@@ -165,35 +167,56 @@ if (fs.existsSync(bunCacheDir)) {
       const isReanimated = full.includes("react-native-reanimated");
       const isExpoModulesCore = full.includes("expo-modules-core");
 
-      if (entry.name === "build.gradle" && (isWorklets || isReanimated || isExpoModulesCore)) {
+      if (
+        entry.name === "build.gradle" &&
+        (isWorklets || isReanimated || isExpoModulesCore)
+      ) {
         const content = fs.readFileSync(full, "utf8");
         let patched = content;
 
         // Keep this idempotent across repeated runs.
-        patched = patched.replace(/\r?\n\s*"-DCMAKE_OBJECT_PATH_MAX=128",/g, "");
-        patched = patched.replace(/\r?\n\s*"-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",/g, "");
-        patched = patched.replace(/\r?\n\s*"-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",/g, "");
+        patched = patched.replace(
+          /\r?\n\s*"-DCMAKE_OBJECT_PATH_MAX=128",/g,
+          "",
+        );
+        patched = patched.replace(
+          /\r?\n\s*"-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",/g,
+          "",
+        );
+        patched = patched.replace(
+          /\r?\n\s*"-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",/g,
+          "",
+        );
 
         patched = patched.replace(
           /arguments\s+"-DANDROID_STL=c\+\+_shared",/g,
           'arguments "-DANDROID_STL=c++_shared",\n                        "-DCMAKE_OBJECT_PATH_MAX=128",\n                        "-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",\n                        "-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",',
         );
 
-        if (isWorklets && !patched.includes('buildStagingDirectory "C:/.cxx/worklets"')) {
+        if (
+          isWorklets &&
+          !patched.includes('buildStagingDirectory "C:/.cxx/worklets"')
+        ) {
           patched = patched.replace(
             /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*version\s*=\s*System\.getenv\("CMAKE_VERSION"\)\s*\?:\s*"3\.22\.1"\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
             'externalNativeBuild {\n        cmake {\n            version = System.getenv("CMAKE_VERSION") ?: "3.22.1"\n            path "CMakeLists.txt"\n            if (System.properties["os.name"].toLowerCase().contains("windows")) {\n                buildStagingDirectory "C:/.cxx/worklets"\n            }\n        }\n    }',
           );
         }
 
-        if (isReanimated && !patched.includes('buildStagingDirectory "C:/.cxx/reanimated"')) {
+        if (
+          isReanimated &&
+          !patched.includes('buildStagingDirectory "C:/.cxx/reanimated"')
+        ) {
           patched = patched.replace(
             /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*version\s*=\s*System\.getenv\("CMAKE_VERSION"\)\s*\?:\s*"3\.22\.1"\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
             'externalNativeBuild {\n        cmake {\n            version = System.getenv("CMAKE_VERSION") ?: "3.22.1"\n            path "CMakeLists.txt"\n            if (System.properties["os.name"].toLowerCase().contains("windows")) {\n                buildStagingDirectory "C:/.cxx/reanimated"\n            }\n        }\n    }',
           );
         }
 
-        if (isExpoModulesCore && !patched.includes('buildStagingDirectory "C:/.cxx/expo-core"')) {
+        if (
+          isExpoModulesCore &&
+          !patched.includes('buildStagingDirectory "C:/.cxx/expo-core"')
+        ) {
           patched = patched.replace(
             /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
             'externalNativeBuild {\n    cmake {\n      path "CMakeLists.txt"\n      if (System.properties["os.name"].toLowerCase().contains("windows")) {\n        buildStagingDirectory "C:/.cxx/expo-core"\n      }\n    }\n  }',
@@ -202,20 +225,29 @@ if (fs.existsSync(bunCacheDir)) {
 
         if (patched !== content) {
           fs.writeFileSync(full, patched);
-          console.log(`[mobile] Patched native build.gradle path settings: ${full}`);
+          console.log(
+            `[mobile] Patched native build.gradle path settings: ${full}`,
+          );
         }
       }
 
-      if (entry.name === "CMakeLists.txt" && (isWorklets || isReanimated || isExpoModulesCore)) {
+      if (
+        entry.name === "CMakeLists.txt" &&
+        (isWorklets || isReanimated || isExpoModulesCore)
+      ) {
         const content = fs.readFileSync(full, "utf8");
         let patched = content;
 
         if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
-          patched = patched.replace(/set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g, "set(CMAKE_OBJECT_PATH_MAX 128)");
+          patched = patched.replace(
+            /set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g,
+            "set(CMAKE_OBJECT_PATH_MAX 128)",
+          );
         } else {
           patched = patched.replace(
             /cmake_minimum_required\(VERSION\s+\d+\.\d+\)\r?\n/,
-            (m) => `${m}\n# Keep low to force hashed object paths on Windows.\nset(CMAKE_OBJECT_PATH_MAX 128)\n`,
+            (m) =>
+              `${m}\n# Keep low to force hashed object paths on Windows.\nset(CMAKE_OBJECT_PATH_MAX 128)\n`,
           );
         }
 
@@ -241,7 +273,10 @@ if (fs.existsSync(bunCacheDir)) {
           );
         }
 
-        if (isExpoModulesCore && full.includes(`${path.sep}android${path.sep}CMakeLists.txt`)) {
+        if (
+          isExpoModulesCore &&
+          full.includes(`${path.sep}android${path.sep}CMakeLists.txt`)
+        ) {
           patched = patched.replace(
             /file\(GLOB sources_android "\$\{SRC_DIR\}\/main\/cpp\/\*\.cpp"\)/,
             'file(GLOB sources_android RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/*.cpp")',
@@ -264,11 +299,16 @@ if (fs.existsSync(bunCacheDir)) {
           );
           patched = patched.replace(
             /\$\{sources_android_javaclasses\}\r?\n\)/,
-            '${sources_android_javaclasses}\n        ${sources_android_decorators}\n)',
+            "${sources_android_javaclasses}\n        ${sources_android_decorators}\n)",
           );
         }
 
-        if (isExpoModulesCore && full.includes(`${path.sep}android${path.sep}src${path.sep}fabric${path.sep}CMakeLists.txt`)) {
+        if (
+          isExpoModulesCore &&
+          full.includes(
+            `${path.sep}android${path.sep}src${path.sep}fabric${path.sep}CMakeLists.txt`,
+          )
+        ) {
           patched = patched.replace(
             /file\(GLOB SOURCES "\*\.cpp"\)/,
             'file(GLOB SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "src/fabric/*.cpp")',
@@ -312,15 +352,23 @@ if (fs.existsSync(bunCacheDir)) {
       // .bun/package@version+hash/node_modules/package/android/build.gradle
       const nodeModulesDir = path.join(full, "node_modules");
       if (fs.existsSync(nodeModulesDir)) {
-        for (const pkgEntry of fs.readdirSync(nodeModulesDir, { withFileTypes: true })) {
+        for (const pkgEntry of fs.readdirSync(nodeModulesDir, {
+          withFileTypes: true,
+        })) {
           if (!pkgEntry.isDirectory()) continue;
           const pkgFull = path.join(nodeModulesDir, pkgEntry.name);
           if (pkgEntry.name.startsWith("@")) {
             // scoped package (@namespace/package), look inside
-            for (const scopedEntry of fs.readdirSync(pkgFull, { withFileTypes: true })) {
+            for (const scopedEntry of fs.readdirSync(pkgFull, {
+              withFileTypes: true,
+            })) {
               if (!scopedEntry.isDirectory()) continue;
               const scopedFull = path.join(pkgFull, scopedEntry.name);
-              const scopedBuildGradle = path.join(scopedFull, "android", "build.gradle");
+              const scopedBuildGradle = path.join(
+                scopedFull,
+                "android",
+                "build.gradle",
+              );
               if (fs.existsSync(scopedBuildGradle)) {
                 patchNativeModuleBuildGradleWithCMakeHook(scopedBuildGradle);
               }
@@ -405,7 +453,9 @@ function removePathWithVerification(targetPath, options = {}) {
       }
     } catch (error) {
       if (typeof tolerateError === "function" && tolerateError(error)) {
-        console.warn(`[mobile] Skipped clearing ${label}: ${targetPath} (${error.message})`);
+        console.warn(
+          `[mobile] Skipped clearing ${label}: ${targetPath} (${error.message})`,
+        );
         return false;
       }
 
@@ -434,7 +484,9 @@ function clearGradleTransformCaches(strict = false) {
 
   const cacheEntries = fs
     .readdirSync(gradleVersionCacheDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("transforms"));
+    .filter(
+      (entry) => entry.isDirectory() && entry.name.startsWith("transforms"),
+    );
 
   for (const entry of cacheEntries) {
     removePathWithVerification(path.join(gradleVersionCacheDir, entry.name), {
@@ -532,7 +584,9 @@ function rewriteAutolinkingToSubstDrive(repoRootPath, driveLetter) {
  */
 function rewriteNativeCMakePaths(bunCacheDir, driveLetter) {
   if (!driveLetter) return;
-  const repoRootUnix = path.normalize(path.join(bunCacheDir, "..", "..")).replace(/\\/g, "/");
+  const repoRootUnix = path
+    .normalize(path.join(bunCacheDir, "..", ".."))
+    .replace(/\\/g, "/");
 
   (function walkDir(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -540,7 +594,9 @@ function rewriteNativeCMakePaths(bunCacheDir, driveLetter) {
 
       if (entry.isDirectory()) {
         // Continue recursion, but skip large/uninteresting directories
-        if (!["build", ".gradle", ".cxx", "build_output"].includes(entry.name)) {
+        if (
+          !["build", ".gradle", ".cxx", "build_output"].includes(entry.name)
+        ) {
           walkDir(full);
         }
       } else if (entry.isFile() && entry.name === "CMakeLists.txt") {
@@ -600,7 +656,9 @@ if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.tas
 `;
 
   fs.writeFileSync(appBuildGradlePath, content + hook);
-  console.log(`[mobile] Injected autolinking cmake path hook: ${appBuildGradlePath}`);
+  console.log(
+    `[mobile] Injected autolinking cmake path hook: ${appBuildGradlePath}`,
+  );
 }
 
 /**

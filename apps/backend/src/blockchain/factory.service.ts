@@ -52,25 +52,23 @@ export class FactoryService {
     });
 
     // Debug logs for explorer lookup
-    
-    console.log("[DEBUG] Factory address:", factoryAddress);
-    
-    console.log("[DEBUG] Transaction hash:", txHash);
 
+    console.log("[DEBUG] Factory address:", factoryAddress);
+
+    console.log("[DEBUG] Transaction hash:", txHash);
 
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash: txHash,
     });
 
-
     // Clamp to the latest block if the receipt block is ahead
     const latestBlock = await this.publicClient.getBlockNumber();
-    const safeBlock = receipt.blockNumber > latestBlock ? latestBlock : receipt.blockNumber;
+    const safeBlock =
+      receipt.blockNumber > latestBlock ? latestBlock : receipt.blockNumber;
 
     // Loosen block range: search up to 5 blocks before
     const fromBlock = safeBlock > 5n ? safeBlock - 5n : 0n;
     const toBlock = safeBlock;
-
 
     let deploymentLogs = await this.publicClient.getLogs({
       address: factoryAddress,
@@ -83,15 +81,16 @@ export class FactoryService {
 
     // Fallback: If no logs found, try parsing from receipt.logs using viem's decodeEventLog
     if (!deploymentLogs.length) {
-      
-      console.warn('[FALLBACK] getLogs returned empty, parsing receipt.logs for CooperativeDeployed event');
+      console.warn(
+        "[FALLBACK] getLogs returned empty, parsing receipt.logs for CooperativeDeployed event",
+      );
       const eventTopic =
-        '0xb2b64c1dbc055e1c9d7a70d3d8111e859954e120b4c34ca85087eaaf713c1b7e';
-      const { decodeEventLog } = await import('viem');
+        "0xb2b64c1dbc055e1c9d7a70d3d8111e859954e120b4c34ca85087eaaf713c1b7e";
+      const { decodeEventLog } = await import("viem");
       for (const log of receipt.logs as any[]) {
         try {
           if (
-            typeof log.topics !== 'undefined' &&
+            typeof log.topics !== "undefined" &&
             log.address.toLowerCase() === factoryAddress.toLowerCase() &&
             log.topics[0] === eventTopic &&
             log.transactionHash === txHash
@@ -102,8 +101,11 @@ export class FactoryService {
               data: (log as any).data,
               topics: (log as any).topics,
             }) as { args: { vault: string } };
-            
-            console.info('[FALLBACK] Decoded CooperativeDeployed event:', (decoded as any).args);
+
+            console.info(
+              "[FALLBACK] Decoded CooperativeDeployed event:",
+              (decoded as any).args,
+            );
             return {
               vaultAddress: getAddress((decoded as any).args.vault),
               txHash,
@@ -112,8 +114,7 @@ export class FactoryService {
             };
           }
         } catch (err) {
-          
-          console.error('[FALLBACK] Error decoding log:', err, log);
+          console.error("[FALLBACK] Error decoding log:", err, log);
         }
       }
     }
@@ -131,16 +132,18 @@ export class FactoryService {
     }
 
     // Log debug info if not found
-    this.publicClient.getTransaction({ hash: txHash }).then(tx => {
-      
-      console.error('[DEBUG] Transaction:', tx);
-    }).catch(() => {});
-    
-    console.error('[DEBUG] Receipt:', receipt);
-    
-    console.error('[DEBUG] Block range searched:', { fromBlock, toBlock });
-    
-    console.error('[DEBUG] deploymentLogs:', deploymentLogs);
+    this.publicClient
+      .getTransaction({ hash: txHash })
+      .then((tx) => {
+        console.error("[DEBUG] Transaction:", tx);
+      })
+      .catch(() => {});
+
+    console.error("[DEBUG] Receipt:", receipt);
+
+    console.error("[DEBUG] Block range searched:", { fromBlock, toBlock });
+
+    console.error("[DEBUG] deploymentLogs:", deploymentLogs);
     throw new Error(
       `CooperativeDeployed event not found in transaction receipt ${txHash}.`,
     );

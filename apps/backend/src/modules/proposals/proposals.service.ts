@@ -206,9 +206,7 @@ export class ProposalsService {
           error instanceof Error ? error.message : String(error);
 
         this.logger.error(
-          `Failed to relay proposal ${proposal.id}: ${
-            errorMessage
-          }`,
+          `Failed to relay proposal ${proposal.id}: ${errorMessage}`,
         );
 
         await this.prisma.proposal.delete({

@@ -445,7 +445,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
               <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
                 <div className="space-y-2">
-                  <p className="text-muted-foreground text-sm">{t("dashboard.vaultAddress")}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("dashboard.vaultAddress")}
+                  </p>
                   <p className="font-mono text-xs sm:text-sm break-all">
                     {vaultAddress || "-"}
                   </p>

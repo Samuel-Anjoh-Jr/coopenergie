@@ -14,9 +14,10 @@ function deriveAuthUrlFromVercelUrl() {
     return;
   }
 
-  const derivedUrl = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")
-    ? vercelUrl
-    : `https://${vercelUrl}`;
+  const derivedUrl =
+    vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")
+      ? vercelUrl
+      : `https://${vercelUrl}`;
 
   process.env.AUTH_URL = derivedUrl;
   process.env.NEXTAUTH_URL = derivedUrl;
@@ -91,7 +92,8 @@ export const authOptions: NextAuthConfig = {
         token.email = user.email;
         token.name = user.name;
         token.accessToken = (user as { token?: string }).token;
-        token.isPlatformAdmin = (user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
+        token.isPlatformAdmin =
+          (user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
       }
 
       return token;

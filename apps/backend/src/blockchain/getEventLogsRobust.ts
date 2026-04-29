@@ -35,7 +35,6 @@ export async function getEventLogsRobust({
       toBlock,
     });
   } catch (err) {
-    
     console.warn(`[getEventLogsRobust] getLogs error:`, err);
   }
   if (logs.length) return logs;

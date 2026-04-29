@@ -128,9 +128,7 @@ export class ContributionsService {
 
         await this.markContributionFailed(contribution.id);
         this.logger.error(
-          `Failed to relay contribution ${contribution.id}: ${
-            errorMessage
-          }`,
+          `Failed to relay contribution ${contribution.id}: ${errorMessage}`,
         );
         throw new InternalServerErrorException(
           `Failed to process contribution on-chain: ${errorMessage}`,

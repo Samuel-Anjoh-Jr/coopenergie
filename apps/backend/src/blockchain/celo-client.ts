@@ -60,7 +60,10 @@ function getRpcUrls(): string[] {
 const rpcUrls = getRpcUrls();
 const primaryRpcUrl = rpcUrls[0];
 
-const transport = fallback(rpcUrls.map((url) => http(url)), { rank: false });
+const transport = fallback(
+  rpcUrls.map((url) => http(url)),
+  { rank: false },
+);
 
 const chain = isMainnetNetwork()
   ? {

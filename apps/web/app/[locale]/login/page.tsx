@@ -32,7 +32,9 @@ export default function LoginPage() {
   const locale = (params.locale as string) || "en";
   const { status, data: session } = useSession();
   const invitationToken = searchParams.get("invitationToken");
-  const joinPath = invitationToken ? buildJoinPath(locale, invitationToken) : null;
+  const joinPath = invitationToken
+    ? buildJoinPath(locale, invitationToken)
+    : null;
   const signupHref = invitationToken
     ? buildInvitationAuthPath("signup", locale, invitationToken)
     : `/${locale}/signup`;

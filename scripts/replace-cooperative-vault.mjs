@@ -209,12 +209,7 @@ async function main() {
 
     const deployOutput = runCommand(
       bunExecutable,
-      [
-        "run",
-        "--cwd",
-        "contracts",
-        deployScript,
-      ],
+      ["run", "--cwd", "contracts", deployScript],
       "Replacement vault deployment",
       {
         COOPERATIVE_ID: cooperative.id,
@@ -250,11 +245,7 @@ async function main() {
     }
 
     console.log("\nApplying DB bind now...");
-    runCommand(
-      bindCommand[0],
-      bindCommand.slice(1),
-      "Vault binding migration",
-    );
+    runCommand(bindCommand[0], bindCommand.slice(1), "Vault binding migration");
 
     console.log("\nReplacement vault flow completed successfully.");
   } finally {

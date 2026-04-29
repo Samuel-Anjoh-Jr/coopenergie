@@ -143,11 +143,20 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const fromBlock = await this.getStartingBlock(cooperative.id);
-    const pollInterval = process.env.BLOCKCHAIN_POLL_INTERVAL ? parseInt(process.env.BLOCKCHAIN_POLL_INTERVAL, 10) : 15000;
-    const isTestnet = (this.publicClient.chain?.id?.toString() || '').includes('44787') || (this.publicClient.transport?.url || '').includes('sepolia');
+    const pollInterval = process.env.BLOCKCHAIN_POLL_INTERVAL
+      ? parseInt(process.env.BLOCKCHAIN_POLL_INTERVAL, 10)
+      : 15000;
+    const isTestnet =
+      (this.publicClient.chain?.id?.toString() || "").includes("44787") ||
+      (this.publicClient.transport?.url || "").includes("sepolia");
 
     // Helper to poll logs for an event
-    const pollEvent = (abi: any, eventName: string, ledgerType: LedgerEventType, payloadMapper: (args: any, log: any) => any) => {
+    const pollEvent = (
+      abi: any,
+      eventName: string,
+      ledgerType: LedgerEventType,
+      payloadMapper: (args: any, log: any) => any,
+    ) => {
       let lastBlock = fromBlock;
       let stopped = false;
       const poll = async () => {
@@ -180,11 +189,13 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
           } catch (err) {
             this.logger.error(`[Polling] Error polling ${eventName}: ${err}`);
           }
-          await new Promise(res => setTimeout(res, pollInterval));
+          await new Promise((res) => setTimeout(res, pollInterval));
         }
       };
       poll();
-      return () => { stopped = true; };
+      return () => {
+        stopped = true;
+      };
     };
 
     let unwatchers: Unwatch[] = [];
@@ -192,36 +203,61 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     if (isTestnet) {
       // Use polling for testnet
       unwatchers = [
-        pollEvent(contributionEventAbi, "ContributionMade", LedgerEventType.CONTRIBUTION, (args) => ({
-          member: args.member,
-          amountXAF: Number(args.amountXAF),
-          totalXAF: Number(args.totalXAF),
-        })),
-        pollEvent(proposalCreatedEventAbi, "ProposalCreated", LedgerEventType.PROPOSAL, (args) => ({
-          proposalId: Number(args.proposalId),
-          creator: args.creator,
-          title: args.title,
-          timestamp: Number(args.timestamp),
-        })),
-        pollEvent(voteCastEventAbi, "VoteCast", LedgerEventType.VOTE, (args, log) => ({
-          proposalId: Number(args.proposalId),
-          voter: args.voter,
-          choice: args.choice,
-          yesVotes: Number(args.yesVotes),
-          noVotes: Number(args.noVotes),
-          timestamp: Number(args.timestamp),
-          vaultAddress: normalizedVaultAddress,
-        })),
-        pollEvent(fundsReleasedEventAbi, "FundsReleased", LedgerEventType.PAYMENT, (args) => ({
-          recipient: args.recipient,
-          amountXAF: Number(args.amountXAF),
-          proposalId: Number(args.proposalId),
-          timestamp: Number(args.timestamp),
-        })),
+        pollEvent(
+          contributionEventAbi,
+          "ContributionMade",
+          LedgerEventType.CONTRIBUTION,
+          (args) => ({
+            member: args.member,
+            amountXAF: Number(args.amountXAF),
+            totalXAF: Number(args.totalXAF),
+          }),
+        ),
+        pollEvent(
+          proposalCreatedEventAbi,
+          "ProposalCreated",
+          LedgerEventType.PROPOSAL,
+          (args) => ({
+            proposalId: Number(args.proposalId),
+            creator: args.creator,
+            title: args.title,
+            timestamp: Number(args.timestamp),
+          }),
+        ),
+        pollEvent(
+          voteCastEventAbi,
+          "VoteCast",
+          LedgerEventType.VOTE,
+          (args, log) => ({
+            proposalId: Number(args.proposalId),
+            voter: args.voter,
+            choice: args.choice,
+            yesVotes: Number(args.yesVotes),
+            noVotes: Number(args.noVotes),
+            timestamp: Number(args.timestamp),
+            vaultAddress: normalizedVaultAddress,
+          }),
+        ),
+        pollEvent(
+          fundsReleasedEventAbi,
+          "FundsReleased",
+          LedgerEventType.PAYMENT,
+          (args) => ({
+            recipient: args.recipient,
+            amountXAF: Number(args.amountXAF),
+            proposalId: Number(args.proposalId),
+            timestamp: Number(args.timestamp),
+          }),
+        ),
       ];
     } else {
       // Use watchContractEvent for mainnet, with error handling and fallback
-      const makeWatcher = (abi: any, eventName: string, ledgerType: LedgerEventType, payloadMapper: (args: any, log: any) => any) => {
+      const makeWatcher = (
+        abi: any,
+        eventName: string,
+        ledgerType: LedgerEventType,
+        payloadMapper: (args: any, log: any) => any,
+      ) => {
         let watcher: any;
         let stopped = false;
         const startWatcher = () => {
@@ -233,10 +269,17 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
             poll: true,
             strict: true,
             onError: (error: Error) => {
-              this.logger.error(`[Watcher] Error for ${eventName}: ${error.message}`);
-              if (error.message.includes('filter not found') || error.message.includes('Missing or invalid parameters')) {
-                this.logger.warn(`[Watcher] Restarting watcher for ${eventName} due to filter error.`);
-                if (watcher && typeof watcher === 'function') watcher();
+              this.logger.error(
+                `[Watcher] Error for ${eventName}: ${error.message}`,
+              );
+              if (
+                error.message.includes("filter not found") ||
+                error.message.includes("Missing or invalid parameters")
+              ) {
+                this.logger.warn(
+                  `[Watcher] Restarting watcher for ${eventName} due to filter error.`,
+                );
+                if (watcher && typeof watcher === "function") watcher();
                 if (!stopped) setTimeout(startWatcher, pollInterval);
               }
             },
@@ -257,35 +300,58 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
           });
         };
         startWatcher();
-        return () => { stopped = true; if (watcher && typeof watcher === 'function') watcher(); };
+        return () => {
+          stopped = true;
+          if (watcher && typeof watcher === "function") watcher();
+        };
       };
       unwatchers = [
-        makeWatcher(contributionEventAbi, "ContributionMade", LedgerEventType.CONTRIBUTION, (args) => ({
-          member: args.member,
-          amountXAF: Number(args.amountXAF),
-          totalXAF: Number(args.totalXAF),
-        })),
-        makeWatcher(proposalCreatedEventAbi, "ProposalCreated", LedgerEventType.PROPOSAL, (args) => ({
-          proposalId: Number(args.proposalId),
-          creator: args.creator,
-          title: args.title,
-          timestamp: Number(args.timestamp),
-        })),
-        makeWatcher(voteCastEventAbi, "VoteCast", LedgerEventType.VOTE, (args, log) => ({
-          proposalId: Number(args.proposalId),
-          voter: args.voter,
-          choice: args.choice,
-          yesVotes: Number(args.yesVotes),
-          noVotes: Number(args.noVotes),
-          timestamp: Number(args.timestamp),
-          vaultAddress: normalizedVaultAddress,
-        })),
-        makeWatcher(fundsReleasedEventAbi, "FundsReleased", LedgerEventType.PAYMENT, (args) => ({
-          recipient: args.recipient,
-          amountXAF: Number(args.amountXAF),
-          proposalId: Number(args.proposalId),
-          timestamp: Number(args.timestamp),
-        })),
+        makeWatcher(
+          contributionEventAbi,
+          "ContributionMade",
+          LedgerEventType.CONTRIBUTION,
+          (args) => ({
+            member: args.member,
+            amountXAF: Number(args.amountXAF),
+            totalXAF: Number(args.totalXAF),
+          }),
+        ),
+        makeWatcher(
+          proposalCreatedEventAbi,
+          "ProposalCreated",
+          LedgerEventType.PROPOSAL,
+          (args) => ({
+            proposalId: Number(args.proposalId),
+            creator: args.creator,
+            title: args.title,
+            timestamp: Number(args.timestamp),
+          }),
+        ),
+        makeWatcher(
+          voteCastEventAbi,
+          "VoteCast",
+          LedgerEventType.VOTE,
+          (args, log) => ({
+            proposalId: Number(args.proposalId),
+            voter: args.voter,
+            choice: args.choice,
+            yesVotes: Number(args.yesVotes),
+            noVotes: Number(args.noVotes),
+            timestamp: Number(args.timestamp),
+            vaultAddress: normalizedVaultAddress,
+          }),
+        ),
+        makeWatcher(
+          fundsReleasedEventAbi,
+          "FundsReleased",
+          LedgerEventType.PAYMENT,
+          (args) => ({
+            recipient: args.recipient,
+            amountXAF: Number(args.amountXAF),
+            proposalId: Number(args.proposalId),
+            timestamp: Number(args.timestamp),
+          }),
+        ),
       ];
     }
 
@@ -626,9 +692,7 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async getStartingBlock(
-    cooperativeId: string,
-  ): Promise<bigint> {
+  private async getStartingBlock(cooperativeId: string): Promise<bigint> {
     const latestLedgerEvent = await this.prisma.ledgerEvent.findFirst({
       where: {
         cooperativeId,

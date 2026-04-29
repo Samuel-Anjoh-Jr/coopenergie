@@ -481,8 +481,8 @@ export class AdminService {
       if (!coop.vaultAdminAddress) {
         results.push({
           ...coop,
-          health: 'no-vault-admin-address',
-          message: 'No vault admin address recorded.'
+          health: "no-vault-admin-address",
+          message: "No vault admin address recorded.",
         });
         continue;
       }
@@ -493,24 +493,24 @@ export class AdminService {
       if (!user) {
         results.push({
           ...coop,
-          health: 'no-local-user',
-          message: 'No local user with this vault admin address.'
+          health: "no-local-user",
+          message: "No local user with this vault admin address.",
         });
         continue;
       }
       if (!user.celoKeyEncrypted) {
         results.push({
           ...coop,
-          health: 'missing-key',
-          message: 'Vault admin user exists but has no stored CELO key.',
+          health: "missing-key",
+          message: "Vault admin user exists but has no stored CELO key.",
           user,
         });
         continue;
       }
       results.push({
         ...coop,
-        health: 'ok',
-        message: 'Vault admin key is present.',
+        health: "ok",
+        message: "Vault admin key is present.",
         user,
       });
     }

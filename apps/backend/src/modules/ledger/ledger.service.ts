@@ -11,7 +11,10 @@ type FindLedgerOptions = {
 
 type EventPayload = Record<string, unknown>;
 
-function extractWalletAddress(payload: EventPayload, type: string): string | null {
+function extractWalletAddress(
+  payload: EventPayload,
+  type: string,
+): string | null {
   const t = type.toUpperCase();
   if (t === "PROPOSAL") return (payload.creator as string) || null;
   if (t === "CONTRIBUTION") return (payload.member as string) || null;

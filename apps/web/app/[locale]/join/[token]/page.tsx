@@ -14,9 +14,6 @@ export default async function JoinInvitationPage({
   const { locale, token } = await params;
 
   return (
-    <JoinCooperative
-      locale={normalizeInvitationLocale(locale)}
-      token={token}
-    />
+    <JoinCooperative locale={normalizeInvitationLocale(locale)} token={token} />
   );
 }
