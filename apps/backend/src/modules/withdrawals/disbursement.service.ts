@@ -476,8 +476,14 @@ export class DisbursementService {
     },
     reference: string,
   ) {
-    const transferApiKey = process.env.CAMPAY_TRANSFER_API_KEY?.trim();
-    const baseUrl = process.env.CAMPAY_BASE_URL?.trim();
+    const transferApiKey = (
+      process.env.CAMPAY_TRANSFER_API_KEY ||
+      process.env.CAMPAY_API_KEY ||
+      process.env.CAMPAY_PERMANENT_TOKEN
+    )?.trim();
+    const baseUrl = (
+      process.env.CAMPAY_BASE_URL || process.env.CAMPAY_API_BASE_URL
+    )?.trim();
 
     if (!transferApiKey || !baseUrl) {
       throw new Error("CamPay transfer credentials are not configured.");
@@ -654,7 +660,9 @@ export class DisbursementService {
     rawBody: Buffer | undefined,
     payload: Record<string, unknown>,
   ) {
-    const secret = process.env.CAMPAY_WEBHOOK_SECRET?.trim();
+    const secret = (
+      process.env.CAMPAY_WEBHOOK_SECRET || process.env.CAMPAY_WEBHOOK_KEY
+    )?.trim();
 
     if (!secret) {
       this.logger.warn(

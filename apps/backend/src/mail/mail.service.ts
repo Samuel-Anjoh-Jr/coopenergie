@@ -49,7 +49,10 @@ export class MailService {
     };
 
     try {
-      const verifiedTransport = await verifyTransport(config.port, config.secure);
+      const verifiedTransport = await verifyTransport(
+        config.port,
+        config.secure,
+      );
 
       return {
         ready: true,
@@ -61,15 +64,14 @@ export class MailService {
         error: null,
       };
     } catch (error) {
-      const fallbackAvailable =
-        config.host.toLowerCase() === "smtp.gmail.com" &&
-        !config.secure &&
-        config.port === 587 &&
-        this.isSmtpNetworkError(error);
+      const fallbackCandidate = this.getGmailFallbackTarget(config, error);
 
-      if (fallbackAvailable) {
+      if (fallbackCandidate) {
         try {
-          const verifiedFallback = await verifyTransport(465, true);
+          const verifiedFallback = await verifyTransport(
+            fallbackCandidate.port,
+            fallbackCandidate.secure,
+          );
 
           return {
             ready: true,
@@ -302,7 +304,9 @@ export class MailService {
   private getFromAddress() {
     return (
       this.readEnvValue(process.env.EMAIL_FROM) ||
-      "CoopEnergie <noreply@coopenergie.cm>"
+      this.readEnvValue(process.env.SMTP_FROM_EMAIL) ||
+      this.readEnvValue(process.env.SMTP_USER) ||
+      "CoopEnergie <anjohsamueljr@gmail.com>"
     );
   }
 
@@ -315,10 +319,15 @@ export class MailService {
       return null;
     }
 
+    const port = parseInt(
+      this.readEnvValue(process.env.SMTP_PORT) || "587",
+      10,
+    );
+
     return {
       host,
-      port: parseInt(this.readEnvValue(process.env.SMTP_PORT) || "587", 10),
-      secure: this.readEnvValue(process.env.SMTP_SECURE) === "true",
+      port,
+      secure: port === 465,
       user,
       pass,
     };
@@ -359,24 +368,47 @@ export class MailService {
       return null;
     }
 
-    const isGmail = config.host.toLowerCase() === "smtp.gmail.com";
-    const shouldRetryGmailSsl =
-      isGmail &&
-      !config.secure &&
-      config.port === 587 &&
-      this.isSmtpNetworkError(error);
+    const fallbackTarget = this.getGmailFallbackTarget(config, error);
 
-    if (!shouldRetryGmailSsl) {
+    if (!fallbackTarget) {
       return null;
     }
 
     return nodemailer.createTransport(
       this.buildTransportOptions({
         ...config,
-        port: 465,
-        secure: true,
+        port: fallbackTarget.port,
+        secure: fallbackTarget.secure,
       }),
     );
+  }
+
+  private getGmailFallbackTarget(
+    config: {
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      pass: string;
+    },
+    error: unknown,
+  ) {
+    const isGmail = config.host.toLowerCase() === "smtp.gmail.com";
+    const networkError = this.isSmtpNetworkError(error);
+
+    if (!isGmail || !networkError) {
+      return null;
+    }
+
+    if (config.secure && config.port === 465) {
+      return { port: 587, secure: false };
+    }
+
+    if (!config.secure && config.port === 587) {
+      return { port: 465, secure: true };
+    }
+
+    return null;
   }
 
   private isConnectionRefusedError(error: unknown) {

@@ -184,7 +184,7 @@ export class PaymentsService {
 
       if (errorMessage.toLowerCase().includes("invalid token")) {
         throw new InternalServerErrorException(
-          "Payment provider configuration error. Verify CAMPAY_API_KEY and CAMPAY_BASE_URL.",
+          "Payment provider configuration error. Verify CAMPAY_PERMANENT_TOKEN/CAMPAY_API_KEY and CAMPAY_API_BASE_URL/CAMPAY_BASE_URL.",
         );
       }
 

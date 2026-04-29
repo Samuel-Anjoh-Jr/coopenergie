@@ -95,15 +95,107 @@ function validateDatabaseUrlOrExit() {
   }
 }
 
+function parseIntegerEnvOrExit(
+  name: string,
+  value: string | undefined,
+  fallback: number,
+) {
+  const candidate = value?.trim() ? value.trim() : String(fallback);
+  const parsed = Number.parseInt(candidate, 10);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(
+      `[startup] ${name} must be a positive integer. Received: ${value}`,
+    );
+    process.exit(1);
+  }
+
+  return parsed;
+}
+
+function validateCampayConfigOrExit() {
+  const isProductionLike =
+    process.env.NODE_ENV === "production" ||
+    !!process.env.RAILWAY_ENVIRONMENT ||
+    !!process.env.RAILWAY_PROJECT_ID;
+  const hasAnyCampayValue = Object.keys(process.env).some((key) =>
+    key.startsWith("CAMPAY_"),
+  );
+
+  if (!isProductionLike && !hasAnyCampayValue) {
+    return;
+  }
+
+  const apiBaseUrl =
+    process.env.CAMPAY_API_BASE_URL?.trim() ||
+    process.env.CAMPAY_BASE_URL?.trim() ||
+    "https://demo.campay.net/api";
+  const token =
+    process.env.CAMPAY_PERMANENT_TOKEN?.trim() ||
+    process.env.CAMPAY_API_KEY?.trim();
+  const webhookKey =
+    process.env.CAMPAY_WEBHOOK_KEY?.trim() ||
+    process.env.CAMPAY_WEBHOOK_SECRET?.trim();
+  const refundEnabled = (process.env.CAMPAY_REFUND_ENABLED || "false").trim();
+
+  try {
+    const parsedUrl = new URL(apiBaseUrl);
+    if (!parsedUrl.protocol.startsWith("http")) {
+      throw new Error("invalid protocol");
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[startup] CAMPAY_API_BASE_URL/CAMPAY_BASE_URL must be a valid URL (${message}).`,
+    );
+    process.exit(1);
+  }
+
+  if (!token) {
+    console.error(
+      "[startup] CAMPAY_PERMANENT_TOKEN or CAMPAY_API_KEY is required.",
+    );
+    process.exit(1);
+  }
+
+  if (!webhookKey) {
+    console.error(
+      "[startup] CAMPAY_WEBHOOK_KEY or CAMPAY_WEBHOOK_SECRET is required.",
+    );
+    process.exit(1);
+  }
+
+  if (refundEnabled !== "true" && refundEnabled !== "false") {
+    console.error(
+      `[startup] CAMPAY_REFUND_ENABLED must be 'true' or 'false'. Received: ${refundEnabled}`,
+    );
+    process.exit(1);
+  }
+
+  parseIntegerEnvOrExit(
+    "CAMPAY_REQUEST_TIMEOUT",
+    process.env.CAMPAY_REQUEST_TIMEOUT,
+    30000,
+  );
+  parseIntegerEnvOrExit(
+    "CAMPAY_MAX_RETRIES",
+    process.env.CAMPAY_MAX_RETRIES,
+    3,
+  );
+  parseIntegerEnvOrExit(
+    "CAMPAY_RETRY_BASE_DELAY",
+    process.env.CAMPAY_RETRY_BASE_DELAY,
+    1000,
+  );
+}
+
 function normalizeBaseUrl(value: string): string {
   return value.trim().replace(/\/+$/, "");
 }
 
 function resolvePublicBaseUrl(port: string | number): string {
   const configuredUrl =
-    process.env.APP_URL ||
-    process.env.AUTH_URL ||
-    process.env.NEXTAUTH_URL;
+    process.env.APP_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL;
 
   if (configuredUrl) {
     return normalizeBaseUrl(configuredUrl);
@@ -130,6 +222,7 @@ function resolveRuntimeEnvironment(): string {
 
 async function bootstrap() {
   validateDatabaseUrlOrExit();
+  validateCampayConfigOrExit();
 
   const app = await NestFactory.create(AppModule, {
     rawBody: true,

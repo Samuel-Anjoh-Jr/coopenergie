@@ -249,9 +249,8 @@ export class RelayerService {
     request: ForwardRequest,
     encryptedPrivateKey: string,
   ): Promise<Hex> {
-    const decryptedPrivateKey = this.walletService.getDecryptedPrivateKey(
-      encryptedPrivateKey,
-    );
+    const decryptedPrivateKey =
+      this.walletService.getDecryptedPrivateKey(encryptedPrivateKey);
     const account = privateKeyToAccount(
       this.normalizePrivateKey(decryptedPrivateKey),
     );
@@ -350,8 +349,8 @@ export class RelayerService {
     const ownerAddress = getAddress(owner);
 
     if (callerAddress !== ownerAddress) {
-      throw new Error(
-        `GasRelayer owner mismatch. owner=${ownerAddress}, configuredRelayerSigner=${callerAddress}.`,
+      this.logger.warn(
+        `GasRelayer owner differs from configured signer. owner=${ownerAddress}, configuredRelayerSigner=${callerAddress}. execute() remains valid if target is whitelisted and signature is valid.`,
       );
     }
 

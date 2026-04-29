@@ -17,8 +17,8 @@ type CampayCollectResponse = {
 @Injectable()
 export class CampayService {
   async getHealthStatus() {
-    const apiKey = this.readApiKey(process.env.CAMPAY_API_KEY);
-    const baseUrl = this.readSecret(process.env.CAMPAY_BASE_URL);
+    const apiKey = this.getApiKey();
+    const baseUrl = this.getBaseUrl();
     const webhookSecret = this.readSecret(process.env.CAMPAY_WEBHOOK_SECRET);
     const webhookUrl = this.readSecret(process.env.CAMPAY_WEBHOOK_URL);
 
@@ -55,7 +55,10 @@ export class CampayService {
         this.readString(payload?.detail) ||
         response.statusText ||
         null;
-      const authReady = !this.isInvalidTokenResponse(response.status, providerMessage);
+      const authReady = !this.isInvalidTokenResponse(
+        response.status,
+        providerMessage,
+      );
 
       return {
         ready: authReady,
@@ -111,10 +114,14 @@ export class CampayService {
   }
 
   verifyWebhookSignature(payload: string, signature: string) {
-    const secret = this.readSecret(process.env.CAMPAY_WEBHOOK_SECRET);
+    const secret = this.getWebhookSecret();
 
     if (!secret || !signature) {
       return false;
+    }
+
+    if (this.isJwtLike(signature)) {
+      return this.verifyHs256JwtSignature(signature, secret);
     }
 
     const expected = createHmac("sha256", secret).update(payload).digest("hex");
@@ -134,8 +141,8 @@ export class CampayService {
       body?: string;
     },
   ) {
-    const apiKey = this.readApiKey(process.env.CAMPAY_API_KEY);
-    const baseUrl = this.readSecret(process.env.CAMPAY_BASE_URL);
+    const apiKey = this.getApiKey();
+    const baseUrl = this.getBaseUrl();
 
     if (!apiKey || !baseUrl) {
       throw new InternalServerErrorException(
@@ -185,6 +192,79 @@ export class CampayService {
   private readApiKey(value: string | undefined) {
     const sanitized = this.readSecret(value);
     return sanitized ? sanitized.replace(/\s+/g, "") : undefined;
+  }
+
+  private getApiKey() {
+    return this.readApiKey(
+      process.env.CAMPAY_API_KEY || process.env.CAMPAY_PERMANENT_TOKEN,
+    );
+  }
+
+  private getBaseUrl() {
+    return this.readSecret(
+      process.env.CAMPAY_BASE_URL || process.env.CAMPAY_API_BASE_URL,
+    );
+  }
+
+  private getWebhookSecret() {
+    return this.readSecret(
+      process.env.CAMPAY_WEBHOOK_SECRET || process.env.CAMPAY_WEBHOOK_KEY,
+    );
+  }
+
+  private isJwtLike(value: string) {
+    return value.split(".").length === 3;
+  }
+
+  private verifyHs256JwtSignature(token: string, secret: string) {
+    const [headerB64, payloadB64, signatureB64] = token.split(".");
+
+    if (!headerB64 || !payloadB64 || !signatureB64) {
+      return false;
+    }
+
+    const header = this.tryParseJson(this.decodeBase64Url(headerB64));
+
+    if (header?.alg !== "HS256") {
+      return false;
+    }
+
+    const signingInput = `${headerB64}.${payloadB64}`;
+    const expectedSignature = createHmac("sha256", secret)
+      .update(signingInput)
+      .digest();
+    const providedSignature = this.decodeBase64UrlToBuffer(signatureB64);
+
+    if (
+      !providedSignature ||
+      providedSignature.length !== expectedSignature.length
+    ) {
+      return false;
+    }
+
+    return timingSafeEqual(providedSignature, expectedSignature);
+  }
+
+  private decodeBase64Url(value: string) {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padding =
+      normalized.length % 4 === 0
+        ? ""
+        : "=".repeat(4 - (normalized.length % 4));
+    return Buffer.from(`${normalized}${padding}`, "base64").toString("utf8");
+  }
+
+  private decodeBase64UrlToBuffer(value: string) {
+    try {
+      const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+      const padding =
+        normalized.length % 4 === 0
+          ? ""
+          : "=".repeat(4 - (normalized.length % 4));
+      return Buffer.from(`${normalized}${padding}`, "base64");
+    } catch {
+      return null;
+    }
   }
 
   private isInvalidTokenResponse(statusCode: number, message: string | null) {
