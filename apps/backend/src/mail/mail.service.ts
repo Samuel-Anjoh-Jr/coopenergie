@@ -1,6 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
-import nodemailer from "nodemailer";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Resend } from "resend";
 
+import { buildBrandedEmailHtml, escapeHtml } from "./templates/brand.template";
 import { buildInvitationHtml } from "./templates/invitation.template";
 import { buildWithdrawalHtml } from "./templates/withdrawal.template";
 
@@ -9,105 +10,74 @@ type MailResult = {
 } | null;
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
 
-  async getHealthStatus() {
-    const config = this.getSmtpConfig();
+  onModuleInit() {
+    const fromAddress = this.getFromAddress();
+    const senderEmail = this.extractSenderEmail(fromAddress)?.toLowerCase();
+    const configuredFrom = this.readEnvValue(process.env.RESEND_FROM);
+    const configuredReplyTo = this.getReplyToAddress();
 
-    if (!config) {
+    if (!configuredFrom) {
+      this.logger.warn(
+        "RESEND_FROM is not set. Using fallback sender. Configure a verified sender/domain in Resend for production delivery.",
+      );
+      return;
+    }
+
+    if (senderEmail && this.isResendOnboardingSender(senderEmail)) {
+      this.logger.warn(
+        `RESEND_FROM (${fromAddress}) appears to use Resend onboarding sender format. This is typically unverified/restricted for production. Verify your domain in Resend and switch RESEND_FROM to it.`,
+      );
+    }
+
+    if (!configuredReplyTo) {
+      this.logger.warn(
+        "RESEND_REPLY_TO is not set. Replies will go to the sender address.",
+      );
+    }
+  }
+
+  async getHealthStatus() {
+    const apiKey = this.getResendApiKey();
+
+    if (!apiKey) {
       return {
+        provider: "resend",
         ready: false,
         configured: false,
         host: null,
         port: null,
         secure: null,
         fromAddress: this.getFromAddress(),
-        error: "SMTP configuration is missing.",
+        error: "Resend configuration is missing.",
       };
     }
 
-    const verifyTransport = async (port: number, secure: boolean) => {
-      const transporter = nodemailer.createTransport(
-        this.buildTransportOptions({
-          ...config,
-          port,
-          secure,
-        }),
-      );
-
-      await this.withTimeout(
-        transporter.verify(),
-        this.getMailSendTimeoutMs(),
-        `Timed out while verifying SMTP connectivity on port ${port}.`,
-      );
-
+    if (!this.isLikelyResendApiKey(apiKey)) {
       return {
-        port,
-        secure,
-      };
-    };
-
-    try {
-      const verifiedTransport = await verifyTransport(
-        config.port,
-        config.secure,
-      );
-
-      return {
-        ready: true,
-        configured: true,
-        host: config.host,
-        port: verifiedTransport.port,
-        secure: verifiedTransport.secure,
-        fromAddress: this.getFromAddress(),
-        error: null,
-      };
-    } catch (error) {
-      const fallbackCandidate = this.getGmailFallbackTarget(config, error);
-
-      if (fallbackCandidate) {
-        try {
-          const verifiedFallback = await verifyTransport(
-            fallbackCandidate.port,
-            fallbackCandidate.secure,
-          );
-
-          return {
-            ready: true,
-            configured: true,
-            host: config.host,
-            port: verifiedFallback.port,
-            secure: verifiedFallback.secure,
-            fromAddress: this.getFromAddress(),
-            error: null,
-          };
-        } catch (fallbackError) {
-          return {
-            ready: false,
-            configured: true,
-            host: config.host,
-            port: config.port,
-            secure: config.secure,
-            fromAddress: this.getFromAddress(),
-            error:
-              fallbackError instanceof Error
-                ? fallbackError.message
-                : String(fallbackError),
-          };
-        }
-      }
-
-      return {
+        provider: "resend",
         ready: false,
         configured: true,
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
+        host: "api.resend.com",
+        port: 443,
+        secure: true,
         fromAddress: this.getFromAddress(),
-        error: error instanceof Error ? error.message : String(error),
+        error: "RESEND_API_KEY looks invalid.",
       };
     }
+
+    return {
+      provider: "resend",
+      ready: true,
+      configured: true,
+      host: "api.resend.com",
+      port: 443,
+      secure: true,
+      fromAddress: this.getFromAddress(),
+      error: null,
+    };
   }
 
   async sendInvitationEmail(
@@ -238,47 +208,33 @@ export class MailService {
     context: string,
   ): Promise<MailResult> {
     try {
-      const transporter = this.getTransporter();
+      const resend = this.getResendClient();
 
-      if (!transporter) {
+      if (!resend) {
         return null;
       }
 
-      const sendAttempt = () =>
-        this.withTimeout(
-          transporter.sendMail({
-            from: this.getFromAddress(),
-            ...options,
-          }),
-          this.getMailSendTimeoutMs(),
-          `Timed out while sending ${context}.`,
+      const result = await this.withTimeout(
+        resend.emails.send(this.buildResendPayload(options)),
+        this.getMailSendTimeoutMs(),
+        `Timed out while sending ${context}.`,
+      );
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      const messageId = result.data?.id ?? null;
+
+      if (!messageId) {
+        this.logger.warn(
+          `Resend accepted ${context} but did not return a message id.`,
         );
-
-      let info;
-
-      try {
-        info = await sendAttempt();
-      } catch (error) {
-        const fallbackTransporter = this.getGmailFallbackTransporter(error);
-
-        if (!fallbackTransporter) {
-          throw error;
-        }
-
-        this.logger.warn(`Retrying ${context} using Gmail SSL fallback (465).`);
-
-        info = await this.withTimeout(
-          fallbackTransporter.sendMail({
-            from: this.getFromAddress(),
-            ...options,
-          }),
-          this.getMailSendTimeoutMs(),
-          `Timed out while sending ${context} (fallback).`,
-        );
+        return null;
       }
 
       return {
-        messageId: info.messageId,
+        messageId,
       };
     } catch (error) {
       this.logger.warn(
@@ -290,144 +246,93 @@ export class MailService {
     }
   }
 
-  private getTransporter() {
-    const config = this.getSmtpConfig();
+  private getResendClient() {
+    const apiKey = this.getResendApiKey();
 
-    if (!config) {
-      this.logger.warn("SMTP is not configured - email delivery disabled.");
+    if (!apiKey) {
+      this.logger.warn("Resend is not configured - email delivery disabled.");
       return null;
     }
 
-    return nodemailer.createTransport(this.buildTransportOptions(config));
+    return new Resend(apiKey);
   }
 
   private getFromAddress() {
     return (
+      this.readEnvValue(process.env.RESEND_FROM) ||
       this.readEnvValue(process.env.EMAIL_FROM) ||
-      this.readEnvValue(process.env.SMTP_FROM_EMAIL) ||
-      this.readEnvValue(process.env.SMTP_USER) ||
-      "CoopEnergie <anjohsamueljr@gmail.com>"
+      "CoopEnergie <onboarding@resend.dev>"
     );
   }
 
-  private getSmtpConfig() {
-    const host = this.readEnvValue(process.env.SMTP_HOST);
-    const user = this.readEnvValue(process.env.SMTP_USER);
-    const pass = this.readPassword(process.env.SMTP_PASS);
-
-    if (!host || !user || !pass) {
-      return null;
-    }
-
-    const port = parseInt(
-      this.readEnvValue(process.env.SMTP_PORT) || "587",
-      10,
-    );
-
-    return {
-      host,
-      port,
-      secure: port === 465,
-      user,
-      pass,
-    };
+  private getResendApiKey() {
+    return this.readEnvValue(process.env.RESEND_API_KEY);
   }
 
-  private buildTransportOptions(config: {
-    host: string;
-    port: number;
-    secure: boolean;
-    user: string;
-    pass: string;
-  }) {
-    return {
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      requireTLS: !config.secure,
-      auth: { user: config.user, pass: config.pass },
-      connectionTimeout: this.parsePositiveInteger(
-        process.env.SMTP_CONNECTION_TIMEOUT_MS,
-        15000,
-      ),
-      greetingTimeout: this.parsePositiveInteger(
-        process.env.SMTP_GREETING_TIMEOUT_MS,
-        10000,
-      ),
-      socketTimeout: this.parsePositiveInteger(
-        process.env.SMTP_SOCKET_TIMEOUT_MS,
-        20000,
-      ),
-    };
-  }
-
-  private getGmailFallbackTransporter(error: unknown) {
-    const config = this.getSmtpConfig();
-
-    if (!config) {
-      return null;
-    }
-
-    const fallbackTarget = this.getGmailFallbackTarget(config, error);
-
-    if (!fallbackTarget) {
-      return null;
-    }
-
-    return nodemailer.createTransport(
-      this.buildTransportOptions({
-        ...config,
-        port: fallbackTarget.port,
-        secure: fallbackTarget.secure,
-      }),
-    );
-  }
-
-  private getGmailFallbackTarget(
-    config: {
-      host: string;
-      port: number;
-      secure: boolean;
-      user: string;
-      pass: string;
-    },
-    error: unknown,
-  ) {
-    const isGmail = config.host.toLowerCase() === "smtp.gmail.com";
-    const networkError = this.isSmtpNetworkError(error);
-
-    if (!isGmail || !networkError) {
-      return null;
-    }
-
-    if (config.secure && config.port === 465) {
-      return { port: 587, secure: false };
-    }
-
-    if (!config.secure && config.port === 587) {
-      return { port: 465, secure: true };
-    }
-
-    return null;
-  }
-
-  private isConnectionRefusedError(error: unknown) {
-    if (!(error instanceof Error)) {
-      return false;
-    }
-
-    const message = error.message.toLowerCase();
-
+  private getReplyToAddress() {
     return (
-      message.includes("econnrefused") ||
-      message.includes("connect econnrefused") ||
-      message.includes("etimedout") ||
-      message.includes("connection timeout")
+      this.readEnvValue(process.env.RESEND_REPLY_TO) ||
+      this.readEnvValue(process.env.EMAIL_REPLY_TO)
     );
   }
 
-  private isSmtpNetworkError(error: unknown) {
-    return this.isConnectionRefusedError(error);
+  private isLikelyResendApiKey(key: string) {
+    return key.startsWith("re_");
+  }
+
+  private parseBcc(value?: string) {
+    if (!value) {
+      return undefined;
+    }
+
+    const recipients = value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    return recipients.length > 0 ? recipients : undefined;
+  }
+
+  private buildResendPayload(options: {
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+    bcc?: string;
+  }) {
+    const payload: Parameters<Resend["emails"]["send"]>[0] = {
+      from: this.getFromAddress(),
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+      bcc: this.parseBcc(options.bcc),
+    };
+
+    const replyTo = this.getReplyToAddress();
+
+    if (replyTo) {
+      payload.replyTo = replyTo;
+    }
+
+    return payload;
+  }
+
+  private extractSenderEmail(fromAddress: string) {
+    const bracketMatch = fromAddress.match(/<([^>]+)>/);
+
+    if (bracketMatch?.[1]) {
+      return bracketMatch[1].trim();
+    }
+
+    return fromAddress.trim();
+  }
+
+  private isResendOnboardingSender(senderEmail: string) {
+    return (
+      senderEmail === "onboarding@resend.dev" ||
+      senderEmail.endsWith("@resend.dev")
+    );
   }
 
   private readEnvValue(value: string | undefined) {
@@ -448,99 +353,35 @@ export class MailService {
     return trimmed || undefined;
   }
 
-  private readPassword(value: string | undefined) {
-    const sanitized = this.readEnvValue(value);
-    return sanitized ? sanitized.replace(/\s+/g, "") : undefined;
-  }
-
   private buildFailureHtml(
     cooperativeName: string,
     amount: number,
     reason: string,
   ) {
-    return `
-      <!DOCTYPE html>
-      <html lang="fr">
-        <body style="margin:0;padding:0;background-color:#F4F7F4;font-family:Arial,sans-serif;color:#1F2937;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F4F7F4;margin:0;padding:24px 12px;">
-            <tr>
-              <td align="center">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;background-color:#FFFFFF;border-radius:16px;overflow:hidden;">
-                  <tr>
-                    <td style="background-color:#1B5E20;padding:24px 32px;text-align:center;">
-                      <div style="font-size:28px;font-weight:700;color:#FFFFFF;">CoopEnergie</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:32px;">
-                      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;color:#1B5E20;">
-                        Echec du retrait pour ${escapeHtml(cooperativeName)}
-                      </h1>
-                      <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">
-                        Le decaissement de <strong>${amount.toLocaleString()} FCFA</strong> n'a pas abouti.
-                      </p>
-                      <p style="margin:0;font-size:15px;line-height:1.7;">
-                        Motif: ${escapeHtml(reason)}
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:20px 32px;background-color:#F0FDF4;font-size:13px;line-height:1.6;color:#4B5563;text-align:center;">
-                      CoopEnergie - Transparent Solar Cooperatives
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-      </html>
-    `;
+    return buildBrandedEmailHtml({
+      lang: "fr",
+      badge: "Alerte decaissement",
+      title: `Echec du retrait pour ${cooperativeName}`,
+      intro: `Le decaissement de <strong>${amount.toLocaleString()} FCFA</strong> n'a pas abouti.`,
+      detailsHtml: `<span style="display:block;font-size:12px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:#9A3412;">Motif</span><span style="display:block;margin-top:6px;color:#7C2D12;">${escapeHtml(reason)}</span>`,
+    });
   }
 
   private buildVoteHtml(cooperativeName: string, proposalTitle: string) {
-    return `
-      <!DOCTYPE html>
-      <html lang="fr">
-        <body style="margin:0;padding:0;background-color:#F4F7F4;font-family:Arial,sans-serif;color:#1F2937;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F4F7F4;margin:0;padding:24px 12px;">
-            <tr>
-              <td align="center">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;background-color:#FFFFFF;border-radius:16px;overflow:hidden;">
-                  <tr>
-                    <td style="background-color:#1B5E20;padding:24px 32px;text-align:center;">
-                      <div style="font-size:28px;font-weight:700;color:#FFFFFF;">CoopEnergie</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:32px;">
-                      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;color:#1B5E20;">
-                        Nouvelle proposition a voter
-                      </h1>
-                      <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">
-                        Une nouvelle proposition a ete publiee dans <strong>${escapeHtml(cooperativeName)}</strong>.
-                      </p>
-                      <p style="margin:0;font-size:15px;line-height:1.7;">
-                        Proposition: <strong>${escapeHtml(proposalTitle)}</strong>
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:20px 32px;background-color:#F0FDF4;font-size:13px;line-height:1.6;color:#4B5563;text-align:center;">
-                      CoopEnergie - Transparent Solar Cooperatives
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-      </html>
-    `;
+    return buildBrandedEmailHtml({
+      lang: "fr",
+      badge: "Notification vote",
+      title: "Nouvelle proposition a voter",
+      intro: `Une nouvelle proposition a ete publiee dans <strong>${escapeHtml(cooperativeName)}</strong>.`,
+      detailsHtml: `<span style="display:block;font-size:12px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:#166534;">Proposition</span><span style="display:block;margin-top:6px;"><strong>${escapeHtml(proposalTitle)}</strong></span>`,
+    });
   }
 
   private getMailSendTimeoutMs() {
-    return this.parsePositiveInteger(process.env.SMTP_SEND_TIMEOUT_MS, 20000);
+    return this.parsePositiveInteger(
+      process.env.RESEND_SEND_TIMEOUT_MS ?? process.env.SMTP_SEND_TIMEOUT_MS,
+      20000,
+    );
   }
 
   private parsePositiveInteger(value: string | undefined, fallback: number) {
@@ -570,13 +411,4 @@ export class MailService {
       }
     }
   }
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }

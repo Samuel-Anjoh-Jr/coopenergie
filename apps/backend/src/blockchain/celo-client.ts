@@ -1,9 +1,19 @@
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createPublicClient, createWalletClient, fallback, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celo, celoSepolia } from "viem/chains";
 
 const defaultCeloSepoliaRpcUrl = "https://forno.celo-sepolia.celo-testnet.org";
 const defaultMainnetRpcUrl = "https://forno.celo.org";
+
+// Fallback RPC URLs used when the primary is unavailable
+const celoSepoliaFallbackUrls = [
+  "https://rpc.ankr.com/celo_alfajores",
+  "https://celo-alfajores.drpc.org",
+];
+const celoMainnetFallbackUrls = [
+  "https://rpc.ankr.com/celo",
+  "https://celo.drpc.org",
+];
 
 function normalizePrivateKey(value?: string): `0x${string}` | undefined {
   const trimmedValue = value?.trim();
@@ -31,28 +41,40 @@ function isMainnetNetwork() {
   return networkName === "celo" || networkName === "mainnet";
 }
 
-function getRpcUrl() {
-  if (process.env.CELO_RPC_URL?.trim()) {
-    return process.env.CELO_RPC_URL.trim();
-  }
+function getRpcUrls(): string[] {
+  const primary = process.env.CELO_RPC_URL?.trim();
+  const fallbacks = isMainnetNetwork()
+    ? celoMainnetFallbackUrls
+    : celoSepoliaFallbackUrls;
 
-  return isMainnetNetwork() ? defaultMainnetRpcUrl : defaultCeloSepoliaRpcUrl;
+  const defaultPrimary = isMainnetNetwork()
+    ? defaultMainnetRpcUrl
+    : defaultCeloSepoliaRpcUrl;
+
+  const primaryUrl = primary || defaultPrimary;
+
+  // De-duplicate: keep primary first, then any fallbacks not equal to primary
+  return [primaryUrl, ...fallbacks.filter((u) => u !== primaryUrl)];
 }
 
-const rpcUrl = getRpcUrl();
+const rpcUrls = getRpcUrls();
+const primaryRpcUrl = rpcUrls[0];
+
+const transport = fallback(rpcUrls.map((url) => http(url)), { rank: false });
+
 const chain = isMainnetNetwork()
   ? {
       ...celo,
       rpcUrls: {
-        default: { http: [rpcUrl] },
-        public: { http: [rpcUrl] },
+        default: { http: rpcUrls },
+        public: { http: rpcUrls },
       },
     }
   : {
       ...celoSepolia,
       rpcUrls: {
-        default: { http: [rpcUrl] },
-        public: { http: [rpcUrl] },
+        default: { http: rpcUrls },
+        public: { http: rpcUrls },
       },
     };
 
@@ -66,16 +88,17 @@ export const relayerAccount = relayerPrivateKey
 
 export const publicClient = createPublicClient({
   chain,
-  transport: http(rpcUrl),
+  transport,
 });
 
 export const walletClient = relayerAccount
   ? createWalletClient({
       account: relayerAccount,
       chain,
-      transport: http(rpcUrl),
+      transport,
     })
   : undefined;
 
 export { chain as celoChain };
-export const celoRpcUrl = rpcUrl;
+export const celoRpcUrl = primaryRpcUrl;
+export { transport as celoTransport };

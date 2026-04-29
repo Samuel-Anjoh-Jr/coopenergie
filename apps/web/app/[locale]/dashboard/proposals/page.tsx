@@ -127,8 +127,9 @@ function getStatusColor(status: string) {
 
 export default function ProposalsPage() {
   const params = useParams();
-  const locale = (params.locale as string) || "en";
-  const t = useTranslations(locale as Locale);
+  const locale = ((params.locale as string) || "en").toLowerCase();
+  const normalizedLocale: Locale = locale.startsWith("fr") ? "fr" : "en";
+  const t = useTranslations(normalizedLocale);
   const { data: session } = useSession();
 
   const [isOpen, setIsOpen] = useState(false);

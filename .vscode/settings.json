@@ -1,5 +1,6 @@
 {
   "snyk.advanced.autoSelectOrganization": true,
   "snyk.advanced.organization": "12778978-9aa4-4892-90a7-6522fc484f07",
-  "prisma.pinToPrisma6": true
+  "prisma.pinToPrisma6": true,
+  "java.configuration.updateBuildConfiguration": "automatic"
 }

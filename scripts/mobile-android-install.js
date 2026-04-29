@@ -17,12 +17,27 @@ const repoRoot = path.resolve(__dirname, "..");
 const mobileDir = path.resolve(__dirname, "..", "apps", "mobile");
 const androidDir = path.join(mobileDir, "android");
 const adb = `${process.env.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe`;
+const gradleVersion = "8.14.3";
+const gradleVersionCacheDir = path.join(
+  process.env.USERPROFILE || "",
+  ".gradle",
+  "caches",
+  gradleVersion,
+);
 const gradleJournalCacheFile = path.join(
   process.env.USERPROFILE || "",
   ".gradle",
   "caches",
   "journal-1",
   "file-access.bin",
+);
+const gradleTransformsCacheDir = path.join(gradleVersionCacheDir, "transforms");
+const gradleProblemsReportFile = path.join(
+  androidDir,
+  "build",
+  "reports",
+  "problems",
+  "problems-report.html",
 );
 
 // Prefer JDK 17 for Android/Gradle toolchain compatibility.
@@ -47,10 +62,16 @@ if (fs.existsSync(bunCacheDir)) {
         // Don't recurse into .cxx or build dirs (speed)
         if (entry.name === ".cxx" || entry.name === "build") continue;
         patchNitroModules(full);
-      } else if (full.includes("react-native-nitro-modules") && full.includes(`${path.sep}android${path.sep}`)) {
+      } else if (
+        full.includes("react-native-nitro-modules") &&
+        full.includes(`${path.sep}android${path.sep}`)
+      ) {
         if (entry.name === "gradle.properties") {
           const content = fs.readFileSync(full, "utf8");
-          const patched = content.replace(/Nitro_minSdkVersion=\d+/g, "Nitro_minSdkVersion=24");
+          const patched = content.replace(
+            /Nitro_minSdkVersion=\d+/g,
+            "Nitro_minSdkVersion=24",
+          );
           if (patched !== content) {
             fs.writeFileSync(full, patched);
             console.log(`[mobile] Patched gradle.properties: ${full}`);
@@ -67,13 +88,30 @@ if (fs.existsSync(bunCacheDir)) {
             /arguments\s+"-DANDROID_STL=c\+\+_shared",\s*"-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"/g,
             'arguments "-DANDROID_PLATFORM=android-24", "-DCMAKE_SYSTEM_VERSION=24", "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"',
           );
+          if (!patched.includes("layout.buildDirectory.set(file(\"C:/.b/nitro\"))")) {
+            patched = patched.replace(
+              /apply from: "\.\/fix-prefab\.gradle"\r?\n/,
+              'apply from: "./fix-prefab.gradle"\n\nif (System.properties["os.name"].toLowerCase().contains("windows")) {\n  // Keep generated code paths short enough for Windows MAX_PATH constraints.\n  layout.buildDirectory.set(file("C:/.b/nitro"))\n}\n',
+            );
+          }
+          // Force CMake build staging to a very short absolute path on Windows.
+          // This avoids build.ninja dirty loops caused by deep bun cache paths.
+          if (!patched.includes("buildStagingDirectory")) {
+            patched = patched.replace(
+              /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
+              'externalNativeBuild {\n    cmake {\n      path "CMakeLists.txt"\n      if (System.properties["os.name"].toLowerCase().contains("windows")) {\n        buildStagingDirectory "C:/.cxx/nitro"\n      }\n    }\n  }',
+            );
+          }
           if (patched !== content) {
             fs.writeFileSync(full, patched);
-            console.log(`[mobile] Patched build.gradle native API/minSdkVersion: ${full}`);
+            console.log(
+              `[mobile] Patched build.gradle native API/minSdkVersion: ${full}`,
+            );
           }
         } else if (entry.name === "fix-prefab.gradle") {
           const isNitroOrMmkv =
-            full.includes("react-native-nitro-modules") || full.includes("react-native-mmkv");
+            full.includes("react-native-nitro-modules") ||
+            full.includes("react-native-mmkv");
           if (!isNitroOrMmkv) continue;
           const content = fs.readFileSync(full, "utf8");
           const patched = content.replace(
@@ -82,23 +120,168 @@ if (fs.existsSync(bunCacheDir)) {
           );
           if (patched !== content) {
             fs.writeFileSync(full, patched);
-            console.log(`[mobile] Patched fix-prefab.gradle variants lookup: ${full}`);
+            console.log(
+              `[mobile] Patched fix-prefab.gradle variants lookup: ${full}`,
+            );
           }
-        } else if (entry.name === "CMakeLists.txt" && full.includes("react-native-nitro-modules")) {
+        } else if (
+          entry.name === "CMakeLists.txt" &&
+          full.includes("react-native-nitro-modules")
+        ) {
           const content = fs.readFileSync(full, "utf8");
           let patched = content;
           if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
-            patched = patched.replace(/set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g, "set(CMAKE_OBJECT_PATH_MAX 128)");
+            patched = patched.replace(
+              /set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g,
+              "set(CMAKE_OBJECT_PATH_MAX 128)",
+            );
           } else {
             patched = patched.replace(
               /cmake_minimum_required\(VERSION\s+3\.9\.0\)\r?\n/,
-              'cmake_minimum_required(VERSION 3.9.0)\n\n# Keep this low so CMake hashes object paths and avoids Windows path-limit churn.\nset(CMAKE_OBJECT_PATH_MAX 128)\n',
+              "cmake_minimum_required(VERSION 3.9.0)\n\n# Keep this low so CMake hashes object paths and avoids Windows path-limit churn.\nset(CMAKE_OBJECT_PATH_MAX 128)\n",
             );
           }
           if (patched !== content) {
             fs.writeFileSync(full, patched);
             console.log(`[mobile] Patched CMakeLists object path max: ${full}`);
           }
+        }
+      }
+    }
+  })(bunCacheDir);
+
+  (function patchOtherNativeModules(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === ".cxx" || entry.name === "build") continue;
+        patchOtherNativeModules(full);
+        continue;
+      }
+
+      if (!full.includes(`${path.sep}android${path.sep}`)) continue;
+
+      const isWorklets = full.includes("react-native-worklets");
+      const isReanimated = full.includes("react-native-reanimated");
+      const isExpoModulesCore = full.includes("expo-modules-core");
+
+      if (entry.name === "build.gradle" && (isWorklets || isReanimated || isExpoModulesCore)) {
+        const content = fs.readFileSync(full, "utf8");
+        let patched = content;
+
+        // Keep this idempotent across repeated runs.
+        patched = patched.replace(/\r?\n\s*"-DCMAKE_OBJECT_PATH_MAX=128",/g, "");
+        patched = patched.replace(/\r?\n\s*"-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",/g, "");
+        patched = patched.replace(/\r?\n\s*"-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",/g, "");
+
+        patched = patched.replace(
+          /arguments\s+"-DANDROID_STL=c\+\+_shared",/g,
+          'arguments "-DANDROID_STL=c++_shared",\n                        "-DCMAKE_OBJECT_PATH_MAX=128",\n                        "-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",\n                        "-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",',
+        );
+
+        if (isWorklets && !patched.includes('buildStagingDirectory "C:/.cxx/worklets"')) {
+          patched = patched.replace(
+            /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*version\s*=\s*System\.getenv\("CMAKE_VERSION"\)\s*\?:\s*"3\.22\.1"\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
+            'externalNativeBuild {\n        cmake {\n            version = System.getenv("CMAKE_VERSION") ?: "3.22.1"\n            path "CMakeLists.txt"\n            if (System.properties["os.name"].toLowerCase().contains("windows")) {\n                buildStagingDirectory "C:/.cxx/worklets"\n            }\n        }\n    }',
+          );
+        }
+
+        if (isReanimated && !patched.includes('buildStagingDirectory "C:/.cxx/reanimated"')) {
+          patched = patched.replace(
+            /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*version\s*=\s*System\.getenv\("CMAKE_VERSION"\)\s*\?:\s*"3\.22\.1"\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
+            'externalNativeBuild {\n        cmake {\n            version = System.getenv("CMAKE_VERSION") ?: "3.22.1"\n            path "CMakeLists.txt"\n            if (System.properties["os.name"].toLowerCase().contains("windows")) {\n                buildStagingDirectory "C:/.cxx/reanimated"\n            }\n        }\n    }',
+          );
+        }
+
+        if (isExpoModulesCore && !patched.includes('buildStagingDirectory "C:/.cxx/expo-core"')) {
+          patched = patched.replace(
+            /externalNativeBuild\s*\{\s*\r?\n\s*cmake\s*\{\s*\r?\n\s*path\s+"CMakeLists\.txt"\s*\r?\n\s*\}\s*\r?\n\s*\}/,
+            'externalNativeBuild {\n    cmake {\n      path "CMakeLists.txt"\n      if (System.properties["os.name"].toLowerCase().contains("windows")) {\n        buildStagingDirectory "C:/.cxx/expo-core"\n      }\n    }\n  }',
+          );
+        }
+
+        if (patched !== content) {
+          fs.writeFileSync(full, patched);
+          console.log(`[mobile] Patched native build.gradle path settings: ${full}`);
+        }
+      }
+
+      if (entry.name === "CMakeLists.txt" && (isWorklets || isReanimated || isExpoModulesCore)) {
+        const content = fs.readFileSync(full, "utf8");
+        let patched = content;
+
+        if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
+          patched = patched.replace(/set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g, "set(CMAKE_OBJECT_PATH_MAX 128)");
+        } else {
+          patched = patched.replace(
+            /cmake_minimum_required\(VERSION\s+\d+\.\d+\)\r?\n/,
+            (m) => `${m}\n# Keep low to force hashed object paths on Windows.\nset(CMAKE_OBJECT_PATH_MAX 128)\n`,
+          );
+        }
+
+        if (isWorklets) {
+          patched = patched.replace(
+            /file\(GLOB_RECURSE WORKLETS_COMMON_CPP_SOURCES CONFIGURE_DEPENDS\s*\r?\n\s*"\$\{COMMON_CPP_DIR\}\/worklets\/\*\.cpp"\)/,
+            'file(GLOB_RECURSE WORKLETS_COMMON_CPP_SOURCES CONFIGURE_DEPENDS\n     RELATIVE ${CMAKE_SOURCE_DIR}\n     "../Common/cpp/worklets/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB_RECURSE WORKLETS_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\s*\r?\n\s*"\$\{ANDROID_CPP_DIR\}\/worklets\/\*\.cpp"\)/,
+            'file(GLOB_RECURSE WORKLETS_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\n     RELATIVE ${CMAKE_SOURCE_DIR}\n     "src/main/cpp/worklets/*.cpp")',
+          );
+        }
+
+        if (isReanimated) {
+          patched = patched.replace(
+            /file\(GLOB_RECURSE REANIMATED_COMMON_CPP_SOURCES CONFIGURE_DEPENDS\s*\r?\n\s*"\$\{COMMON_CPP_DIR\}\/reanimated\/\*\.cpp"\)/,
+            'file(GLOB_RECURSE REANIMATED_COMMON_CPP_SOURCES CONFIGURE_DEPENDS\n     RELATIVE ${CMAKE_SOURCE_DIR}\n     "../Common/cpp/reanimated/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB_RECURSE REANIMATED_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\s*\r?\n\s*"\$\{ANDROID_CPP_DIR\}\/reanimated\/\*\.cpp"\)/,
+            'file(GLOB_RECURSE REANIMATED_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\n     RELATIVE ${CMAKE_SOURCE_DIR}\n     "src/main/cpp/reanimated/*.cpp")',
+          );
+        }
+
+        if (isExpoModulesCore && full.includes(`${path.sep}android${path.sep}CMakeLists.txt`)) {
+          patched = patched.replace(
+            /file\(GLOB sources_android "\$\{SRC_DIR\}\/main\/cpp\/\*\.cpp"\)/,
+            'file(GLOB sources_android RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB sources_android_types "\$\{SRC_DIR\}\/main\/cpp\/types\/\*\.cpp"\)/,
+            'file(GLOB sources_android_types RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/types/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB sources_android_javaclasses "\$\{SRC_DIR\}\/main\/cpp\/javaclasses\/\*\.cpp"\)/,
+            'file(GLOB sources_android_javaclasses RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/javaclasses/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB sources_android_javaclasses "\$\{SRC_DIR\}\/main\/cpp\/decorators\/\*\.cpp"\)/,
+            'file(GLOB sources_android_decorators RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/decorators/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB common_sources "\$\{COMMON_DIR\}\/\*\.cpp"\)/,
+            'file(GLOB common_sources RELATIVE ${CMAKE_SOURCE_DIR} "../common/cpp/*.cpp")',
+          );
+          patched = patched.replace(
+            /\$\{sources_android_javaclasses\}\r?\n\)/,
+            '${sources_android_javaclasses}\n        ${sources_android_decorators}\n)',
+          );
+        }
+
+        if (isExpoModulesCore && full.includes(`${path.sep}android${path.sep}src${path.sep}fabric${path.sep}CMakeLists.txt`)) {
+          patched = patched.replace(
+            /file\(GLOB SOURCES "\*\.cpp"\)/,
+            'file(GLOB SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "src/fabric/*.cpp")',
+          );
+          patched = patched.replace(
+            /file\(GLOB COMMON_FABRIC_SOURCES "\$\{COMMON_FABRIC_DIR\}\/\*\.cpp"\)/,
+            'file(GLOB COMMON_FABRIC_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "../common/cpp/fabric/*.cpp")',
+          );
+        }
+
+        if (patched !== content) {
+          fs.writeFileSync(full, patched);
+          console.log(`[mobile] Patched native CMake path settings: ${full}`);
         }
       }
     }
@@ -117,16 +300,63 @@ if (fs.existsSync(bunCacheDir)) {
       }
     }
   })(bunCacheDir);
+
+  // Inject CMakeLists rewrite hooks into all native module build.gradle files
+  // so that long absolute paths are rewritten to SUBST drive paths before CMake runs.
+  (function patchNativeModuleBuildGradles(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const full = path.join(dir, entry.name);
+
+      // Look for build.gradle files in the typical pattern: bun cache has
+      // .bun/package@version+hash/node_modules/package/android/build.gradle
+      const nodeModulesDir = path.join(full, "node_modules");
+      if (fs.existsSync(nodeModulesDir)) {
+        for (const pkgEntry of fs.readdirSync(nodeModulesDir, { withFileTypes: true })) {
+          if (!pkgEntry.isDirectory()) continue;
+          const pkgFull = path.join(nodeModulesDir, pkgEntry.name);
+          if (pkgEntry.name.startsWith("@")) {
+            // scoped package (@namespace/package), look inside
+            for (const scopedEntry of fs.readdirSync(pkgFull, { withFileTypes: true })) {
+              if (!scopedEntry.isDirectory()) continue;
+              const scopedFull = path.join(pkgFull, scopedEntry.name);
+              const scopedBuildGradle = path.join(scopedFull, "android", "build.gradle");
+              if (fs.existsSync(scopedBuildGradle)) {
+                patchNativeModuleBuildGradleWithCMakeHook(scopedBuildGradle);
+              }
+            }
+          } else {
+            const buildGradle = path.join(pkgFull, "android", "build.gradle");
+            if (fs.existsSync(buildGradle)) {
+              patchNativeModuleBuildGradleWithCMakeHook(buildGradle);
+            }
+          }
+        }
+      }
+    }
+  })(bunCacheDir);
 }
 
 // Recover from Gradle journal index corruption that can occur on interrupted builds.
 if (gradleJournalCacheFile && fs.existsSync(gradleJournalCacheFile)) {
-  try {
-    fs.rmSync(gradleJournalCacheFile, { force: true });
-    console.log(`[mobile] Cleared corrupted Gradle journal cache index: ${gradleJournalCacheFile}`);
-  } catch {
-    // non-fatal; Gradle may recreate or continue using existing cache
-  }
+  removePathWithVerification(gradleJournalCacheFile, {
+    label: "corrupted Gradle journal cache index",
+    tolerateError: (error) => error && error.code === "EPERM",
+  });
+}
+
+// Recover from corrupted Gradle transform metadata (metadata.bin) by clearing
+// the transforms cache for the current Gradle version.
+if (gradleTransformsCacheDir && fs.existsSync(gradleTransformsCacheDir)) {
+  clearGradleTransformCaches(false);
+}
+
+// Gradle can fail to move a new problems report over an existing file on Windows.
+if (gradleProblemsReportFile && fs.existsSync(gradleProblemsReportFile)) {
+  removePathWithVerification(gradleProblemsReportFile, {
+    label: "stale Gradle problems report",
+    tolerateError: (error) => error && error.code === "EPERM",
+  });
 }
 
 // Update this to match the applicationId in android/app/build.gradle
@@ -156,6 +386,102 @@ function run(cmd, opts = {}) {
   execSync(cmd, { stdio: "inherit", ...opts });
 }
 
+function removePathWithVerification(targetPath, options = {}) {
+  const {
+    recursive = false,
+    label = targetPath,
+    retries = 3,
+    tolerateError = null,
+  } = options;
+  if (!targetPath || !fs.existsSync(targetPath)) return false;
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      fs.rmSync(targetPath, { recursive, force: true });
+      if (!fs.existsSync(targetPath)) {
+        console.log(`[mobile] Cleared ${label}: ${targetPath}`);
+        return true;
+      }
+    } catch (error) {
+      if (typeof tolerateError === "function" && tolerateError(error)) {
+        console.warn(`[mobile] Skipped clearing ${label}: ${targetPath} (${error.message})`);
+        return false;
+      }
+
+      if (process.platform === "win32" && error && error.code === "EPERM") {
+        try {
+          execSync("cmd /c taskkill /F /IM java.exe /T", { stdio: "ignore" });
+        } catch {
+          // Best-effort fallback to unlock cache files held by stale Java processes.
+        }
+      }
+
+      lastError = error;
+    }
+  }
+
+  const reason = lastError ? ` (${lastError.message})` : "";
+  throw new Error(`Failed to clear ${label}: ${targetPath}${reason}`);
+}
+
+function clearGradleTransformCaches(strict = false) {
+  if (!gradleVersionCacheDir || !fs.existsSync(gradleVersionCacheDir)) return;
+
+  if (process.platform === "win32") {
+    stopWindowsGradleCacheLockers();
+  }
+
+  const cacheEntries = fs
+    .readdirSync(gradleVersionCacheDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("transforms"));
+
+  for (const entry of cacheEntries) {
+    removePathWithVerification(path.join(gradleVersionCacheDir, entry.name), {
+      recursive: true,
+      label: "Gradle transforms cache",
+      tolerateError:
+        !strict && process.platform === "win32"
+          ? (error) => error && error.code === "EPERM"
+          : null,
+    });
+  }
+}
+
+function isGradleTransformMetadataError(error) {
+  if (!error) return false;
+
+  return [error.message, error.stdout?.toString?.(), error.stderr?.toString?.()]
+    .filter(Boolean)
+    .some(
+      (text) =>
+        text.includes("Could not read workspace metadata") ||
+        text.includes("metadata.bin"),
+    );
+}
+
+function stopWindowsGradleCacheLockers() {
+  const psCommand = [
+    "$targets = Get-CimInstance Win32_Process | Where-Object {",
+    "  $_.Name -eq 'java.exe' -and (",
+    `    $_.CommandLine -match 'GradleDaemon ${gradleVersion.replace(/\./g, "\\.")}' -or`,
+    "    $_.CommandLine -match 'gradle-server.jar'",
+    "  )",
+    "}",
+    "if ($targets) {",
+    "  $targets | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+    "}",
+  ].join(" ");
+
+  try {
+    execSync(`powershell -NoProfile -Command \"${psCommand}\"`, {
+      stdio: "ignore",
+    });
+  } catch {
+    // Best-effort: cache cleanup will still tell us if something remains locked.
+  }
+}
+
 function getFreeSubstDrive() {
   for (const letter of ["X", "Y", "Z", "W", "V"]) {
     if (!fs.existsSync(`${letter}:\\`)) return letter;
@@ -173,6 +499,156 @@ function upsertGradleProp(content, key, value) {
   return `${content.trimEnd()}\n${line}\n`;
 }
 
+function rewriteAutolinkingToSubstDrive(repoRootPath, driveLetter) {
+  if (!driveLetter) return;
+  const autolinkingCmakePath = path.join(
+    androidDir,
+    "app",
+    "build",
+    "generated",
+    "autolinking",
+    "src",
+    "main",
+    "jni",
+    "Android-autolinking.cmake",
+  );
+  if (!fs.existsSync(autolinkingCmakePath)) return;
+
+  const repoRootUnix = repoRootPath.replace(/\\/g, "/");
+  const content = fs.readFileSync(autolinkingCmakePath, "utf8");
+  const rewritten = content.split(repoRootUnix).join(`${driveLetter}:`);
+  if (rewritten !== content) {
+    fs.writeFileSync(autolinkingCmakePath, rewritten);
+    console.log(
+      `[mobile] Rewrote autolinking CMake paths to SUBST drive: ${autolinkingCmakePath}`,
+    );
+  }
+}
+
+/**
+ * Rewrite all CMakeLists.txt files in the bun cache to use SUBST drive paths
+ * instead of absolute paths. This prevents object file paths from exceeding
+ * Windows' 260-char MAX_PATH limit during native compilation.
+ */
+function rewriteNativeCMakePaths(bunCacheDir, driveLetter) {
+  if (!driveLetter) return;
+  const repoRootUnix = path.normalize(path.join(bunCacheDir, "..", "..")).replace(/\\/g, "/");
+
+  (function walkDir(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        // Continue recursion, but skip large/uninteresting directories
+        if (!["build", ".gradle", ".cxx", "build_output"].includes(entry.name)) {
+          walkDir(full);
+        }
+      } else if (entry.isFile() && entry.name === "CMakeLists.txt") {
+        try {
+          const content = fs.readFileSync(full, "utf8");
+          const rewritten = content.split(repoRootUnix).join(`${driveLetter}:`);
+          if (rewritten !== content) {
+            fs.writeFileSync(full, rewritten);
+            console.log(`[mobile] Rewrote CMakeLists.txt paths: ${full}`);
+          }
+        } catch {
+          // skip files we can't read/write
+        }
+      }
+    }
+  })(bunCacheDir);
+}
+
+/**
+ * Inject a Gradle task hook into app/build.gradle that rewrites the generated
+ * Android-autolinking.cmake file after each generateAutolinkingNewArchitectureFiles
+ * run.  This replaces long absolute bun-cache paths with the SUBST drive letter
+ * so Ninja never sees >260-char source filenames.
+ */
+function patchAppBuildGradleWithAutolinkHook(appBuildGradlePath) {
+  if (!fs.existsSync(appBuildGradlePath)) return;
+  const marker = "// [WIN_PATH_FIX] autolinking cmake rewrite";
+  const content = fs.readFileSync(appBuildGradlePath, "utf8");
+  if (content.includes(marker)) return; // already injected
+
+  const hook = `
+
+${marker}
+// Rewrite long absolute .bun cache paths in the generated autolinking cmake to
+// the SUBST drive so Ninja stays within Windows 260-char MAX_PATH limits.
+if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
+    afterEvaluate {
+        tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
+            doLast {
+                def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
+                if (autolinkingCmake.exists()) {
+                    def text = autolinkingCmake.text
+                    // Replace the long absolute repo path with a relative "../../../.." that works
+                    // regardless of SUBST drive letter, or use the env var SUBST_REPO_ROOT if set.
+                    def substRoot = System.getenv("SUBST_REPO_ROOT")
+                    def longRoot = (rootDir.parentFile.parentFile).absolutePath.replace(File.separatorChar, '/' as char)
+                    if (substRoot && text.contains(longRoot)) {
+                        def fixed = text.replace(longRoot, substRoot)
+                        autolinkingCmake.text = fixed
+                        println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
+                    }
+                }
+            }
+        }
+    }
+}
+`;
+
+  fs.writeFileSync(appBuildGradlePath, content + hook);
+  console.log(`[mobile] Injected autolinking cmake path hook: ${appBuildGradlePath}`);
+}
+
+/**
+ * Inject a Gradle hook into a native module's build.gradle that rewrites its
+ * CMakeLists.txt file(s) to use SUBST drive paths instead of long absolute
+ * bun-cache paths before CMake is invoked. This prevents object file paths
+ * from exceeding Windows' 260-char MAX_PATH limit.
+ */
+function patchNativeModuleBuildGradleWithCMakeHook(buildGradlePath) {
+  if (!fs.existsSync(buildGradlePath)) return;
+  const marker = "// [WIN_PATH_FIX] CMakeLists rewrite";
+  const content = fs.readFileSync(buildGradlePath, "utf8");
+  if (content.includes(marker)) return; // already injected
+
+  const hook = `
+
+${marker}
+// Rewrite long absolute paths in CMakeLists.txt to use SUBST drive paths,
+// so Ninja-generated object file paths stay within Windows 260-char MAX_PATH.
+if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
+    afterEvaluate {
+        tasks.matching { it.name.contains("generateJsonModel") || it.name.contains("generateNinja") || it.name.contains("cmake") }.configureEach { currentTask ->
+            doFirst {
+                def substRoot = System.getenv("SUBST_REPO_ROOT")
+                def longRoot = (rootDir.parentFile.parentFile.parentFile).absolutePath.replace(File.separatorChar, '/' as char)
+                if (substRoot && longRoot) {
+                    fileTree(dir: projectDir).visit { details ->
+                        if (details.name == "CMakeLists.txt") {
+                            def cmakelists = details.file
+                            def text = cmakelists.text
+                            if (text.contains(longRoot)) {
+                                def fixed = text.replace(longRoot, substRoot)
+                                cmakelists.text = fixed
+                                println("[WIN_PATH_FIX] Rewrote CMakeLists.txt: " + cmakelists.absolutePath)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+`;
+
+  fs.writeFileSync(buildGradlePath, content + hook);
+  console.log(`[mobile] Injected CMakeLists rewrite hook: ${buildGradlePath}`);
+}
+
 // Step 1: Generate Android project if not yet prebuilt
 if (!fs.existsSync(androidDir)) {
   console.log("[mobile] Generating Android native project (expo prebuild)…");
@@ -185,17 +661,18 @@ if (fs.existsSync(gradlePropsPath)) {
   let props = fs.readFileSync(gradlePropsPath, "utf8");
   props = props.replace(
     /org\.gradle\.jvmargs=.*/,
-    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8',
+    "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8",
   );
   if (!props.includes("org.gradle.internal.http.connectionTimeout")) {
-    props += "\norg.gradle.internal.http.connectionTimeout=120000\norg.gradle.internal.http.socketTimeout=120000\n";
+    props +=
+      "\norg.gradle.internal.http.connectionTimeout=120000\norg.gradle.internal.http.socketTimeout=120000\n";
   }
   props = upsertGradleProp(props, "android.minSdkVersion", "24");
   props = upsertGradleProp(props, "minSdkVersion", "24");
   props = upsertGradleProp(props, "minSdk", "24");
   props = upsertGradleProp(props, "Nitro_minSdkVersion", "24");
   props = upsertGradleProp(props, "org.gradle.parallel", "false");
-  props = upsertGradleProp(props, "org.gradle.workers.max", "2");
+  props = upsertGradleProp(props, "org.gradle.workers.max", "1");
   // Remove in-process strategy to let Kotlin use a forked daemon with separate heap
   props = props.replace(/^kotlin\.compiler\.execution\.strategy=.*\n?/m, "");
   if (fs.existsSync(jdk17Path)) {
@@ -223,7 +700,7 @@ if (fs.existsSync(gradlePropsPath)) {
 console.log(`[mobile] Building ${variant} APK…`);
 const gradleArgs = [
   "--no-daemon",
-  "--max-workers=2",
+  "--max-workers=1",
   `assemble${variant}`,
   "-Pandroid.minSdkVersion=24",
   "-PminSdkVersion=24",
@@ -247,8 +724,59 @@ if (process.platform === "win32") {
   }
 }
 
+// Inject Gradle hook (idempotent) so after every re-generation the autolinking
+// cmake paths are rewritten to the SUBST drive root.
+const appBuildGradle = path.join(androidDir, "app", "build.gradle");
+patchAppBuildGradleWithAutolinkHook(appBuildGradle);
+
+// Set env var so Gradle hook knows what the short prefix should be.
+if (substDrive) {
+  process.env.SUBST_REPO_ROOT = `${substDrive}:`;
+}
+process.env.CMAKE_BUILD_PARALLEL_LEVEL = "1";
+process.env.NINJAFLAGS = "-j1";
+
 try {
-  run(`cmd /c gradlew.bat ${gradleArgs.join(" ")}`, { cwd: gradleCwd });
+  // Rewrite existing autolinking CMake to use the SUBST drive so Ninja never sees
+  // long absolute bun-cache paths in source file references.
+  rewriteAutolinkingToSubstDrive(repoRoot, substDrive);
+
+  // Rewrite all native module CMakeLists.txt files to use SUBST drive paths,
+  // so object file paths stay within Windows 260-char MAX_PATH limit.
+  rewriteNativeCMakePaths(bunCacheDir, substDrive);
+
+  const gradleCmd = `cmd /c gradlew.bat ${gradleArgs.join(" ")}`;
+  const runGradleWithRetry = (cwd) => {
+    try {
+      run(gradleCmd, { cwd });
+    } catch {
+      console.log(
+        "[mobile] Gradle assemble failed. Clearing transforms caches and retrying once…",
+      );
+      clearGradleTransformCaches(true);
+      run(gradleCmd, { cwd });
+    }
+  };
+
+  try {
+    runGradleWithRetry(gradleCwd);
+  } catch (error) {
+    if (process.platform === "win32" && substDrive) {
+      console.log(
+        "[mobile] SUBST-path build failed. Retrying Gradle once without SUBST to avoid mixed-drive path issues…",
+      );
+      try {
+        run(`cmd /c subst ${substDrive}: /d`);
+      } catch {
+        // non-fatal cleanup failure
+      }
+      substDrive = null;
+      delete process.env.SUBST_REPO_ROOT;
+      runGradleWithRetry(androidDir);
+    } else {
+      throw error;
+    }
+  }
 } finally {
   if (substDrive) {
     try {

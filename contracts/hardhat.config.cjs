@@ -3,7 +3,6 @@ const { existsSync, readFileSync } = require("node:fs");
 const { dirname, resolve } = require("node:path");
 
 require("@nomicfoundation/hardhat-toolbox");
-require("hardhat-celo");
 
 // Since we are in a .cjs file, we don't have import.meta.url
 // We use the standard __dirname instead.
@@ -106,5 +105,21 @@ module.exports = {
     sources: "./src",
     tests: "./test",
     artifacts: "./artifacts",
+  },
+  etherscan: {
+    apiKey: {
+      celoSepolia: process.env.BLOCKSCOUT_API_KEY || "empty",
+      celo: process.env.CELOSCAN_API_KEY || "empty",
+    },
+    customChains: [
+      {
+        network: "celoSepolia",
+        chainId: 11142220,
+        urls: {
+          apiURL: "https://celo-sepolia.blockscout.com/api",
+          browserURL: "https://celo-sepolia.blockscout.com",
+        },
+      },
+    ],
   },
 };

@@ -9,6 +9,17 @@ type FindLedgerOptions = {
   offset?: number;
 };
 
+type EventPayload = Record<string, unknown>;
+
+function extractWalletAddress(payload: EventPayload, type: string): string | null {
+  const t = type.toUpperCase();
+  if (t === "PROPOSAL") return (payload.creator as string) || null;
+  if (t === "CONTRIBUTION") return (payload.member as string) || null;
+  if (t === "VOTE") return (payload.voter as string) || null;
+  if (t === "PAYMENT") return (payload.recipient as string) || null;
+  return null;
+}
+
 @Injectable()
 export class LedgerService {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,14 +37,41 @@ export class LedgerService {
       skip: options.offset ?? 0,
     });
 
+    // Collect all wallet addresses to resolve performer names in one query
+    const walletAddresses = events
+      .map((e) => extractWalletAddress(e.payload as EventPayload, e.type))
+      .filter((addr): addr is string => !!addr);
+
+    const walletToName = new Map<string, string>();
+    if (walletAddresses.length > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { celoAddress: { in: walletAddresses } },
+        select: { celoAddress: true, name: true },
+      });
+      for (const user of users) {
+        if (user.celoAddress) {
+          walletToName.set(user.celoAddress.toLowerCase(), user.name);
+        }
+      }
+    }
+
     const celoscanBase =
       process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
       "https://celo-sepolia.blockscout.com";
 
-    return events.map((event) => ({
-      ...event,
-      celoScanUrl: `${celoscanBase.replace(/\/+$/, "")}/tx/${event.txHash}`,
-    }));
+    return events.map((event) => {
+      const payload = event.payload as EventPayload;
+      const walletAddr = extractWalletAddress(payload, event.type);
+      const performerName = walletAddr
+        ? (walletToName.get(walletAddr.toLowerCase()) ?? null)
+        : null;
+
+      return {
+        ...event,
+        payload: { ...payload, performerName },
+        celoScanUrl: `${celoscanBase.replace(/\/+$/, "")}/tx/${event.txHash}`,
+      };
+    });
   }
 
   async getStats(cooperativeId: string) {

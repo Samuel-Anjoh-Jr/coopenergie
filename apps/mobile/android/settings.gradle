@@ -1,0 +1,47 @@
+pluginManagement {
+  def reactNativeGradlePlugin = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine(
+        "node",
+        "--print",
+        "(() => { const p = require('path'); const cwd = process.cwd(); const roots = [cwd, p.resolve(cwd, '..'), p.resolve(cwd, '../..'), p.resolve(cwd, '../../..')]; const rnPkg = require.resolve('react-native/package.json', { paths: roots }); return require.resolve('@react-native/gradle-plugin/package.json', { paths: [p.dirname(rnPkg), ...roots] }); })()",
+      )
+    }.standardOutput.asText.get().trim()
+  ).getParentFile().absolutePath
+  includeBuild(reactNativeGradlePlugin)
+  
+  def expoPluginsPath = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine(
+        "node",
+        "--print",
+        "(() => { const p = require('path'); const cwd = process.cwd(); const roots = [cwd, p.resolve(cwd, '..'), p.resolve(cwd, '../..'), p.resolve(cwd, '../../..')]; return require.resolve('expo-modules-autolinking/package.json', { paths: roots }); })()",
+      )
+    }.standardOutput.asText.get().trim(),
+    "../android/expo-gradle-plugin"
+  ).absolutePath
+  includeBuild(expoPluginsPath)
+}
+
+plugins {
+  id("com.facebook.react.settings")
+  id("expo-autolinking-settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
+    ex.autolinkLibrariesFromCommand()
+  } else {
+    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
+  }
+}
+expoAutolinking.useExpoModules()
+
+rootProject.name = 'CoopEnergie'
+
+expoAutolinking.useExpoVersionCatalog()
+
+include ':app'
+includeBuild(expoAutolinking.reactNativeGradlePlugin)

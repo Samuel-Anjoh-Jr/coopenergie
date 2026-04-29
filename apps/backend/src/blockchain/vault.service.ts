@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { createWalletClient, getAddress, http } from "viem";
+import { createWalletClient, getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 import { cooperativeVaultAbi } from "./abis/cooperative-vault.abi";
 import {
   celoChain,
-  celoRpcUrl,
+  celoTransport,
   publicClient as configuredPublicClient,
 } from "./celo-client";
 import { CELO_PUBLIC_CLIENT } from "./blockchain.tokens";
@@ -104,7 +104,7 @@ export class VaultService {
     const walletClient = createWalletClient({
       account,
       chain: celoChain,
-      transport: http(celoRpcUrl),
+      transport: celoTransport,
     });
 
     const txHash = await this.withRetry(() =>

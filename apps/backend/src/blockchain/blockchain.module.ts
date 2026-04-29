@@ -15,6 +15,7 @@ import {
   GAS_RELAYER_ABI,
   GAS_RELAYER_ADDRESS,
 } from "./blockchain.tokens";
+import { BlockscoutVerificationService } from "./blockscout-verification.service";
 import { EventListenerService } from "./event-listener.service";
 import { gasRelayerAbi } from "./abis/gas-relayer.abi";
 import { FactoryService } from "./factory.service";
@@ -58,6 +59,7 @@ import { WalletService } from "./wallet.service";
       provide: GAS_RELAYER_ADDRESS,
       useValue: RELAYER_ADDRESS,
     },
+    BlockscoutVerificationService,
     EventListenerService,
     FactoryService,
     RelayerService,
@@ -73,6 +75,7 @@ import { WalletService } from "./wallet.service";
     GAS_RELAYER_ABI,
     COOP_FACTORY_ADDRESS,
     GAS_RELAYER_ADDRESS,
+    BlockscoutVerificationService,
     EventListenerService,
     FactoryService,
     RelayerService,

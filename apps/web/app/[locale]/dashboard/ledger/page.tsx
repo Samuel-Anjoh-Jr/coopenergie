@@ -114,20 +114,22 @@ function getPayloadSummary(
   if (!payload) return "-";
 
   const lowered = type.toUpperCase();
+  const performerName = payload.performerName as string | null | undefined;
+  const byLine = performerName ? ` · by ${performerName}` : "";
 
   if (lowered === "CONTRIBUTION") {
     const amount = payload.amountXAF ?? 0;
-    return `${amount.toLocaleString()} FCFA`;
+    return `${(amount as number).toLocaleString()} FCFA${byLine}`;
   }
 
   if (lowered === "VOTE") {
     const choice = payload.choice === true ? "YES" : "NO";
-    return `Vote: ${choice}`;
+    return `Vote: ${choice}${byLine}`;
   }
 
   if (lowered === "PROPOSAL") {
     const title = payload.title ?? "Proposal";
-    return String(title).substring(0, 50);
+    return `${String(title).substring(0, 50)}${byLine}`;
   }
 
   return JSON.stringify(payload).substring(0, 50);
@@ -135,8 +137,9 @@ function getPayloadSummary(
 
 export default function LedgerPage() {
   const params = useParams();
-  const locale = (params.locale as string) || "en";
-  const t = useTranslations(locale as Locale);
+  const locale = ((params.locale as string) || "en").toLowerCase();
+  const normalizedLocale: Locale = locale.startsWith("fr") ? "fr" : "en";
+  const t = useTranslations(normalizedLocale);
   const { data: session } = useSession();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
@@ -190,9 +193,9 @@ export default function LedgerPage() {
       await navigator.clipboard.writeText(hash);
       setCopiedHash(hash);
       setTimeout(() => setCopiedHash(null), 1500);
-      toast.success(locale === "fr" ? "Hash copié" : "Hash copied");
+      toast.success(normalizedLocale === "fr" ? "Hash copié" : "Hash copied");
     } catch {
-      toast.error(locale === "fr" ? "Échec de copie" : "Copy failed");
+      toast.error(normalizedLocale === "fr" ? "Échec de copie" : "Copy failed");
     }
   };
 
@@ -246,7 +249,7 @@ export default function LedgerPage() {
               </h1>
               <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                {locale === "fr"
+                {normalizedLocale === "fr"
                   ? "Sécurisé par cryptographie"
                   : "Cryptographically secured"}
               </p>
@@ -266,14 +269,16 @@ export default function LedgerPage() {
             <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
               <CardTitle className="text-lg md:text-xl flex items-center gap-2">
                 <Blocks className="w-5 h-5 text-primary" />
-                {locale === "fr" ? "Adresse du coffre-fort" : "Community Vault"}
+                {normalizedLocale === "fr"
+                  ? "Adresse du coffre-fort"
+                  : "Community Vault"}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    {locale === "fr" ? "Adresse" : "Address"}
+                    {normalizedLocale === "fr" ? "Adresse" : "Address"}
                   </p>
                   <div className="flex items-center gap-2 bg-muted/50 p-3 rounded-lg border border-border/50">
                     <code className="text-xs md:text-sm font-mono text-foreground break-all flex-1">
@@ -299,7 +304,7 @@ export default function LedgerPage() {
                       rel="noreferrer"
                       className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                     >
-                      {locale === "fr"
+                      {normalizedLocale === "fr"
                         ? "Vérifier sur CeloScan"
                         : "Verify on CeloScan"}
                       <ExternalLink className="h-3 w-3" />
@@ -342,14 +347,14 @@ export default function LedgerPage() {
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-3">
             <CardTitle className="text-base md:text-lg flex items-center gap-2">
               <Info className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              {locale === "fr"
+              {normalizedLocale === "fr"
                 ? "Pourquoi c'est important"
                 : "Why This Matters"}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
             <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-              {locale === "fr"
+              {normalizedLocale === "fr"
                 ? "Chaque transaction est enregistrée de manière permanente et ne peut pas être modifiée ou supprimée. Cela garantit que chaque contribution, vote et proposition est entièrement traçable et vérifiable par tous les membres de la coopérative."
                 : "Every transaction is permanently recorded and cannot be modified or deleted. This ensures that every contribution, vote, and proposal is fully traceable and verifiable by all cooperative members."}
             </p>
@@ -359,21 +364,21 @@ export default function LedgerPage() {
                 className="border-primary/30 text-primary bg-primary/5"
               >
                 <Lock className="w-3 h-3 mr-1" />
-                {locale === "fr" ? "Immuable" : "Immutable"}
+                {normalizedLocale === "fr" ? "Immuable" : "Immutable"}
               </Badge>
               <Badge
                 variant="outline"
                 className="border-accent/30 text-accent bg-accent/5"
               >
                 <Shield className="w-3 h-3 mr-1" />
-                {locale === "fr" ? "Vérifié" : "Verified"}
+                {normalizedLocale === "fr" ? "Vérifié" : "Verified"}
               </Badge>
               <Badge
                 variant="outline"
                 className="border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5"
               >
                 <Blocks className="w-3 h-3 mr-1" />
-                {locale === "fr" ? "Distribué" : "Distributed"}
+                {normalizedLocale === "fr" ? "Distribué" : "Distributed"}
               </Badge>
             </div>
           </CardContent>
@@ -389,7 +394,7 @@ export default function LedgerPage() {
               >
                 <ChevronDown className="mr-2 h-4 w-4 transition-transform" />
                 <span className="text-base md:text-lg font-semibold">
-                  {locale === "fr"
+                  {normalizedLocale === "fr"
                     ? "Comment vérifier sur CeloScan"
                     : "How to Verify on CeloScan"}
                 </span>
@@ -441,10 +446,12 @@ export default function LedgerPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">
-                        {locale === "fr" ? item.titleFr : item.titleEn}
+                        {normalizedLocale === "fr"
+                          ? item.titleFr
+                          : item.titleEn}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {locale === "fr" ? item.descFr : item.descEn}
+                        {normalizedLocale === "fr" ? item.descFr : item.descEn}
                       </p>
                     </div>
                   </div>
@@ -496,7 +503,7 @@ export default function LedgerPage() {
           <Card className="border-border bg-card">
             <CardContent className="flex items-center justify-center h-64">
               <div className="text-muted-foreground">
-                {locale === "fr" ? "Chargement..." : "Loading..."}
+                {normalizedLocale === "fr" ? "Chargement..." : "Loading..."}
               </div>
             </CardContent>
           </Card>
@@ -508,12 +515,12 @@ export default function LedgerPage() {
               </div>
               <div className="text-center">
                 <p className="text-lg font-medium text-foreground">
-                  {locale === "fr"
+                  {normalizedLocale === "fr"
                     ? "Aucune transaction trouvée"
                     : "No transactions found"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {locale === "fr"
+                  {normalizedLocale === "fr"
                     ? "Aucune transaction ne correspond à ce filtre"
                     : "No transactions match this filter"}
                 </p>
@@ -528,7 +535,8 @@ export default function LedgerPage() {
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-linear-to-r from-primary/10 to-accent/10 border border-primary/20">
                     <Blocks className="w-4 h-4 text-primary" />
                     <span className="font-mono text-sm font-semibold text-foreground">
-                      {locale === "fr" ? "Bloc" : "Block"} #{block.blockNumber}
+                      {normalizedLocale === "fr" ? "Bloc" : "Block"} #
+                      {block.blockNumber}
                     </span>
                   </div>
                 </div>
@@ -577,7 +585,7 @@ export default function LedgerPage() {
                                         className="border-green-500/30 text-green-600 dark:text-green-400 bg-green-500/5 text-xs cursor-help"
                                       >
                                         <Shield className="w-3 h-3 mr-1" />
-                                        {locale === "fr"
+                                        {normalizedLocale === "fr"
                                           ? "Vérifié"
                                           : "Verified"}
                                       </Badge>
@@ -587,7 +595,7 @@ export default function LedgerPage() {
                                       className="max-w-xs"
                                     >
                                       <p className="text-sm">
-                                        {locale === "fr"
+                                        {normalizedLocale === "fr"
                                           ? "Cette transaction est enregistrée de manière permanente et ne peut pas être modifiée ou supprimée."
                                           : "This transaction is permanently recorded and cannot be modified or deleted."}
                                       </p>
@@ -605,8 +613,10 @@ export default function LedgerPage() {
                                       {formatDate(event.createdAt)}
                                     </p>
                                     <p className="text-xs text-muted-foreground/70 mt-1">
-                                      {locale === "fr" ? "Bloc" : "Block"}: #
-                                      {event.blockNumber}
+                                      {normalizedLocale === "fr"
+                                        ? "Bloc"
+                                        : "Block"}
+                                      : #{event.blockNumber}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -633,10 +643,10 @@ export default function LedgerPage() {
                                       <TooltipContent side="top">
                                         <p className="text-sm">
                                           {copiedHash === event.txHash
-                                            ? locale === "fr"
+                                            ? normalizedLocale === "fr"
                                               ? "Copié!"
                                               : "Copied!"
-                                            : locale === "fr"
+                                            : normalizedLocale === "fr"
                                               ? "Copier"
                                               : "Copy"}
                                         </p>
@@ -681,7 +691,7 @@ export default function LedgerPage() {
                   {events.length}
                 </p>
                 <p className="text-xs md:text-sm text-muted-foreground">
-                  {locale === "fr" ? "Transactions" : "Transactions"}
+                  {normalizedLocale === "fr" ? "Transactions" : "Transactions"}
                 </p>
               </div>
               <div>
@@ -689,7 +699,7 @@ export default function LedgerPage() {
                   {uniqueBlockCount}
                 </p>
                 <p className="text-xs md:text-sm text-muted-foreground">
-                  {locale === "fr" ? "Blocs" : "Blocks"}
+                  {normalizedLocale === "fr" ? "Blocs" : "Blocks"}
                 </p>
               </div>
               <div>
@@ -697,7 +707,7 @@ export default function LedgerPage() {
                   100%
                 </p>
                 <p className="text-xs md:text-sm text-muted-foreground">
-                  {locale === "fr" ? "Vérifié" : "Verified"}
+                  {normalizedLocale === "fr" ? "Vérifié" : "Verified"}
                 </p>
               </div>
               <div>
@@ -705,7 +715,9 @@ export default function LedgerPage() {
                   0
                 </p>
                 <p className="text-xs md:text-sm text-muted-foreground">
-                  {locale === "fr" ? "Modifications" : "Modifications"}
+                  {normalizedLocale === "fr"
+                    ? "Modifications"
+                    : "Modifications"}
                 </p>
               </div>
             </div>

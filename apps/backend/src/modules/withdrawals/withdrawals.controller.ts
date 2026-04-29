@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -41,12 +42,34 @@ export class WithdrawalsController {
     return this.withdrawalsService.findByCooperative(cooperativeId);
   }
 
+  @Get("webhook")
+  handleWebhookGet(
+    @Query() query: Record<string, unknown>,
+    @Req() request: any,
+  ) {
+    return this.disbursementService.handleWebhook(
+      this.normalizePayload(query),
+      request.headers ?? {},
+      undefined,
+    );
+  }
+
   @Post("webhook")
   handleWebhook(@Body() body: Record<string, unknown>, @Req() request: any) {
     return this.disbursementService.handleWebhook(
-      body,
+      this.normalizePayload(body),
       request.headers ?? {},
       request.rawBody,
     );
+  }
+
+  private normalizePayload(payload: Record<string, unknown>) {
+    const normalized: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(payload || {})) {
+      normalized[key] = Array.isArray(value) ? value[0] : value;
+    }
+
+    return normalized;
   }
 }

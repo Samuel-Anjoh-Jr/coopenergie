@@ -3,10 +3,12 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, Role } from "@prisma/client";
 
+import { BlockscoutVerificationService } from "../../blockchain/blockscout-verification.service";
 import { EventListenerService } from "../../blockchain/event-listener.service";
 import { FactoryService } from "../../blockchain/factory.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -14,10 +16,13 @@ import { CreateCooperativeDto } from "./dto/create-cooperative.dto";
 
 @Injectable()
 export class CooperativesService {
+  private readonly logger = new Logger(CooperativesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly factoryService: FactoryService,
     private readonly eventListenerService: EventListenerService,
+    private readonly blockscoutVerification: BlockscoutVerificationService,
   ) {}
 
   async create(
@@ -95,6 +100,27 @@ export class CooperativesService {
         deployment.vaultAddress,
         cooperative.id,
       );
+
+      // Auto-verify the new vault contract on Blockscout (fire-and-forget)
+      const relayerAddress =
+        (process.env.GAS_RELAYER_ADDRESS ?? "").trim() ||
+        "0x131fB19f443A3e00d2bE4e1805B807bb4Ff62550";
+
+      void this.blockscoutVerification
+        .verifyCooperativeVault({
+          vaultAddress: deployment.vaultAddress,
+          name: normalizedName,
+          targetAmountXAF,
+          adminAddress: user.celoAddress,
+          relayerAddress,
+        })
+        .catch((err: unknown) => {
+          this.logger.warn(
+            `Auto-verification fire-and-forget error: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        });
 
       return updatedCooperative;
     } catch (error) {

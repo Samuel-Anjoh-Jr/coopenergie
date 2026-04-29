@@ -170,6 +170,7 @@ const translations = {
       admin: "Admin",
       platform: "Platform",
       warning: "Warning",
+      role: "Role",
       defaultMemberLabel: "Member",
       defaultCooperativeName: "Cooperative",
     },
@@ -522,20 +523,20 @@ const translations = {
     },
   },
   fr: {
-        admin: {
-          coopAdminHealth: {
-            title: "Santé de la clé admin de la coopérative",
-            cooperative: "Coopérative",
-            vaultAdminAddress: "Adresse admin du coffre",
-            status: "Statut",
-            message: "Message",
-            user: "Utilisateur",
-            ok: "OK",
-            missingKey: "Clé manquante",
-            noVaultAdminAddress: "Pas d'adresse admin de coffre",
-            noLocalUser: "Pas d'utilisateur local",
-          },
-        },
+    admin: {
+      coopAdminHealth: {
+        title: "Santé de la clé admin de la coopérative",
+        cooperative: "Coopérative",
+        vaultAdminAddress: "Adresse admin du coffre",
+        status: "Statut",
+        message: "Message",
+        user: "Utilisateur",
+        ok: "OK",
+        missingKey: "Clé manquante",
+        noVaultAdminAddress: "Pas d'adresse admin de coffre",
+        noLocalUser: "Pas d'utilisateur local",
+      },
+    },
     branding: {
       appName: "CoopEnergie",
       heroTagline1: "La puissance du soleil,",
@@ -695,6 +696,7 @@ const translations = {
       admin: "Admin",
       platform: "Plateforme",
       warning: "Attention",
+      role: "Rôle",
       defaultMemberLabel: "Membre",
       defaultCooperativeName: "Cooperative",
     },
@@ -1097,13 +1099,18 @@ const translations = {
 export type Locale = keyof typeof translations;
 export type TranslationKey = string;
 
-export function getTranslations(locale: Locale) {
-  return translations[locale];
+function resolveLocale(locale: Locale | string): Locale {
+  const normalized = String(locale || "en").toLowerCase();
+  return normalized.startsWith("fr") ? "fr" : "en";
 }
 
-export function t(locale: Locale, key: TranslationKey): string {
+export function getTranslations(locale: Locale | string) {
+  return translations[resolveLocale(locale)];
+}
+
+export function t(locale: Locale | string, key: TranslationKey): string {
   const keys = key.split(".");
-  let value: any = translations[locale];
+  let value: any = translations[resolveLocale(locale)];
 
   for (const k of keys) {
     value = value?.[k];
@@ -1112,6 +1119,6 @@ export function t(locale: Locale, key: TranslationKey): string {
   return value || key;
 }
 
-export function useTranslations(locale: Locale) {
+export function useTranslations(locale: Locale | string) {
   return (key: TranslationKey) => t(locale, key);
 }

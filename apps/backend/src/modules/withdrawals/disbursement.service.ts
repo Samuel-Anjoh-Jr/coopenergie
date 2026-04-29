@@ -490,7 +490,7 @@ export class DisbursementService {
     }
 
     const body = this.buildTransferBody(withdrawalRequest, reference);
-    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/transfer/`, {
+    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/withdraw/`, {
       method: "POST",
       headers: {
         Authorization: `Token ${transferApiKey}`,
@@ -660,26 +660,41 @@ export class DisbursementService {
     rawBody: Buffer | undefined,
     payload: Record<string, unknown>,
   ) {
-    const secret = (
-      process.env.CAMPAY_WEBHOOK_SECRET || process.env.CAMPAY_WEBHOOK_KEY
-    )?.trim();
+    const secret = this.readSecret(
+      process.env.CAMPAY_WEBHOOK_SECRET || process.env.CAMPAY_WEBHOOK_KEY,
+    );
 
     if (!secret) {
-      this.logger.warn(
-        "CAMPAY_WEBHOOK_SECRET is not configured; skipping signature validation.",
+      throw new InternalServerErrorException(
+        "CAMPAY_WEBHOOK_SECRET/CAMPAY_WEBHOOK_KEY is not configured.",
       );
-      return;
     }
 
-    const providedSignature = this.extractHeader(
-      headers,
-      "x-campay-signature",
-      "campay-signature",
-      "x-signature",
-    );
+    const providedSignature =
+      this.extractHeader(
+        headers,
+        "x-campay-signature",
+        "campay-signature",
+        "x-signature",
+        "x-webhook-signature",
+        "webhook-signature",
+      ) ||
+      this.readAuthorizationBearerToken(headers) ||
+      this.readString(payload.signature) ||
+      this.readString(payload.token);
 
     if (!providedSignature) {
       throw new BadRequestException("Missing CamPay signature.");
+    }
+
+    if (this.isJwtLike(providedSignature)) {
+      const validJwt = this.verifyHs256JwtSignature(providedSignature, secret);
+
+      if (!validJwt) {
+        throw new BadRequestException("Invalid CamPay signature.");
+      }
+
+      return;
     }
 
     const rawPayload = rawBody?.length
@@ -699,6 +714,72 @@ export class DisbursementService {
       )
     ) {
       throw new BadRequestException("Invalid CamPay signature.");
+    }
+  }
+
+  private readAuthorizationBearerToken(headers: Record<string, unknown>) {
+    const authorization = this.extractHeader(headers, "authorization");
+
+    if (!authorization) {
+      return undefined;
+    }
+
+    const match = authorization.match(/^Bearer\s+(.+)$/i);
+    return match?.[1]?.trim();
+  }
+
+  private isJwtLike(value: string) {
+    return value.split(".").length === 3;
+  }
+
+  private verifyHs256JwtSignature(token: string, secret: string) {
+    const [headerB64, payloadB64, signatureB64] = token.split(".");
+
+    if (!headerB64 || !payloadB64 || !signatureB64) {
+      return false;
+    }
+
+    const header = this.tryParseJson(this.decodeBase64Url(headerB64));
+
+    if (header?.alg !== "HS256") {
+      return false;
+    }
+
+    const signingInput = `${headerB64}.${payloadB64}`;
+    const expectedSignature = createHmac("sha256", secret)
+      .update(signingInput)
+      .digest();
+    const providedSignature = this.decodeBase64UrlToBuffer(signatureB64);
+
+    if (
+      !providedSignature ||
+      providedSignature.length !== expectedSignature.length
+    ) {
+      return false;
+    }
+
+    return timingSafeEqual(providedSignature, expectedSignature);
+  }
+
+  private decodeBase64Url(value: string) {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padding =
+      normalized.length % 4 === 0
+        ? ""
+        : "=".repeat(4 - (normalized.length % 4));
+    return Buffer.from(`${normalized}${padding}`, "base64").toString("utf8");
+  }
+
+  private decodeBase64UrlToBuffer(value: string) {
+    try {
+      const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+      const padding =
+        normalized.length % 4 === 0
+          ? ""
+          : "=".repeat(4 - (normalized.length % 4));
+      return Buffer.from(`${normalized}${padding}`, "base64");
+    } catch {
+      return null;
     }
   }
 
@@ -765,5 +846,23 @@ export class DisbursementService {
 
   private readString(value: unknown) {
     return typeof value === "string" ? value : undefined;
+  }
+
+  private readSecret(value: string | undefined) {
+    if (!value) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      const unwrapped = trimmed.slice(1, -1).trim();
+      return unwrapped || undefined;
+    }
+
+    return trimmed || undefined;
   }
 }
