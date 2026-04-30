@@ -63,6 +63,7 @@ export default function ReportPage() {
   });
 
   const report: ReportData | undefined = reportData?.report;
+  const isInitialReportLoading = loadingReport && !reportData?.report;
 
   const handleDownloadReport = async () => {
     if (!cooperativeId) {
@@ -114,7 +115,7 @@ export default function ReportPage() {
     return null;
   }
 
-  if (loadingReport) {
+  if (isInitialReportLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

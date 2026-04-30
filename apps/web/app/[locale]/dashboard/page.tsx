@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import { Activity, Building2, TrendingUp, Users, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
@@ -25,7 +26,11 @@ import {
   SUBSCRIPTION_ON_PROPOSAL,
   SUBSCRIPTION_ON_VOTE,
 } from "@/lib/graphql/subscriptions/cooperative";
-import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import {
+  createTrailingThrottle,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
+} from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { useTranslations, type Locale } from "@/lib/translations";
 
@@ -37,6 +42,7 @@ type ActivityItem = {
   amount?: string;
   user: string;
   timestamp: string;
+  href: string;
 };
 
 type DashboardPageProps = {
@@ -52,10 +58,14 @@ function formatXaf(value: number): string {
 }
 
 function parsePayload(
-  payload: string | null | undefined,
+  payload: string | Record<string, unknown> | null | undefined,
 ): Record<string, unknown> {
   if (!payload) {
     return {};
+  }
+
+  if (typeof payload === "object") {
+    return payload;
   }
 
   try {
@@ -66,6 +76,7 @@ function parsePayload(
 }
 
 export default function DashboardPage({ params }: DashboardPageProps) {
+  const router = useRouter();
   const [locale, setLocale] = useState<Locale>("en");
   const [activeCooperativeId, setActiveCooperativeId] = useState<string | null>(
     null,
@@ -118,10 +129,24 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     },
   );
 
+  const throttledRealtimeRefresh = useMemo(
+    () =>
+      createTrailingThrottle(() => {
+        setRecentSubscriptionTick((tick) => tick + 1);
+        void refetchCooperativeDetail();
+        void refetchReport();
+      }, DASHBOARD_REALTIME_REFETCH_THROTTLE_MS),
+    [refetchCooperativeDetail, refetchReport],
+  );
+
+  useEffect(() => {
+    return () => {
+      throttledRealtimeRefresh.cancel();
+    };
+  }, [throttledRealtimeRefresh]);
+
   const onRealtimeEvent = () => {
-    setRecentSubscriptionTick((tick) => tick + 1);
-    void refetchCooperativeDetail();
-    void refetchReport();
+    throttledRealtimeRefresh.trigger();
   };
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
@@ -154,15 +179,21 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   const formatActivity = (event: {
     id: string;
     type: string;
-    payload?: string;
+    payload?: string | Record<string, unknown>;
     createdAt: string;
   }): ActivityItem => {
     const payload = parsePayload(event.payload);
     const eventType = event.type.toUpperCase();
+    const fallbackUser = t("common.defaultMemberLabel");
+    const activityHref = `/${locale}/dashboard/ledger?activity=${encodeURIComponent(
+      event.id,
+    )}`;
 
     if (eventType === "CONTRIBUTION") {
       const amount = Number(payload.amountXAF ?? 0);
-      const contributor = String(payload.member ?? payload.user ?? "Member");
+      const contributor = String(
+        payload.performerName ?? payload.member ?? payload.user ?? fallbackUser,
+      );
       return {
         id: event.id,
         icon: "money",
@@ -171,11 +202,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         amount: amount > 0 ? formatXaf(amount) : undefined,
         user: contributor,
         timestamp: new Date(event.createdAt).toLocaleString(),
+        href: activityHref,
       };
     }
 
     if (eventType === "VOTE") {
-      const voter = String(payload.voter ?? "Member");
+      const voter = String(
+        payload.performerName ?? payload.voter ?? fallbackUser,
+      );
       const choice = String(payload.choice ?? "VOTE").toUpperCase();
       return {
         id: event.id,
@@ -186,6 +220,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
           : undefined,
         user: voter,
         timestamp: new Date(event.createdAt).toLocaleString(),
+        href: activityHref,
       };
     }
 
@@ -194,8 +229,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       icon: "proposal",
       action: t("dashboard.proposalCreated"),
       description: payload.title ? String(payload.title) : undefined,
-      user: String(payload.creator ?? "Member"),
+      user: String(payload.performerName ?? payload.creator ?? fallbackUser),
       timestamp: new Date(event.createdAt).toLocaleString(),
+      href: activityHref,
     };
   };
 
@@ -514,7 +550,16 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 {recentActivity.map((activity: ActivityItem) => (
                   <div
                     key={`${activity.id}-${recentSubscriptionTick}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4 cursor-pointer hover:border-primary/50 transition-colors"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(activity.href)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(activity.href);
+                      }
+                    }}
                   >
                     <div className="flex items-start sm:items-center gap-3 md:gap-4 min-w-0 flex-1">
                       <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0">

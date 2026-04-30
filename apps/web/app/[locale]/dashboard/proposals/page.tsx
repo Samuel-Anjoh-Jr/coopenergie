@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import {
@@ -50,7 +50,11 @@ import { GET_WITHDRAWAL_ELIGIBILITY } from "@/lib/graphql/queries/withdrawal";
 import { SUBSCRIPTION_ON_PROPOSAL } from "@/lib/graphql/subscriptions/cooperative";
 import { SUBSCRIPTION_ON_VOTE } from "@/lib/graphql/subscriptions/cooperative";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
-import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import {
+  createTrailingThrottle,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
+} from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -171,11 +175,28 @@ export default function ProposalsPage() {
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
+  const isInitialProposalsLoading =
+    loadingProposals && !proposalsData?.proposals;
+
+  const throttledProposalsRefetch = useMemo(
+    () =>
+      createTrailingThrottle(() => {
+        void refetchProposals();
+      }, DASHBOARD_REALTIME_REFETCH_THROTTLE_MS),
+    [refetchProposals],
+  );
+
+  useEffect(() => {
+    return () => {
+      throttledProposalsRefetch.cancel();
+    };
+  }, [throttledProposalsRefetch]);
+
   useSubscription(SUBSCRIPTION_ON_VOTE, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchProposals();
+      throttledProposalsRefetch.trigger();
     },
   });
 
@@ -183,7 +204,7 @@ export default function ProposalsPage() {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchProposals();
+      throttledProposalsRefetch.trigger();
     },
   });
 
@@ -371,7 +392,7 @@ export default function ProposalsPage() {
           </div>
         </div>
 
-        {loadingProposals ? (
+        {isInitialProposalsLoading ? (
           <Card className="border-border bg-card">
             <CardContent className="flex items-center justify-center h-64">
               <Spinner className="h-6 w-6" />

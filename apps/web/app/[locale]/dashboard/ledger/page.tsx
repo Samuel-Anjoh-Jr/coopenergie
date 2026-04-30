@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import {
@@ -18,7 +18,7 @@ import {
   MessageSquare,
   Shield,
 } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
@@ -45,7 +45,11 @@ import {
   SUBSCRIPTION_ON_PROPOSAL,
   SUBSCRIPTION_ON_VOTE,
 } from "@/lib/graphql/subscriptions/cooperative";
-import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import {
+  createTrailingThrottle,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
+} from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 
 type LedgerEvent = {
@@ -143,6 +147,7 @@ function getPayloadSummary(
 
 export default function LedgerPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = ((params.locale as string) || "en").toLowerCase();
   const normalizedLocale: Locale = locale.startsWith("fr") ? "fr" : "en";
   const t = useTranslations(normalizedLocale);
@@ -150,6 +155,9 @@ export default function LedgerPage() {
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+  const [highlightedActivityId, setHighlightedActivityId] = useState<
+    string | null
+  >(null);
 
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
@@ -177,12 +185,52 @@ export default function LedgerPage() {
   });
 
   const events: LedgerEvent[] = ledgerData?.ledger ?? [];
+  const isInitialLedgerLoading = loadingLedger && !ledgerData?.ledger;
+
+  const throttledLedgerRefetch = useMemo(
+    () =>
+      createTrailingThrottle(() => {
+        void refetchLedger();
+      }, DASHBOARD_REALTIME_REFETCH_THROTTLE_MS),
+    [refetchLedger],
+  );
+
+  useEffect(() => {
+    return () => {
+      throttledLedgerRefetch.cancel();
+    };
+  }, [throttledLedgerRefetch]);
+  const activityIdToHighlight = searchParams.get("activity");
+
+  useEffect(() => {
+    if (!activityIdToHighlight || events.length === 0) {
+      return;
+    }
+
+    const target = document.getElementById(
+      `ledger-activity-${activityIdToHighlight}`,
+    );
+    if (!target) {
+      return;
+    }
+
+    setHighlightedActivityId(activityIdToHighlight);
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const timeout = window.setTimeout(() => {
+      setHighlightedActivityId((current) =>
+        current === activityIdToHighlight ? null : current,
+      );
+    }, 2500);
+
+    return () => window.clearTimeout(timeout);
+  }, [activityIdToHighlight, events]);
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchLedger();
+      throttledLedgerRefetch.trigger();
     },
   });
 
@@ -190,7 +238,7 @@ export default function LedgerPage() {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchLedger();
+      throttledLedgerRefetch.trigger();
     },
   });
 
@@ -198,7 +246,7 @@ export default function LedgerPage() {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchLedger();
+      throttledLedgerRefetch.trigger();
     },
   });
 
@@ -532,7 +580,7 @@ export default function LedgerPage() {
         </div>
 
         {/* Ledger Events */}
-        {loadingLedger ? (
+        {isInitialLedgerLoading ? (
           <Card className="border-border bg-card">
             <CardContent className="flex items-center justify-center h-64">
               <div className="text-muted-foreground">
@@ -590,7 +638,12 @@ export default function LedgerPage() {
                       return (
                         <div
                           key={event.id}
-                          className="relative pl-12 md:pl-16 group transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+                          id={`ledger-activity-${event.id}`}
+                          className={`relative pl-12 md:pl-16 group transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${
+                            highlightedActivityId === event.id
+                              ? "rounded-xl ring-2 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse"
+                              : ""
+                          }`}
                           style={{ transitionDelay: `${idx * 50}ms` }}
                         >
                           <div

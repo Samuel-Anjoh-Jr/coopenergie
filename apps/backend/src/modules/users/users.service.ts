@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from "@nestjs/common";
-import { DevicePlatform } from "@prisma/client";
+import { DevicePlatform, Prisma } from "@prisma/client";
 import { plainToInstance } from "class-transformer";
 
 import { normalizeCameroonPhone } from "../../common/phone-utils";
@@ -22,6 +23,8 @@ type ProfileUpdateInput = {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string) {
@@ -146,18 +149,48 @@ export class UsersService {
     token: string,
     platform: DevicePlatform,
   ) {
-    return this.prisma.deviceToken.upsert({
-      where: { token },
-      update: {
-        userId,
-        platform,
-      },
-      create: {
-        userId,
-        token,
-        platform,
-      },
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
+
+    if (!user) {
+      // Gracefully ignore stale sessions that reference deleted users.
+      await this.removeStaleToken(token);
+      this.logger.warn(
+        `Skipping device token registration for deleted user ${userId}.`,
+      );
+      return null;
+    }
+
+    try {
+      return await this.prisma.deviceToken.upsert({
+        where: { token },
+        update: {
+          userId,
+          platform,
+        },
+        create: {
+          userId,
+          token,
+          platform,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2003"
+      ) {
+        // Handle race conditions where user was deleted between existence check and upsert.
+        await this.removeStaleToken(token);
+        this.logger.warn(
+          `Device token registration skipped due to missing user FK for ${userId}.`,
+        );
+        return null;
+      }
+
+      throw error;
+    }
   }
 
   async unregisterDeviceToken(userId: string, token: string) {

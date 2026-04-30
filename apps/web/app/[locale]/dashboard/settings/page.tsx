@@ -119,6 +119,11 @@ export default function SettingsPage() {
       },
     });
 
+  const isInitialCoopSettingsLoading =
+    loadingCoopSettings && !coopSettingsData?.cooperativeSettings;
+  const isInitialPlatformSettingsLoading =
+    loadingPlatformSettings && !platformSettingsData?.platformSettings;
+
   const handleSaveCoopSettings = async () => {
     if (!cooperativeId || !coopThreshold) {
       toast.error(t("errors.invalidFormValues"));
@@ -223,7 +228,7 @@ export default function SettingsPage() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {loadingCoopSettings ? (
+              {isInitialCoopSettingsLoading ? (
                 <div className="flex items-center justify-center h-40">
                   <Spinner className="h-6 w-6" />
                 </div>
@@ -321,7 +326,7 @@ export default function SettingsPage() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {loadingPlatformSettings ? (
+              {isInitialPlatformSettingsLoading ? (
                 <div className="flex items-center justify-center h-40">
                   <Spinner className="h-6 w-6" />
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import { Calendar, Copy, ExternalLink, Plus } from "lucide-react";
@@ -33,7 +33,11 @@ import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_CONTRIBUTIONS } from "@/lib/graphql/queries/contributions";
 import { SUBSCRIPTION_ON_CONTRIBUTION } from "@/lib/graphql/subscriptions/cooperative";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
-import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import {
+  createTrailingThrottle,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
+} from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 import { restClient } from "@/lib/rest-client";
 
@@ -101,11 +105,28 @@ export default function ContributionsPage() {
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
+  const isInitialContributionsLoading =
+    contributionsLoading && !contributionsData?.contributions;
+
+  const throttledContributionsRefetch = useMemo(
+    () =>
+      createTrailingThrottle(() => {
+        void refetchContributions();
+      }, DASHBOARD_REALTIME_REFETCH_THROTTLE_MS),
+    [refetchContributions],
+  );
+
+  useEffect(() => {
+    return () => {
+      throttledContributionsRefetch.cancel();
+    };
+  }, [throttledContributionsRefetch]);
+
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
-      void refetchContributions();
+      throttledContributionsRefetch.trigger();
     },
   });
 
@@ -254,7 +275,7 @@ export default function ContributionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="relative p-4 md:p-6 pt-0">
-          {contributionsLoading ? (
+          {isInitialContributionsLoading ? (
             <div className="py-8 flex items-center justify-center">
               <Spinner className="h-6 w-6" />
             </div>
