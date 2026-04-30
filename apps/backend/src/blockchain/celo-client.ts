@@ -5,11 +5,9 @@ import { celo, celoSepolia } from "viem/chains";
 const defaultCeloSepoliaRpcUrl = "https://forno.celo-sepolia.celo-testnet.org";
 const defaultMainnetRpcUrl = "https://forno.celo.org";
 
-// Fallback RPC URLs used when the primary is unavailable
-const celoSepoliaFallbackUrls = [
-  "https://rpc.ankr.com/celo_alfajores",
-  "https://celo-alfajores.drpc.org",
-];
+// Keep Sepolia fallbacks empty by default so the client never hops onto a
+// different Celo testnet behind the scenes.
+const celoSepoliaFallbackUrls: string[] = [];
 const celoMainnetFallbackUrls = [
   "https://rpc.ankr.com/celo",
   "https://celo.drpc.org",

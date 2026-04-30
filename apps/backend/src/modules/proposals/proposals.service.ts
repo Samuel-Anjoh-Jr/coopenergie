@@ -9,7 +9,12 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Proposal, ProposalStatus, Role } from "@prisma/client";
+import {
+  LedgerEventType,
+  Proposal,
+  ProposalStatus,
+  Role,
+} from "@prisma/client";
 
 import { RelayerService } from "../../blockchain/relayer.service";
 import { VaultService } from "../../blockchain/vault.service";
@@ -200,6 +205,37 @@ export class ProposalsService {
           onProposal: createdProposal,
         });
 
+        if (createdProposal.txHash) {
+          await this.prisma.ledgerEvent.upsert({
+            where: { txHash: createdProposal.txHash },
+            update: {
+              type: LedgerEventType.PROPOSAL,
+              payload: {
+                title: createdProposal.title,
+                creator:
+                  createdProposal.creator?.celoAddress ??
+                  createdProposal.creatorId,
+                proposalId: createdProposal.id,
+              },
+              blockNumber: createdProposal.blockNumber ?? 0,
+              cooperativeId,
+            },
+            create: {
+              type: LedgerEventType.PROPOSAL,
+              payload: {
+                title: createdProposal.title,
+                creator:
+                  createdProposal.creator?.celoAddress ??
+                  createdProposal.creatorId,
+                proposalId: createdProposal.id,
+              },
+              txHash: createdProposal.txHash,
+              blockNumber: createdProposal.blockNumber ?? 0,
+              cooperativeId,
+            },
+          });
+        }
+
         return createdProposal;
       } catch (error) {
         const errorMessage =
@@ -269,6 +305,35 @@ export class ProposalsService {
     await this.pubSub.publish(`proposal.created.${cooperativeId}`, {
       onProposal: createdProposal,
     });
+
+    if (createdProposal.txHash) {
+      await this.prisma.ledgerEvent.upsert({
+        where: { txHash: createdProposal.txHash },
+        update: {
+          type: LedgerEventType.PROPOSAL,
+          payload: {
+            title: createdProposal.title,
+            creator:
+              createdProposal.creator?.celoAddress ?? createdProposal.creatorId,
+            proposalId: createdProposal.id,
+          },
+          blockNumber: createdProposal.blockNumber ?? 0,
+          cooperativeId,
+        },
+        create: {
+          type: LedgerEventType.PROPOSAL,
+          payload: {
+            title: createdProposal.title,
+            creator:
+              createdProposal.creator?.celoAddress ?? createdProposal.creatorId,
+            proposalId: createdProposal.id,
+          },
+          txHash: createdProposal.txHash,
+          blockNumber: createdProposal.blockNumber ?? 0,
+          cooperativeId,
+        },
+      });
+    }
 
     return createdProposal;
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAdminRealtime } from "@/lib/admin-realtime";
 import { restClient } from "@/lib/rest-client";
 
 type UserItem = {
@@ -93,39 +94,46 @@ export default function AdminUsersPage() {
     totalPages: 1,
   });
 
-  const load = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-    try {
-      const [usersData, auditData] = await Promise.all([
-        restClient.get<PagedResponse<UserItem>>(
-          `/admin/users?page=1&limit=50${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`,
-        ),
-        restClient.get<PagedResponse<AuditItem>>(
-          `/admin/audit-logs?page=1&limit=50`,
-        ),
-      ]);
-      setUsersPayload(usersData);
-      setAuditPayload(auditData);
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to load users and audit logs.",
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      try {
+        const [usersData, auditData] = await Promise.all([
+          restClient.get<PagedResponse<UserItem>>(
+            `/admin/users?page=1&limit=50${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`,
+          ),
+          restClient.get<PagedResponse<AuditItem>>(
+            `/admin/audit-logs?page=1&limit=50`,
+          ),
+        ]);
+        setUsersPayload(usersData);
+        setAuditPayload(auditData);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load users and audit logs.",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [search],
+  );
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  useAdminRealtime(() => {
+    void load(true);
+  });
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();

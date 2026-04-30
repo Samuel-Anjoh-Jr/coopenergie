@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   Logger,
 } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -23,6 +24,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly walletService: WalletService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async register(email: string, password: string, name: string) {
@@ -47,6 +49,11 @@ export class AuthService {
 
       // Store encrypted key via users service (for audit trail if needed)
       await this.usersService.storeCeloKey(user.id, wallet.encryptedPrivateKey);
+
+      this.eventEmitter.emit("admin.user.updated", {
+        targetUserId: user.id,
+        change: "registered",
+      });
 
       const token = await this.generateToken(user.id, user.email);
 

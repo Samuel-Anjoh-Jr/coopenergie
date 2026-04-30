@@ -17,3 +17,23 @@ export const CELOSCAN_BASE =
   process.env.EXPO_PUBLIC_CELOSCAN_BASE ||
   process.env.NEXT_PUBLIC_CELOSCAN_BASE ||
   "https://celo-sepolia.blockscout.com";
+
+export const celoScanTx = (hash: string) => {
+  const baseUrl = CELOSCAN_BASE.replace(/\/+$/, "");
+  const url = new URL(`${baseUrl}/tx/${hash}`);
+  url.searchParams.set("tab", "logs");
+  return url.toString();
+};
+
+export const withCeloScanLogsTab = (txUrl: string) => {
+  try {
+    const url = new URL(txUrl);
+    if (url.pathname.includes("/tx/")) {
+      url.searchParams.set("tab", "logs");
+      return url.toString();
+    }
+    return txUrl;
+  } catch {
+    return txUrl;
+  }
+};

@@ -2,7 +2,11 @@ import { gql, useQuery } from "@apollo/client";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Linking, Pressable, Text, View } from "react-native";
 
-import { CELOSCAN_BASE } from "@/lib/constants";
+import {
+  CELOSCAN_BASE,
+  celoScanTx,
+  withCeloScanLogsTab,
+} from "@/lib/constants";
 import { useActiveCooperative } from "@/lib/dashboard";
 import { getLedger, saveLedger } from "@/lib/offline/db";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
@@ -172,7 +176,9 @@ export default function LedgerScreen() {
                 className="mt-2"
                 onPress={() =>
                   Linking.openURL(
-                    item.celoScanUrl || `${CELOSCAN_BASE}/tx/${item.txHash}`,
+                    item.celoScanUrl
+                      ? withCeloScanLogsTab(item.celoScanUrl)
+                      : celoScanTx(item.txHash),
                   )
                 }
               >

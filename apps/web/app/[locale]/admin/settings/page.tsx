@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { GET_PLATFORM_SETTINGS } from "@/lib/graphql/queries/withdrawal";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 
 type PlatformSettings = {
@@ -43,6 +44,7 @@ export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const { loading, refetch } = useQuery(GET_PLATFORM_SETTINGS, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     onCompleted: (data: { platformSettings: PlatformSettings }) => {
       if (data?.platformSettings) {
         setThresholdDefault(

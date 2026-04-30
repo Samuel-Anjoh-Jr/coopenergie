@@ -17,7 +17,7 @@ pluginManagement {
       commandLine(
         "node",
         "--print",
-        "(() => { const p = require('path'); const cwd = process.cwd(); const roots = [cwd, p.resolve(cwd, '..'), p.resolve(cwd, '../..'), p.resolve(cwd, '../../..')]; return require.resolve('expo-modules-autolinking/package.json', { paths: roots }); })()",
+        "(() => { const p = require('path'); const cwd = process.cwd(); const roots = [cwd, p.resolve(cwd, '..'), p.resolve(cwd, '../..'), p.resolve(cwd, '../../..')]; const expoPkg = require.resolve('expo/package.json', { paths: roots }); return require.resolve('expo-modules-autolinking/package.json', { paths: [p.dirname(expoPkg), ...roots] }); })()",
       )
     }.standardOutput.asText.get().trim(),
     "../android/expo-gradle-plugin"

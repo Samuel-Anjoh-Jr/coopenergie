@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { useQuery } from "@apollo/client";
+import { useQuery, useSubscription } from "@apollo/client";
 import {
   Blocks,
   Check,
@@ -37,9 +37,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CELOSCAN_BASE } from "@/lib/config";
+import { CELOSCAN_BASE, celoScanTx, withCeloScanLogsTab } from "@/lib/config";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_LEDGER } from "@/lib/graphql/queries/ledger";
+import {
+  SUBSCRIPTION_ON_CONTRIBUTION,
+  SUBSCRIPTION_ON_PROPOSAL,
+  SUBSCRIPTION_ON_VOTE,
+} from "@/lib/graphql/subscriptions/cooperative";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 
 type LedgerEvent = {
@@ -145,7 +151,9 @@ export default function LedgerPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
   const vaultAddress =
     myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
@@ -165,9 +173,34 @@ export default function LedgerPage() {
       offset: 0,
     },
     skip: !cooperativeId,
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const events: LedgerEvent[] = ledgerData?.ledger ?? [];
+
+  useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
+    variables: { cooperativeId },
+    skip: !cooperativeId,
+    onData: () => {
+      void refetchLedger();
+    },
+  });
+
+  useSubscription(SUBSCRIPTION_ON_VOTE, {
+    variables: { cooperativeId },
+    skip: !cooperativeId,
+    onData: () => {
+      void refetchLedger();
+    },
+  });
+
+  useSubscription(SUBSCRIPTION_ON_PROPOSAL, {
+    variables: { cooperativeId },
+    skip: !cooperativeId,
+    onData: () => {
+      void refetchLedger();
+    },
+  });
 
   const groupedByBlock = useMemo(() => {
     const blockMap = new Map<number, LedgerEvent[]>();
@@ -547,8 +580,8 @@ export default function LedgerPage() {
                   <div className="space-y-3">
                     {block.transactions.map((event, idx) => {
                       const txUrl = event.celoScanUrl
-                        ? event.celoScanUrl
-                        : `${CELOSCAN_BASE}/tx/${event.txHash}`;
+                        ? withCeloScanLogsTab(event.celoScanUrl)
+                        : celoScanTx(event.txHash);
                       const summary = getPayloadSummary(
                         event.type,
                         event.payload,

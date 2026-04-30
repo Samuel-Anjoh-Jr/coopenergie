@@ -1,15 +1,12 @@
 import { buildBrandedEmailHtml, escapeHtml } from "./brand.template";
+import { buildCeloScanTxUrl } from "../../common/celoscan.util";
 
 export function buildWithdrawalHtml(
   cooperativeName: string,
   amount: number,
   txHash: string,
 ) {
-  const celoscanBase =
-    process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() || "https://celoscan.io";
-  const txUrl = txHash
-    ? `${celoscanBase.replace(/\/+$/, "")}/tx/${txHash}`
-    : null;
+  const txUrl = txHash ? buildCeloScanTxUrl(txHash) : null;
 
   const detailsHtml = txUrl
     ? `Hash de transaction :<br /><a href="${escapeHtml(txUrl)}" style="color:#166534;text-decoration:none;word-break:break-all;">${escapeHtml(txHash)}</a>`

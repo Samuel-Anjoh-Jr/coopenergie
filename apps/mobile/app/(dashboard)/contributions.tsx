@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 import { api } from "@/lib/api";
-import { CELOSCAN_BASE } from "@/lib/constants";
+import { celoScanTx } from "@/lib/constants";
 import { useActiveCooperative } from "@/lib/dashboard";
 import { enqueue } from "@/lib/offline/action-queue";
 import { getContributions, saveContributions } from "@/lib/offline/db";
@@ -168,7 +168,7 @@ export default function ContributionsScreen() {
             { text: t("common.close") },
             {
               text: t("blockchain.viewOnCeloScan"),
-              onPress: () => Linking.openURL(`${CELOSCAN_BASE}/tx/${txHash}`),
+              onPress: () => Linking.openURL(celoScanTx(txHash)),
             },
           ],
         );

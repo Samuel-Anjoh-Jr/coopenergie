@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Spinner } from "@/components/ui/spinner";
+import { useAdminRealtime } from "@/lib/admin-realtime";
 import { restClient } from "@/lib/rest-client";
 import { toast } from "sonner";
 
@@ -66,24 +67,34 @@ export default function AdminPage() {
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [metricsData, coopsData] = await Promise.all([
-          restClient.get<Metrics>("/admin/metrics"),
-          restClient.get<{ items: Cooperative[] }>("/admin/cooperatives"),
-        ]);
-        setMetrics(metricsData);
-        setCooperatives(coopsData.items);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to load admin data",
-        );
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadAdminData = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    try {
+      const [metricsData, coopsData] = await Promise.all([
+        restClient.get<Metrics>("/admin/metrics"),
+        restClient.get<{ items: Cooperative[] }>("/admin/cooperatives"),
+      ]);
+      setMetrics(metricsData);
+      setCooperatives(coopsData.items);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load admin data",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadAdminData(true);
+  }, [loadAdminData]);
+
+  useAdminRealtime(() => {
+    void loadAdminData();
+  });
 
   if (loading) {
     return (

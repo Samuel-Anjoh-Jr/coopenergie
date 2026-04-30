@@ -11,6 +11,7 @@ import { UseGuards } from "@nestjs/common";
 import { ContributionStatus } from "@prisma/client";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
+import { buildCeloScanTxUrl } from "../../common/celoscan.util";
 import { CurrentUser } from "../../modules/auth/decorators/current-user.decorator";
 import { CooperativesService } from "../../modules/cooperatives/cooperatives.service";
 import { MembershipsService } from "../../modules/memberships/memberships.service";
@@ -137,12 +138,9 @@ export class CooperativeResolver {
       take: 10,
     });
 
-    const celoscanBase =
-      process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() || "https://celoscan.io";
-
     return events.map((event) => ({
       ...event,
-      celoScanUrl: `${celoscanBase.replace(/\/+$/, "")}/tx/${event.txHash}`,
+      celoScanUrl: buildCeloScanTxUrl(event.txHash),
     }));
   }
 }

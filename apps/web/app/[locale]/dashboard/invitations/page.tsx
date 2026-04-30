@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useQuery } from "@apollo/client";
 import { Copy, Mail, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
@@ -26,6 +26,7 @@ import {
   GET_COOPERATIVE_DETAIL,
   GET_MY_COOPERATIVES,
 } from "@/lib/graphql/queries/cooperative";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -75,7 +76,9 @@ export default function InvitationsPage() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id as
     | string
     | undefined;
@@ -91,11 +94,12 @@ export default function InvitationsPage() {
     {
       variables: { id: cooperativeId },
       skip: !cooperativeId || userRole !== "COOP_ADMIN",
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     },
   );
   const members: Member[] = cooperativeDetailData?.cooperative?.members ?? [];
 
-  const loadPendingInvitations = async () => {
+  const loadPendingInvitations = useCallback(async () => {
     if (!cooperativeId || userRole !== "COOP_ADMIN") {
       setItems([]);
       return;
@@ -114,13 +118,26 @@ export default function InvitationsPage() {
     } finally {
       setIsLoadingPending(false);
     }
-  };
+  }, [cooperativeId, t, userRole]);
 
   useEffect(() => {
     if (userRole === "COOP_ADMIN" && cooperativeId) {
       void loadPendingInvitations();
     }
-  }, [userRole, cooperativeId]);
+  }, [cooperativeId, loadPendingInvitations, userRole]);
+
+  useEffect(() => {
+    if (userRole !== "COOP_ADMIN" || !cooperativeId) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void loadPendingInvitations();
+      void refetchCoopDetail();
+    }, DASHBOARD_REALTIME_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [cooperativeId, loadPendingInvitations, refetchCoopDetail, userRole]);
 
   const handleSendEmailInvite = async () => {
     if (!cooperativeId || !email.trim()) {

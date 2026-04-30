@@ -2,18 +2,30 @@
 
 import { useParams } from "next/navigation";
 import { Locale, useTranslations } from "@/lib/translations";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useAdminRealtime } from "@/lib/admin-realtime";
 
 export default function CoopAdminHealthPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const t = useTranslations(locale as Locale);
   const [data, setData] = useState<any[]>([]);
-  useEffect(() => {
-    fetch("/api/admin/cooperatives/admin-key-health", { cache: "no-store" })
+
+  const fetchHealth = useCallback(() => {
+    return fetch("/api/admin/cooperatives/admin-key-health", {
+      cache: "no-store",
+    })
       .then((res) => res.json())
       .then(setData);
   }, []);
+
+  useEffect(() => {
+    void fetchHealth();
+  }, [fetchHealth]);
+
+  useAdminRealtime(() => {
+    void fetchHealth();
+  });
 
   return (
     <div className="max-w-3xl mx-auto p-6">

@@ -43,12 +43,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CELOSCAN_BASE } from "@/lib/config";
+import { celoScanTx } from "@/lib/config";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_PROPOSALS } from "@/lib/graphql/queries/proposals";
 import { GET_WITHDRAWAL_ELIGIBILITY } from "@/lib/graphql/queries/withdrawal";
+import { SUBSCRIPTION_ON_PROPOSAL } from "@/lib/graphql/subscriptions/cooperative";
 import { SUBSCRIPTION_ON_VOTE } from "@/lib/graphql/subscriptions/cooperative";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -149,10 +151,12 @@ export default function ProposalsPage() {
   const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
   const [votingProposalId, setVotingProposalId] = useState<string | null>(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
   const cooperativeBalance =
-    myCooperativesData?.myCooperatives?.[0]?.balance || 0;
+    myCooperativesData?.myCooperatives?.[0]?.confirmedBalanceXAF || 0;
   const userRole =
     (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
     "MEMBER";
@@ -164,9 +168,18 @@ export default function ProposalsPage() {
   } = useQuery(GET_PROPOSALS, {
     variables: { cooperativeId },
     skip: !cooperativeId,
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   useSubscription(SUBSCRIPTION_ON_VOTE, {
+    variables: { cooperativeId },
+    skip: !cooperativeId,
+    onData: () => {
+      void refetchProposals();
+    },
+  });
+
+  useSubscription(SUBSCRIPTION_ON_PROPOSAL, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
@@ -730,6 +743,7 @@ function ProposalCard({
   const { data: eligibilityData } = useQuery(GET_WITHDRAWAL_ELIGIBILITY, {
     variables: { proposalId: proposal.id },
     skip: proposal.type !== "WITHDRAWAL",
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const eligibility: WithdrawalEligibility | undefined =
@@ -740,9 +754,7 @@ function ProposalCard({
     totalVotes > 0 ? (proposal.yesVotes / totalVotes) * 100 : 0;
   const disableVoting =
     proposal.status.toLowerCase() !== "pending" || proposal.hasUserVoted;
-  const txUrl = proposal.txHash
-    ? `${CELOSCAN_BASE}/tx/${proposal.txHash}`
-    : null;
+  const txUrl = proposal.txHash ? celoScanTx(proposal.txHash) : null;
 
   const cannotVoteWithdrawal =
     isWithdrawal && eligibility && !eligibility.canVote;

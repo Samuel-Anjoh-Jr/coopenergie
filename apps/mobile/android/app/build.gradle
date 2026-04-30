@@ -307,25 +307,62 @@ dependencies {
 
 
 // [WIN_PATH_FIX] autolinking cmake rewrite
-// Rewrite long absolute .bun cache paths in the generated autolinking cmake to
-// the SUBST drive so Ninja stays within Windows 260-char MAX_PATH limits.
+// Rewrite Nitro autolinking path to a short build dir so Ninja stays within
+// Windows 260-char MAX_PATH limits.
 if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
     afterEvaluate {
-        tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
-            doLast {
-                def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
-                if (autolinkingCmake.exists()) {
-                    def text = autolinkingCmake.text
-                    // Replace the long absolute repo path with a relative "../../../.." that works
-                    // regardless of SUBST drive letter, or use the env var SUBST_REPO_ROOT if set.
-                    def substRoot = System.getenv("SUBST_REPO_ROOT")
-                    def longRoot = (rootDir.parentFile.parentFile).absolutePath.replace(File.separatorChar, '/' as char)
-                    if (substRoot && text.contains(longRoot)) {
-                        def fixed = text.replace(longRoot, substRoot)
-                        autolinkingCmake.text = fixed
-                        println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
+        def rewriteAutolinkingCodegenPaths = {
+            def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
+            if (!autolinkingCmake.exists()) return
+
+            def text = autolinkingCmake.text
+            def fixed = text
+            def pattern = /([A-Za-z]:\/[^\n\"]*\/node_modules\/\.bun\/([^\/\n\"]+)\/node_modules\/[^\/\n\"]+\/android\/build\/generated\/source\/codegen\/jni\/)/
+            def matcher = (text =~ pattern)
+
+            matcher.each { fullPath, _, bunEntry ->
+                if (bunEntry.startsWith("react-native-nitro-modules@")) {
+                    return
+                }
+
+                def shortPath = "C:/.b/cg/${bunEntry}/jni/"
+                fixed = fixed.replace(fullPath, shortPath)
+
+                def targetDir = new File(fullPath.replace('/' as char, File.separatorChar))
+                def shortDir = new File(shortPath.replace('/' as char, File.separatorChar))
+                if (!shortDir.exists() && targetDir.exists()) {
+                    shortDir.parentFile.mkdirs()
+                    try {
+                        project.exec {
+                            commandLine("cmd", "/c", "mklink", "/J", shortDir.absolutePath, targetDir.absolutePath)
+                            ignoreExitValue = true
+                        }
+                    } catch (Exception ignored) {
+                        // Best-effort: if junction creation fails, keep original path.
                     }
                 }
+            }
+
+            // Keep nitro on its dedicated short build directory when available.
+            fixed = fixed.replaceAll(
+                /(?m)[A-Za-z]:\/[^\n\"]*react-native-nitro-modules[^\n\"]*\/android\/build\/generated\/source\/codegen\/jni\//,
+                "C:/.b/nitro/generated/source/codegen/jni/"
+            )
+            if (fixed != text) {
+                autolinkingCmake.text = fixed
+                println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
+            }
+        }
+
+        tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
+            doLast {
+                rewriteAutolinkingCodegenPaths()
+            }
+        }
+
+        tasks.matching { it.name.contains("configureCMake") || it.name.contains("ConfigureCMake") }.configureEach {
+            doFirst {
+                rewriteAutolinkingCodegenPaths()
             }
         }
     }

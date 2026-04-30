@@ -6,6 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Prisma, Role } from "@prisma/client";
 
 import { BlockscoutVerificationService } from "../../blockchain/blockscout-verification.service";
@@ -23,6 +24,7 @@ export class CooperativesService {
     private readonly factoryService: FactoryService,
     private readonly eventListenerService: EventListenerService,
     private readonly blockscoutVerification: BlockscoutVerificationService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -121,6 +123,11 @@ export class CooperativesService {
             }`,
           );
         });
+
+      this.eventEmitter.emit("admin.cooperative.updated", {
+        cooperativeId: cooperative.id,
+        change: "created",
+      });
 
       return updatedCooperative;
     } catch (error) {

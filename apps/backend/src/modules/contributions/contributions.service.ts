@@ -9,7 +9,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { ContributionStatus } from "@prisma/client";
+import { ContributionStatus, LedgerEventType } from "@prisma/client";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
 import { PUBSUB } from "../../graphql/graphql.tokens";
@@ -158,6 +158,36 @@ export class ContributionsService {
     }
 
     this.eventEmitter.emit("contribution.created", finalizedContribution);
+    await this.prisma.ledgerEvent.upsert({
+      where: {
+        txHash:
+          finalizedContribution.txHash ??
+          this.generateFakeTxHash(cooperativeId, userId, amountXAF),
+      },
+      update: {
+        type: LedgerEventType.CONTRIBUTION,
+        payload: {
+          amountXAF,
+          member: user.celoAddress ?? userId,
+          contributionId: finalizedContribution.id,
+        },
+        blockNumber: finalizedContribution.blockNumber ?? 0,
+        cooperativeId,
+      },
+      create: {
+        type: LedgerEventType.CONTRIBUTION,
+        payload: {
+          amountXAF,
+          member: user.celoAddress ?? userId,
+          contributionId: finalizedContribution.id,
+        },
+        txHash:
+          finalizedContribution.txHash ??
+          this.generateFakeTxHash(cooperativeId, userId, amountXAF),
+        blockNumber: finalizedContribution.blockNumber ?? 0,
+        cooperativeId,
+      },
+    });
     await this.notificationsService.notifyContributionConfirmed(
       cooperativeId,
       user.name,

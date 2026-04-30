@@ -4,13 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Prisma, SubscriptionStatus } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getPlatformMetrics() {
     const [
@@ -147,6 +151,11 @@ export class AdminService {
       },
     });
 
+    this.eventEmitter.emit("admin.cooperative.updated", {
+      cooperativeId,
+      change: "suspension",
+    });
+
     return updated;
   }
 
@@ -191,6 +200,11 @@ export class AdminService {
           nextWithdrawalsLocked: withdrawalsLocked,
         },
       },
+    });
+
+    this.eventEmitter.emit("admin.cooperative.updated", {
+      cooperativeId,
+      change: "withdrawals-lock",
     });
 
     return updated;
@@ -251,6 +265,11 @@ export class AdminService {
             nextSlug: trimmedSlug,
           },
         },
+      });
+
+      this.eventEmitter.emit("admin.cooperative.updated", {
+        cooperativeId,
+        change: "slug",
       });
 
       return updated;
@@ -458,6 +477,11 @@ export class AdminService {
           nextIsPlatformAdmin: isPlatformAdmin,
         },
       },
+    });
+
+    this.eventEmitter.emit("admin.user.updated", {
+      targetUserId,
+      change: "platform-admin-role",
     });
 
     return updated;

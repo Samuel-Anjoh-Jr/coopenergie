@@ -10,7 +10,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma, ProposalStatus } from "@prisma/client";
+import { LedgerEventType, Prisma, ProposalStatus } from "@prisma/client";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
 import { RelayerService } from "../../blockchain/relayer.service";
@@ -291,6 +291,34 @@ export class VotesService {
       }
 
       this.eventEmitter.emit("vote.cast", result);
+      if (updatedVote.txHash) {
+        await this.prisma.ledgerEvent.upsert({
+          where: {
+            txHash: updatedVote.txHash,
+          },
+          update: {
+            type: LedgerEventType.VOTE,
+            payload: {
+              voter: user.celoAddress ?? userId,
+              choice,
+              proposalId,
+            },
+            blockNumber: updatedVote.blockNumber ?? 0,
+            cooperativeId: proposal.cooperativeId,
+          },
+          create: {
+            type: LedgerEventType.VOTE,
+            payload: {
+              voter: user.celoAddress ?? userId,
+              choice,
+              proposalId,
+            },
+            txHash: updatedVote.txHash,
+            blockNumber: updatedVote.blockNumber ?? 0,
+            cooperativeId: proposal.cooperativeId,
+          },
+        });
+      }
       await this.pubSub.publish(`vote.cast.${proposal.cooperativeId}`, {
         onVote: {
           vote: updatedVote,

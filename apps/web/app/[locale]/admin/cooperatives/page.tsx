@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, RefreshCw, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAdminRealtime } from "@/lib/admin-realtime";
 import { restClient } from "@/lib/rest-client";
 
 type Cooperative = {
@@ -71,38 +72,47 @@ export default function AdminCooperativesPage() {
   const [slugDrafts, setSlugDrafts] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
-  const fetchCooperatives = async (nextPage: number, isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const fetchCooperatives = useCallback(
+    async (nextPage: number, isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-    try {
-      const data = await restClient.get<CooperativeResponse>(
-        `/admin/cooperatives?page=${nextPage}&limit=20`,
-      );
-      setPayload(data);
-      setPage(data.page);
-      setSlugDrafts(
-        data.items.reduce<Record<string, string>>((accumulator, item) => {
-          accumulator[item.id] = item.slug;
-          return accumulator;
-        }, {}),
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load cooperatives.",
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      try {
+        const data = await restClient.get<CooperativeResponse>(
+          `/admin/cooperatives?page=${nextPage}&limit=20`,
+        );
+        setPayload(data);
+        setPage(data.page);
+        setSlugDrafts(
+          data.items.reduce<Record<string, string>>((accumulator, item) => {
+            accumulator[item.id] = item.slug;
+            return accumulator;
+          }, {}),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load cooperatives.",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void fetchCooperatives(1);
-  }, []);
+  }, [fetchCooperatives]);
+
+  useAdminRealtime(() => {
+    void fetchCooperatives(page, true);
+  });
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { LedgerEventType as PrismaLedgerEventType } from "@prisma/client";
 
+import { buildCeloScanTxUrl } from "../../common/celoscan.util";
 import { PrismaService } from "../../prisma/prisma.service";
 
 type FindLedgerOptions = {
@@ -58,10 +59,6 @@ export class LedgerService {
       }
     }
 
-    const celoscanBase =
-      process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
-      "https://celo-sepolia.blockscout.com";
-
     return events.map((event) => {
       const payload = event.payload as EventPayload;
       const walletAddr = extractWalletAddress(payload, event.type);
@@ -72,7 +69,7 @@ export class LedgerService {
       return {
         ...event,
         payload: { ...payload, performerName },
-        celoScanUrl: `${celoscanBase.replace(/\/+$/, "")}/tx/${event.txHash}`,
+        celoScanUrl: buildCeloScanTxUrl(event.txHash),
       };
     });
   }

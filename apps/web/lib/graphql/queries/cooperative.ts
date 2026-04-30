@@ -7,6 +7,7 @@ export const GET_MY_COOPERATIVES = gql`
       name
       slug
       targetAmountXAF
+      confirmedBalanceXAF
       vaultAddress
       createdAt
       membership {

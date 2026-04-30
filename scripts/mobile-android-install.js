@@ -39,6 +39,7 @@ const gradleProblemsReportFile = path.join(
   "problems",
   "problems-report.html",
 );
+const appCxxCacheDir = path.join(androidDir, "app", ".cxx");
 
 // Prefer JDK 17 for Android/Gradle toolchain compatibility.
 const jdk17Path = "C:\\Program Files\\Java\\jdk-17";
@@ -407,6 +408,15 @@ if (gradleProblemsReportFile && fs.existsSync(gradleProblemsReportFile)) {
   });
 }
 
+// Purge app-level CMake/Ninja state so old long paths are not reused.
+if (appCxxCacheDir && fs.existsSync(appCxxCacheDir)) {
+  removePathWithVerification(appCxxCacheDir, {
+    recursive: true,
+    label: "stale app CMake cache",
+    tolerateError: (error) => error && error.code === "EPERM",
+  });
+}
+
 // Update this to match the applicationId in android/app/build.gradle
 // after running expo prebuild for the first time.
 const PACKAGE_NAME = "com.coopenergie.app";
@@ -551,6 +561,71 @@ function upsertGradleProp(content, key, value) {
   return `${content.trimEnd()}\n${line}\n`;
 }
 
+function restoreAutolinkingRealPaths(repoRootPath) {
+  // Undo any prior SUBST-drive rewrite in the autolinking cmake so Gradle
+  // always sees consistent real C: paths (avoids "different roots" in Path.relativize).
+  const autolinkingCmakePath = path.join(
+    androidDir,
+    "app",
+    "build",
+    "generated",
+    "autolinking",
+    "src",
+    "main",
+    "jni",
+    "Android-autolinking.cmake",
+  );
+  if (!fs.existsSync(autolinkingCmakePath)) return;
+
+  const repoRootUnix = repoRootPath.replace(/\\/g, "/");
+  let content = fs.readFileSync(autolinkingCmakePath, "utf8");
+  let changed = false;
+  for (const letter of ["X", "Y", "Z", "W", "V"]) {
+    const substPrefix = `${letter}:`;
+    if (content.includes(substPrefix)) {
+      content = content.split(substPrefix).join(repoRootUnix);
+      changed = true;
+    }
+  }
+  if (changed) {
+    fs.writeFileSync(autolinkingCmakePath, content);
+    console.log(
+      `[mobile] Restored autolinking CMake to real paths: ${autolinkingCmakePath}`,
+    );
+  }
+}
+
+function rewriteNitroAutolinkingPathToShortBuildDir() {
+  const autolinkingCmakePath = path.join(
+    androidDir,
+    "app",
+    "build",
+    "generated",
+    "autolinking",
+    "src",
+    "main",
+    "jni",
+    "Android-autolinking.cmake",
+  );
+  if (!fs.existsSync(autolinkingCmakePath)) return;
+
+  const shortNitroCodegenDir = "C:/.b/nitro/generated/source/codegen/jni/";
+  const nitroAutolinkPathPattern =
+    /[A-Za-z]:\/[^\"\n]*?react-native-nitro-modules[^\"\n]*?\/android\/build\/generated\/source\/codegen\/jni\//g;
+  const content = fs.readFileSync(autolinkingCmakePath, "utf8");
+  const rewritten = content.replace(
+    nitroAutolinkPathPattern,
+    shortNitroCodegenDir,
+  );
+
+  if (rewritten !== content) {
+    fs.writeFileSync(autolinkingCmakePath, rewritten);
+    console.log(
+      `[mobile] Rewrote Nitro autolinking path to short build dir: ${autolinkingCmakePath}`,
+    );
+  }
+}
+
 function rewriteAutolinkingToSubstDrive(repoRootPath, driveLetter) {
   if (!driveLetter) return;
   const autolinkingCmakePath = path.join(
@@ -630,8 +705,8 @@ function patchAppBuildGradleWithAutolinkHook(appBuildGradlePath) {
   const hook = `
 
 ${marker}
-// Rewrite long absolute .bun cache paths in the generated autolinking cmake to
-// the SUBST drive so Ninja stays within Windows 260-char MAX_PATH limits.
+// Rewrite Nitro autolinking path to a short build dir so Ninja stays within
+// Windows 260-char MAX_PATH limits.
 if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
     afterEvaluate {
         tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
@@ -639,12 +714,9 @@ if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.tas
                 def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
                 if (autolinkingCmake.exists()) {
                     def text = autolinkingCmake.text
-                    // Replace the long absolute repo path with a relative "../../../.." that works
-                    // regardless of SUBST drive letter, or use the env var SUBST_REPO_ROOT if set.
-                    def substRoot = System.getenv("SUBST_REPO_ROOT")
-                    def longRoot = (rootDir.parentFile.parentFile).absolutePath.replace(File.separatorChar, '/' as char)
-                    if (substRoot && text.contains(longRoot)) {
-                        def fixed = text.replace(longRoot, substRoot)
+          def nitroPattern = /[A-Za-z]:\\/[^\"\\n]*?react-native-nitro-modules[^\"\\n]*?\\/android\\/build\\/generated\\/source\\/codegen\\/jni\\//
+          def fixed = text.replaceAll(nitroPattern, "C:/.b/nitro/generated/source/codegen/jni/")
+          if (fixed != text) {
                         autolinkingCmake.text = fixed
                         println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
                     }
@@ -754,6 +826,9 @@ if (fs.existsSync(gradlePropsPath)) {
   );
 }
 
+const appBuildGradlePath = path.join(androidDir, "app", "build.gradle");
+patchAppBuildGradleWithAutolinkHook(appBuildGradlePath);
+
 // Step 2: Build APK via Gradle
 console.log(`[mobile] Building ${variant} APK…`);
 const gradleArgs = [
@@ -770,80 +845,48 @@ if (!isRelease) {
   gradleArgs.push("-PreactNativeArchitectures=arm64-v8a");
 }
 
-let gradleCwd = androidDir;
-let substDrive = null;
-if (process.platform === "win32") {
-  const drive = getFreeSubstDrive();
-  if (drive) {
-    run(`cmd /c subst ${drive}: "${repoRoot}"`);
-    substDrive = drive;
-    gradleCwd = `${drive}:\\apps\\mobile\\android`;
-    console.log(`[mobile] Using SUBST path for Gradle: ${gradleCwd}`);
-  }
-}
+// Do NOT use SUBST drive for Gradle. The React Native Gradle plugin uses
+// Java's Path.relativize() across the codegen CLI path and each module's
+// android directory. When those are on different drive letters (X: vs C:)
+// it throws "different roots". Instead, keep all paths on C: and rely on
+// the buildStagingDirectory patches in individual native modules to keep
+// CMake staging paths short enough for Windows MAX_PATH.
+const gradleCwd = androidDir;
 
-// Inject Gradle hook (idempotent) so after every re-generation the autolinking
-// cmake paths are rewritten to the SUBST drive root.
-const appBuildGradle = path.join(androidDir, "app", "build.gradle");
-patchAppBuildGradleWithAutolinkHook(appBuildGradle);
+// Restore any autolinking cmake that a prior SUBST run may have rewritten
+// to a drive letter path, so all paths are consistently on C: for this run.
+restoreAutolinkingRealPaths(repoRoot);
+rewriteNitroAutolinkingPathToShortBuildDir();
 
-// Set env var so Gradle hook knows what the short prefix should be.
-if (substDrive) {
-  process.env.SUBST_REPO_ROOT = `${substDrive}:`;
-}
 process.env.CMAKE_BUILD_PARALLEL_LEVEL = "1";
 process.env.NINJAFLAGS = "-j1";
+delete process.env.SUBST_REPO_ROOT;
 
-try {
-  // Rewrite existing autolinking CMake to use the SUBST drive so Ninja never sees
-  // long absolute bun-cache paths in source file references.
-  rewriteAutolinkingToSubstDrive(repoRoot, substDrive);
-
-  // Rewrite all native module CMakeLists.txt files to use SUBST drive paths,
-  // so object file paths stay within Windows 260-char MAX_PATH limit.
-  rewriteNativeCMakePaths(bunCacheDir, substDrive);
-
-  const gradleCmd = `cmd /c gradlew.bat ${gradleArgs.join(" ")}`;
-  const runGradleWithRetry = (cwd) => {
-    try {
-      run(gradleCmd, { cwd });
-    } catch {
-      console.log(
-        "[mobile] Gradle assemble failed. Clearing transforms caches and retrying once…",
-      );
-      clearGradleTransformCaches(true);
-      run(gradleCmd, { cwd });
-    }
-  };
-
+const gradleCmd = `cmd /c gradlew.bat ${gradleArgs.join(" ")}`;
+const runGradleWithRetry = (cwd) => {
   try {
-    runGradleWithRetry(gradleCwd);
-  } catch (error) {
-    if (process.platform === "win32" && substDrive) {
-      console.log(
-        "[mobile] SUBST-path build failed. Retrying Gradle once without SUBST to avoid mixed-drive path issues…",
-      );
+    run(gradleCmd, { cwd });
+  } catch {
+    console.log(
+      "[mobile] Gradle assemble failed. Clearing transforms caches and retrying once…",
+    );
+    rewriteNitroAutolinkingPathToShortBuildDir();
+    // Kill stale java processes before aggressive cache clear to release locks.
+    if (process.platform === "win32") {
       try {
-        run(`cmd /c subst ${substDrive}: /d`);
+        execSync("cmd /c taskkill /F /IM java.exe /T", { stdio: "ignore" });
       } catch {
-        // non-fatal cleanup failure
+        // best-effort
       }
-      substDrive = null;
-      delete process.env.SUBST_REPO_ROOT;
-      runGradleWithRetry(androidDir);
-    } else {
-      throw error;
     }
+    // Tolerate EPERM on retry clear: the metadata.bin error is already cleared
+    // after the first pass; remaining EPERM files won't block the second pass.
+    clearGradleTransformCaches(false);
+    run(gradleCmd, { cwd });
   }
-} finally {
-  if (substDrive) {
-    try {
-      run(`cmd /c subst ${substDrive}: /d`);
-    } catch {
-      // non-fatal cleanup failure
-    }
-  }
-}
+};
+
+runGradleWithRetry(gradleCwd);
 
 // Step 3: Install via ADB (reinstall if already installed)
 console.log("[mobile] Installing APK on connected device…");

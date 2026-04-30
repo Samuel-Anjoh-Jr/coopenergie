@@ -34,6 +34,7 @@ import {
   GET_COOPERATIVE_SETTINGS,
   GET_PLATFORM_SETTINGS,
 } from "@/lib/graphql/queries/withdrawal";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -59,7 +60,9 @@ export default function SettingsPage() {
   const [quorumMinVotes, setQuorumMinVotes] = useState<string>("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
   const userRole =
     (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
@@ -70,6 +73,7 @@ export default function SettingsPage() {
     {
       variables: { cooperativeId },
       skip: !cooperativeId || userRole !== "COOP_ADMIN",
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
       onCompleted: (data: {
         cooperativeSettings: {
           withdrawalThreshold: { toString: () => SetStateAction<string> };
@@ -87,6 +91,7 @@ export default function SettingsPage() {
   const { data: platformSettingsData, loading: loadingPlatformSettings } =
     useQuery(GET_PLATFORM_SETTINGS, {
       skip: userRole !== "PLATFORM_ADMIN",
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
       onCompleted: (data: {
         platformSettings: {
           withdrawalThresholdDefault: { toString: () => any };

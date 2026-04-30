@@ -28,11 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CELOSCAN_BASE } from "@/lib/config";
+import { celoScanTx } from "@/lib/config";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_CONTRIBUTIONS } from "@/lib/graphql/queries/contributions";
 import { SUBSCRIPTION_ON_CONTRIBUTION } from "@/lib/graphql/subscriptions/cooperative";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 import { restClient } from "@/lib/rest-client";
 
@@ -85,7 +86,9 @@ export default function ContributionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES);
+  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
 
   const {
@@ -95,6 +98,7 @@ export default function ContributionsPage() {
   } = useQuery(GET_CONTRIBUTIONS, {
     variables: { cooperativeId },
     skip: !cooperativeId,
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
@@ -273,9 +277,7 @@ export default function ContributionsPage() {
                   <TableBody>
                     {contributions.map((contribution) => {
                       const txHash = contribution.txHash ?? null;
-                      const txUrl = txHash
-                        ? `${CELOSCAN_BASE}/tx/${txHash}`
-                        : null;
+                      const txUrl = txHash ? celoScanTx(txHash) : null;
 
                       return (
                         <TableRow
@@ -335,7 +337,7 @@ export default function ContributionsPage() {
               <div className="md:hidden space-y-3">
                 {contributions.map((contribution) => {
                   const txHash = contribution.txHash ?? null;
-                  const txUrl = txHash ? `${CELOSCAN_BASE}/tx/${txHash}` : null;
+                  const txUrl = txHash ? celoScanTx(txHash) : null;
 
                   return (
                     <div

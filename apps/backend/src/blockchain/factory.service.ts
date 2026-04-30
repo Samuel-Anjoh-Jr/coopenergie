@@ -11,6 +11,7 @@ import {
   CELO_WALLET_CLIENT,
   COOP_FACTORY_ADDRESS,
 } from "./blockchain.tokens";
+import { buildCeloScanTxUrl } from "../common/celoscan.util";
 
 type BlockchainPublicClient = typeof configuredPublicClient;
 type BlockchainWalletClient = typeof configuredWalletClient;
@@ -172,10 +173,6 @@ export class FactoryService {
   }
 
   private buildCeloScanUrl(txHash: `0x${string}`): string {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() ||
-      "https://celo-sepolia.blockscout.com";
-
-    return `${baseUrl.replace(/\/+$/, "")}/tx/${txHash}`;
+    return buildCeloScanTxUrl(txHash);
   }
 }

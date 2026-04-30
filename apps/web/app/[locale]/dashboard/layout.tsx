@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useNotifications } from "@/lib/firebase/use-notifications";
 import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 
 const navItems = [
   { key: "overview", icon: BarChart3, href: "/dashboard" },
@@ -75,6 +76,7 @@ export default function DashboardLayout({
   const { notificationsEnabled, requestPermission } = useNotifications();
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
     skip: status !== "authenticated",
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
   const cooperativeName = myCooperativesData?.myCooperatives?.[0]?.name ?? "-";
   const userRole = myCooperativesData?.myCooperatives?.[0]?.membership?.role;

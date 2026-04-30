@@ -2,11 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  MessageEvent,
   Param,
   Patch,
   Query,
+  Sse,
   UseGuards,
 } from "@nestjs/common";
+import { Observable } from "rxjs";
 
 import { PlatformAdminGuard } from "../../common/guards/platform-admin.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -17,6 +20,7 @@ import { RenameCooperativeSlugDto } from "./dto/rename-cooperative-slug.dto";
 import { UpdateCooperativeSuspensionDto } from "./dto/update-cooperative-suspension.dto";
 import { UpdateCooperativeWithdrawalLockDto } from "./dto/update-cooperative-withdrawal-lock.dto";
 import { UpdatePlatformAdminRoleDto } from "./dto/update-platform-admin-role.dto";
+import { AdminRealtimeService } from "./admin-realtime.service";
 import { AdminService } from "./admin.service";
 
 @Controller("admin")
@@ -24,7 +28,15 @@ export class AdminController {
   constructor(
     private readonly platformSettingsService: PlatformSettingsService,
     private readonly adminService: AdminService,
+    private readonly adminRealtimeService: AdminRealtimeService,
   ) {}
+
+  @Sse("events")
+  adminEvents(
+    @Query("token") token?: string,
+  ): Promise<Observable<MessageEvent>> {
+    return this.adminRealtimeService.streamForToken(token);
+  }
 
   @UseGuards(JwtAuthGuard, PlatformAdminGuard)
   @Get("metrics")

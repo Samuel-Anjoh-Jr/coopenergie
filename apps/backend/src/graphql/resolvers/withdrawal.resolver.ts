@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 
 import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
+import { buildCeloScanTxUrl } from "../../common/celoscan.util";
 import { CurrentUser } from "../../modules/auth/decorators/current-user.decorator";
 import { PlatformSettingsService } from "../../modules/platform-settings/platform-settings.service";
 import { WithdrawalsService } from "../../modules/withdrawals/withdrawals.service";
@@ -148,10 +149,7 @@ export class WithdrawalResolver {
       return null;
     }
 
-    const celoscanBase =
-      process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() || "https://celoscan.io";
-
-    return `${celoscanBase.replace(/\/+$/, "")}/tx/${txHash}`;
+    return buildCeloScanTxUrl(txHash);
   }
 
   private async assertMembership(userId: string, cooperativeId: string) {

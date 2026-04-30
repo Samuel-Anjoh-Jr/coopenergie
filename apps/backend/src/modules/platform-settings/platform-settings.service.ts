@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Role } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
@@ -12,7 +13,10 @@ import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
 
 @Injectable()
 export class PlatformSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getSettings() {
     return this.prisma.platformSettings.upsert({
@@ -81,6 +85,10 @@ export class PlatformSettingsService {
             maintenanceMode: dto.maintenanceMode,
           },
         },
+      });
+
+      this.eventEmitter.emit("admin.settings.updated", {
+        updatedById: adminUserId,
       });
 
       return updatedSettings;

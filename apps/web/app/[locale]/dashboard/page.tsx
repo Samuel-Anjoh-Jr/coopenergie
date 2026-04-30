@@ -25,6 +25,7 @@ import {
   SUBSCRIPTION_ON_PROPOSAL,
   SUBSCRIPTION_ON_VOTE,
 } from "@/lib/graphql/subscriptions/cooperative";
+import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { useTranslations, type Locale } from "@/lib/translations";
 
@@ -85,7 +86,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     data: myCooperativesData,
     loading: loadingMyCooperatives,
     refetch: refetchMyCooperatives,
-  } = useQuery(GET_MY_COOPERATIVES);
+  } = useQuery(GET_MY_COOPERATIVES, {
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  });
 
   useEffect(() => {
     if (
@@ -103,6 +106,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   } = useQuery(GET_COOPERATIVE_DETAIL, {
     variables: { id: activeCooperativeId },
     skip: !activeCooperativeId,
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const { data: reportData, refetch: refetchReport } = useQuery(
@@ -110,6 +114,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     {
       variables: { cooperativeId: activeCooperativeId },
       skip: !activeCooperativeId,
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     },
   );
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Resend } from "resend";
 
+import { buildCeloScanTxUrl } from "../common/celoscan.util";
 import { buildBrandedEmailHtml, escapeHtml } from "./templates/brand.template";
 import { buildInvitationHtml } from "./templates/invitation.template";
 import { buildWithdrawalHtml } from "./templates/withdrawal.template";
@@ -128,10 +129,8 @@ export class MailService implements OnModuleInit {
     amount: number,
     txHash: string,
   ): Promise<MailResult> {
-    const celoscanBase =
-      process.env.NEXT_PUBLIC_CELOSCAN_BASE?.trim() || "https://celoscan.io";
     const txUrl = txHash
-      ? `${celoscanBase.replace(/\/+$/, "")}/tx/${txHash}`
+      ? buildCeloScanTxUrl(txHash)
       : "Transaction hash unavailable";
 
     return this.sendMail(

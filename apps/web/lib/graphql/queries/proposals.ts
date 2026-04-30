@@ -7,11 +7,17 @@ export const GET_PROPOSALS = gql`
       title
       description
       status
+      type
       yesVotes
       noVotes
       txHash
       hasUserVoted
       createdAt
+      withdrawalRequest {
+        amountXAF
+        destinationType
+        status
+      }
     }
   }
 `;

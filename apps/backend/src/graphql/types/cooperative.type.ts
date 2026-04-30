@@ -17,6 +17,9 @@ export class CooperativeType {
   @Field(() => Int)
   targetAmountXAF!: number;
 
+  @Field(() => Int)
+  confirmedBalanceXAF!: number;
+
   @Field({ nullable: true })
   vaultAddress?: string | null;
 

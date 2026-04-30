@@ -9,6 +9,24 @@ export const CELOSCAN_BASE =
   "https://celo-sepolia.blockscout.com";
 export const CELO_CHAIN = process.env.NEXT_PUBLIC_CELO_CHAIN || "celoSepolia";
 
-export const celoScanTx = (hash: string) => `${CELOSCAN_BASE}/tx/${hash}`;
+export const celoScanTx = (hash: string) => {
+  const baseUrl = CELOSCAN_BASE.replace(/\/+$/, "");
+  const url = new URL(`${baseUrl}/tx/${hash}`);
+  url.searchParams.set("tab", "logs");
+  return url.toString();
+};
 export const celoScanAddress = (addr: string) =>
   `${CELOSCAN_BASE}/address/${addr}`;
+
+export const withCeloScanLogsTab = (txUrl: string) => {
+  try {
+    const url = new URL(txUrl);
+    if (url.pathname.includes("/tx/")) {
+      url.searchParams.set("tab", "logs");
+      return url.toString();
+    }
+    return txUrl;
+  } catch {
+    return txUrl;
+  }
+};
