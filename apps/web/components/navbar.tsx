@@ -297,6 +297,22 @@ export function Navbar({ locale }: NavbarProps) {
                           </SheetClose>
                         );
                       })}
+
+                      {session?.user && (
+                        <SheetClose asChild>
+                          <Link
+                            href={`/${locale}/dashboard`}
+                            className={mobileNavItemClass(false)}
+                          >
+                            <span
+                              className="absolute left-1.5 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary opacity-0"
+                              aria-hidden="true"
+                            />
+                            <LayoutDashboard className="h-4 w-4" />
+                            {t("navbar.dashboard")}
+                          </Link>
+                        </SheetClose>
+                      )}
                     </>
                   ) : (
                     <>
@@ -421,18 +437,28 @@ export function Navbar({ locale }: NavbarProps) {
 
           <div className="hidden md:flex items-center gap-6">
             {isLandingPage ? (
-              landingNavItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className={desktopLandingNavItemClass(
-                    activeHash === item.href,
-                  )}
-                  onClick={(event) => handleLandingNavClick(item.href, event)}
-                >
-                  {item.label}
-                </a>
-              ))
+              <>
+                {landingNavItems.map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={desktopLandingNavItemClass(
+                      activeHash === item.href,
+                    )}
+                    onClick={(event) => handleLandingNavClick(item.href, event)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                {session?.user && (
+                  <Link
+                    href={`/${locale}/dashboard`}
+                    className={desktopLandingNavItemClass(false)}
+                  >
+                    {t("navbar.dashboard")}
+                  </Link>
+                )}
+              </>
             ) : (
               <>
                 <Link
