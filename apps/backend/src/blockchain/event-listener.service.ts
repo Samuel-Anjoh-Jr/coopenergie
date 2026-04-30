@@ -148,7 +148,7 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
       : 15000;
     const isTestnet =
       (this.publicClient.chain?.id?.toString() || "").includes("44787") ||
-      (this.publicClient.transport?.url || "").includes("sepolia");
+      ((this.publicClient.transport as any)?.url || "").includes("sepolia");
 
     // Helper to poll logs for an event
     const pollEvent = (
