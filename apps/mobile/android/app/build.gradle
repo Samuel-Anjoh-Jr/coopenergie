@@ -307,8 +307,9 @@ dependencies {
 
 
 // [WIN_PATH_FIX] autolinking cmake rewrite
-// Rewrite Nitro autolinking path to a short build dir so Ninja stays within
-// Windows 260-char MAX_PATH limits.
+// Rewrite all Bun cache paths in the generated autolinking cmake to use a
+// SUBST drive (B:) so Ninja stays within Windows 260-char MAX_PATH limits.
+// The script sets up "subst B: <repo>/node_modules/.bun" before invoking Gradle.
 if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
     afterEvaluate {
         def rewriteAutolinkingCodegenPaths = {
@@ -316,34 +317,11 @@ if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.tas
             if (!autolinkingCmake.exists()) return
 
             def text = autolinkingCmake.text
-            def fixed = text
-            def pattern = /([A-Za-z]:\/[^\n\"]*\/node_modules\/\.bun\/([^\/\n\"]+)\/node_modules\/[^\/\n\"]+\/android\/build\/generated\/source\/codegen\/jni\/)/
-            def matcher = (text =~ pattern)
-
-            matcher.each { fullPath, _, bunEntry ->
-                if (bunEntry.startsWith("react-native-nitro-modules@")) {
-                    return
-                }
-
-                def shortPath = "C:/.b/cg/${bunEntry}/jni/"
-                fixed = fixed.replace(fullPath, shortPath)
-
-                def targetDir = new File(fullPath.replace('/' as char, File.separatorChar))
-                def shortDir = new File(shortPath.replace('/' as char, File.separatorChar))
-                if (!shortDir.exists() && targetDir.exists()) {
-                    shortDir.parentFile.mkdirs()
-                    try {
-                        project.exec {
-                            commandLine("cmd", "/c", "mklink", "/J", shortDir.absolutePath, targetDir.absolutePath)
-                            ignoreExitValue = true
-                        }
-                    } catch (Exception ignored) {
-                        // Best-effort: if junction creation fails, keep original path.
-                    }
-                }
-            }
-
-            // Keep nitro on its dedicated short build directory when available.
+            // Replace the long bun cache prefix with B:/ (subst drive)
+            // Pattern: any drive letter path ending in /node_modules/.bun/
+            def bunPrefix = ~/[A-Za-z]:\/[^\n\"]*\/node_modules\/\.bun\//
+            def fixed = text.replaceAll(bunPrefix, "B:/")
+            // Also keep nitro on its dedicated short build directory.
             fixed = fixed.replaceAll(
                 /(?m)[A-Za-z]:\/[^\n\"]*react-native-nitro-modules[^\n\"]*\/android\/build\/generated\/source\/codegen\/jni\//,
                 "C:/.b/nitro/generated/source/codegen/jni/"

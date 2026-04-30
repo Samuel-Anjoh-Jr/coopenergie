@@ -40,6 +40,7 @@ const gradleProblemsReportFile = path.join(
   "problems-report.html",
 );
 const appCxxCacheDir = path.join(androidDir, "app", ".cxx");
+const minimumFreeDiskGb = 4;
 
 // Prefer JDK 17 for Android/Gradle toolchain compatibility.
 const jdk17Path = "C:\\Program Files\\Java\\jdk-17";
@@ -278,29 +279,31 @@ if (fs.existsSync(bunCacheDir)) {
           isExpoModulesCore &&
           full.includes(`${path.sep}android${path.sep}CMakeLists.txt`)
         ) {
+          // Restore original expo-modules-core globbing. Relative globs here can
+          // resolve against the wrong CMake root and produce empty source lists.
           patched = patched.replace(
-            /file\(GLOB sources_android "\$\{SRC_DIR\}\/main\/cpp\/\*\.cpp"\)/,
-            'file(GLOB sources_android RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/*.cpp")',
+            /file\(GLOB sources_android RELATIVE \$\{CMAKE_SOURCE_DIR\} "src\/main\/cpp\/\*\.cpp"\)/g,
+            'file(GLOB sources_android "${SRC_DIR}/main/cpp/*.cpp")',
           );
           patched = patched.replace(
-            /file\(GLOB sources_android_types "\$\{SRC_DIR\}\/main\/cpp\/types\/\*\.cpp"\)/,
-            'file(GLOB sources_android_types RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/types/*.cpp")',
+            /file\(GLOB sources_android_types RELATIVE \$\{CMAKE_SOURCE_DIR\} "src\/main\/cpp\/types\/\*\.cpp"\)/g,
+            'file(GLOB sources_android_types "${SRC_DIR}/main/cpp/types/*.cpp")',
           );
           patched = patched.replace(
-            /file\(GLOB sources_android_javaclasses "\$\{SRC_DIR\}\/main\/cpp\/javaclasses\/\*\.cpp"\)/,
-            'file(GLOB sources_android_javaclasses RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/javaclasses/*.cpp")',
+            /file\(GLOB sources_android_javaclasses RELATIVE \$\{CMAKE_SOURCE_DIR\} "src\/main\/cpp\/javaclasses\/\*\.cpp"\)/g,
+            'file(GLOB sources_android_javaclasses "${SRC_DIR}/main/cpp/javaclasses/*.cpp")',
           );
           patched = patched.replace(
-            /file\(GLOB sources_android_javaclasses "\$\{SRC_DIR\}\/main\/cpp\/decorators\/\*\.cpp"\)/,
-            'file(GLOB sources_android_decorators RELATIVE ${CMAKE_SOURCE_DIR} "src/main/cpp/decorators/*.cpp")',
+            /file\(GLOB sources_android_decorators RELATIVE \$\{CMAKE_SOURCE_DIR\} "src\/main\/cpp\/decorators\/\*\.cpp"\)/g,
+            'file(GLOB sources_android_decorators "${SRC_DIR}/main/cpp/decorators/*.cpp")',
           );
           patched = patched.replace(
-            /file\(GLOB common_sources "\$\{COMMON_DIR\}\/\*\.cpp"\)/,
-            'file(GLOB common_sources RELATIVE ${CMAKE_SOURCE_DIR} "../common/cpp/*.cpp")',
+            /file\(GLOB common_sources RELATIVE \$\{CMAKE_SOURCE_DIR\} "\.\.\/common\/cpp\/\*\.cpp"\)/g,
+            'file(GLOB common_sources "${COMMON_DIR}/*.cpp")',
           );
           patched = patched.replace(
-            /\$\{sources_android_javaclasses\}\r?\n\)/,
-            "${sources_android_javaclasses}\n        ${sources_android_decorators}\n)",
+            /\s*\$\{sources_android_decorators\}\r?\n/g,
+            "",
           );
         }
 
@@ -310,13 +313,15 @@ if (fs.existsSync(bunCacheDir)) {
             `${path.sep}android${path.sep}src${path.sep}fabric${path.sep}CMakeLists.txt`,
           )
         ) {
+          // Restore original fabric globs; RELATIVE with CMAKE_SOURCE_DIR breaks
+          // source discovery in this nested CMake project.
           patched = patched.replace(
-            /file\(GLOB SOURCES "\*\.cpp"\)/,
-            'file(GLOB SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "src/fabric/*.cpp")',
+            /file\(GLOB SOURCES RELATIVE \$\{CMAKE_SOURCE_DIR\} "src\/fabric\/\*\.cpp"\)/g,
+            'file(GLOB SOURCES "*.cpp")',
           );
           patched = patched.replace(
-            /file\(GLOB COMMON_FABRIC_SOURCES "\$\{COMMON_FABRIC_DIR\}\/\*\.cpp"\)/,
-            'file(GLOB COMMON_FABRIC_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "../common/cpp/fabric/*.cpp")',
+            /file\(GLOB COMMON_FABRIC_SOURCES RELATIVE \$\{CMAKE_SOURCE_DIR\} "\.\.\/common\/cpp\/fabric\/\*\.cpp"\)/g,
+            'file(GLOB COMMON_FABRIC_SOURCES "${COMMON_FABRIC_DIR}/*.cpp")',
           );
         }
 
@@ -387,6 +392,9 @@ if (fs.existsSync(bunCacheDir)) {
 }
 
 // Recover from Gradle journal index corruption that can occur on interrupted builds.
+if (process.platform === "win32") {
+  stopWindowsGradleCacheLockers();
+}
 if (gradleJournalCacheFile && fs.existsSync(gradleJournalCacheFile)) {
   removePathWithVerification(gradleJournalCacheFile, {
     label: "corrupted Gradle journal cache index",
@@ -417,6 +425,18 @@ if (appCxxCacheDir && fs.existsSync(appCxxCacheDir)) {
   });
 }
 
+const freeDiskGbAfterCleanup = getFreeDiskGb();
+if (
+  Number.isFinite(freeDiskGbAfterCleanup) &&
+  freeDiskGbAfterCleanup < minimumFreeDiskGb
+) {
+  throw new Error(
+    `[mobile] Not enough free disk on C: ${freeDiskGbAfterCleanup.toFixed(2)} GB available; ` +
+      `${minimumFreeDiskGb} GB required for Android Gradle build. ` +
+      `Free up space and rerun bun run mobile:android:install.`,
+  );
+}
+
 // Update this to match the applicationId in android/app/build.gradle
 // after running expo prebuild for the first time.
 const PACKAGE_NAME = "com.coopenergie.app";
@@ -442,6 +462,25 @@ const apkPath = path.join(
 function run(cmd, opts = {}) {
   console.log(`\n> ${cmd}\n`);
   execSync(cmd, { stdio: "inherit", ...opts });
+}
+
+function getFreeDiskGb() {
+  if (process.platform !== "win32") return Number.POSITIVE_INFINITY;
+  try {
+    const out = execSync(
+      'powershell -NoProfile -Command "(Get-PSDrive -Name C).Free"',
+      { stdio: ["ignore", "pipe", "ignore"] },
+    )
+      .toString()
+      .trim();
+    const freeBytes = Number(out);
+    if (Number.isFinite(freeBytes)) {
+      return freeBytes / (1024 * 1024 * 1024);
+    }
+  } catch {
+    // best-effort
+  }
+  return Number.NaN;
 }
 
 function removePathWithVerification(targetPath, options = {}) {
@@ -845,16 +884,26 @@ if (!isRelease) {
   gradleArgs.push("-PreactNativeArchitectures=arm64-v8a");
 }
 
-// Do NOT use SUBST drive for Gradle. The React Native Gradle plugin uses
-// Java's Path.relativize() across the codegen CLI path and each module's
-// android directory. When those are on different drive letters (X: vs C:)
-// it throws "different roots". Instead, keep all paths on C: and rely on
-// the buildStagingDirectory patches in individual native modules to keep
-// CMake staging paths short enough for Windows MAX_PATH.
+// Use SUBST drive B: -> node_modules/.bun so Ninja sees short paths.
+// The SUBST drive is only used inside the autolinking cmake file (Ninja sources)
+// and not for Gradle's own file system which stays on C:.
 const gradleCwd = androidDir;
+const bunCachePathForSubst = path.join(repoRoot, "node_modules", ".bun");
+if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
+  try {
+    // Remove any existing B: subst first (ignore errors if not mapped).
+    execSync("cmd /c subst B: /D", { stdio: "ignore" });
+  } catch { /* ignore */ }
+  try {
+    execSync(`cmd /c subst B: "${bunCachePathForSubst}"`, { stdio: "inherit" });
+    console.log(`[mobile] SUBST B: => ${bunCachePathForSubst}`);
+  } catch (e) {
+    console.warn(`[mobile] Warning: could not set SUBST B: — ${e.message}`);
+  }
+}
 
-// Restore any autolinking cmake that a prior SUBST run may have rewritten
-// to a drive letter path, so all paths are consistently on C: for this run.
+// Restore any autolinking cmake that a prior run may have rewritten,
+// then apply the Nitro short path rewrite.
 restoreAutolinkingRealPaths(repoRoot);
 rewriteNitroAutolinkingPathToShortBuildDir();
 
@@ -870,6 +919,11 @@ const runGradleWithRetry = (cwd) => {
     console.log(
       "[mobile] Gradle assemble failed. Clearing transforms caches and retrying once…",
     );
+    // Re-apply SUBST B: in case it was lost between attempts.
+    if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
+      try { execSync("cmd /c subst B: /D", { stdio: "ignore" }); } catch { /* ignore */ }
+      try { execSync(`cmd /c subst B: "${bunCachePathForSubst}"`, { stdio: "ignore" }); } catch { /* ignore */ }
+    }
     rewriteNitroAutolinkingPathToShortBuildDir();
     // Kill stale java processes before aggressive cache clear to release locks.
     if (process.platform === "win32") {
