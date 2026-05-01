@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery } from "@apollo/client";
 import { Copy, Mail, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
@@ -26,7 +26,12 @@ import {
   GET_COOPERATIVE_DETAIL,
   GET_MY_COOPERATIVES,
 } from "@/lib/graphql/queries/cooperative";
-import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import {
+  createTrailingThrottle,
+  DASHBOARD_INVITATIONS_REFRESH_INTERVAL_MS,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
+} from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
 
@@ -75,6 +80,9 @@ export default function InvitationsPage() {
   const [latestJoinUrl, setLatestJoinUrl] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
+  const [isRefreshingPending, setIsRefreshingPending] = useState(false);
+  const hasLoadedPendingRef = useRef(false);
+  const pendingRequestInFlightRef = useRef(false);
 
   const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
@@ -99,26 +107,59 @@ export default function InvitationsPage() {
   );
   const members: Member[] = cooperativeDetailData?.cooperative?.members ?? [];
 
-  const loadPendingInvitations = useCallback(async () => {
-    if (!cooperativeId || userRole !== "COOP_ADMIN") {
-      setItems([]);
-      return;
-    }
+  const loadPendingInvitations = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!cooperativeId || userRole !== "COOP_ADMIN") {
+        setItems([]);
+        hasLoadedPendingRef.current = false;
+        return;
+      }
 
-    setIsLoadingPending(true);
-    try {
-      const data = await restClient.get<PendingInvitationsResponse>(
-        `/invitations/cooperative/${cooperativeId}`,
-      );
-      setItems(data || []);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.unknownError"),
-      );
-    } finally {
-      setIsLoadingPending(false);
-    }
-  }, [cooperativeId, t, userRole]);
+      if (pendingRequestInFlightRef.current) {
+        return;
+      }
+
+      pendingRequestInFlightRef.current = true;
+      const shouldShowBlockingLoader =
+        !options?.silent && !hasLoadedPendingRef.current;
+
+      if (shouldShowBlockingLoader) {
+        setIsLoadingPending(true);
+      }
+      try {
+        const data = await restClient.get<PendingInvitationsResponse>(
+          `/invitations/cooperative/${cooperativeId}`,
+        );
+        setItems(data || []);
+        hasLoadedPendingRef.current = true;
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : t("errors.unknownError"),
+        );
+      } finally {
+        pendingRequestInFlightRef.current = false;
+        if (shouldShowBlockingLoader) {
+          setIsLoadingPending(false);
+        }
+      }
+    },
+    [cooperativeId, userRole],
+  );
+
+  const throttledInvitationsRefresh = useMemo(
+    () =>
+      createTrailingThrottle(() => {
+        void loadPendingInvitations({ silent: true });
+        void refetchCoopDetail();
+      }, DASHBOARD_REALTIME_REFETCH_THROTTLE_MS),
+    [loadPendingInvitations, refetchCoopDetail],
+  );
+
+  useEffect(() => {
+    return () => {
+      throttledInvitationsRefresh.cancel();
+    };
+  }, [throttledInvitationsRefresh]);
 
   useEffect(() => {
     if (userRole === "COOP_ADMIN" && cooperativeId) {
@@ -132,12 +173,11 @@ export default function InvitationsPage() {
     }
 
     const interval = setInterval(() => {
-      void loadPendingInvitations();
-      void refetchCoopDetail();
-    }, DASHBOARD_REALTIME_POLL_INTERVAL_MS);
+      throttledInvitationsRefresh.trigger();
+    }, DASHBOARD_INVITATIONS_REFRESH_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [cooperativeId, loadPendingInvitations, refetchCoopDetail, userRole]);
+  }, [cooperativeId, throttledInvitationsRefresh, userRole]);
 
   const handleSendEmailInvite = async () => {
     if (!cooperativeId || !email.trim()) {
@@ -159,7 +199,7 @@ export default function InvitationsPage() {
       setEmail("");
       setLatestJoinUrl(response.joinUrl);
       toast.success(t("invitations.invitationSent"));
-      await loadPendingInvitations();
+      await loadPendingInvitations({ silent: true });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("errors.unknownError"),
@@ -187,7 +227,7 @@ export default function InvitationsPage() {
 
       setLatestJoinUrl(response.joinUrl);
       toast.success(t("invitations.linkGenerated"));
-      await loadPendingInvitations();
+      await loadPendingInvitations({ silent: true });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("errors.unknownError"),
@@ -202,11 +242,11 @@ export default function InvitationsPage() {
     try {
       await restClient.delete(`/invitations/${id}`);
       toast.success(t("invitations.invitationRevoked"));
-      await loadPendingInvitations();
+      await loadPendingInvitations({ silent: true });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.unknownError"),
-      );
+      const errorMsg =
+        error instanceof Error ? error.message : t("errors.unknownError");
+      toast.error(errorMsg);
     } finally {
       setRevokingId(null);
     }
@@ -223,9 +263,9 @@ export default function InvitationsPage() {
       toast.success(t("toasts.memberPromoted"));
       await refetchCoopDetail();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.unknownError"),
-      );
+      const errorMsg =
+        error instanceof Error ? error.message : t("errors.unknownError");
+      toast.error(errorMsg);
     } finally {
       setPromotingId(null);
     }
@@ -344,9 +384,19 @@ export default function InvitationsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => void loadPendingInvitations()}
+            onClick={() => {
+              setIsRefreshingPending(true);
+              void loadPendingInvitations({ silent: true }).finally(() => {
+                setIsRefreshingPending(false);
+              });
+            }}
+            disabled={isRefreshingPending}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            {isRefreshingPending ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
             {t("invitations.refresh")}
           </Button>
         </CardHeader>

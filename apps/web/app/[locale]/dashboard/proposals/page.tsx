@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
 import {
@@ -52,7 +52,7 @@ import { SUBSCRIPTION_ON_VOTE } from "@/lib/graphql/subscriptions/cooperative";
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import {
   createTrailingThrottle,
-  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS,
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
@@ -155,9 +155,9 @@ export default function ProposalsPage() {
   const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
   const [votingProposalId, setVotingProposalId] = useState<string | null>(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
+  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
+    GET_MY_COOPERATIVES,
+  );
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
   const cooperativeBalance =
     myCooperativesData?.myCooperatives?.[0]?.confirmedBalanceXAF || 0;
@@ -172,7 +172,6 @@ export default function ProposalsPage() {
   } = useQuery(GET_PROPOSALS, {
     variables: { cooperativeId },
     skip: !cooperativeId,
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const isInitialProposalsLoading =
@@ -191,6 +190,19 @@ export default function ProposalsPage() {
       throttledProposalsRefetch.cancel();
     };
   }, [throttledProposalsRefetch]);
+
+  useEffect(() => {
+    if (!cooperativeId) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refetchMyCooperatives();
+      throttledProposalsRefetch.trigger();
+    }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [cooperativeId, refetchMyCooperatives, throttledProposalsRefetch]);
 
   useSubscription(SUBSCRIPTION_ON_VOTE, {
     variables: { cooperativeId },
@@ -218,6 +230,14 @@ export default function ProposalsPage() {
     [proposals],
   );
 
+  const safeRefetchProposals = useCallback(async () => {
+    try {
+      await refetchProposals();
+    } catch (error) {
+      console.error("Failed to refetch proposals:", error);
+    }
+  }, [refetchProposals]);
+
   const handleVote = async (proposalId: string, choice: boolean) => {
     setVotingProposalId(proposalId);
     try {
@@ -233,11 +253,13 @@ export default function ProposalsPage() {
           : t("toasts.voteRecorded"),
       );
 
-      void refetchProposals();
+      await safeRefetchProposals();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.voteFailed"),
-      );
+      console.error("Vote error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : t("errors.voteFailed");
+      toast.error(errorMessage);
+      await safeRefetchProposals();
     } finally {
       setVotingProposalId(null);
     }
@@ -273,7 +295,7 @@ export default function ProposalsPage() {
 
       setFormData({ title: "", description: "" });
       setIsOpen(false);
-      void refetchProposals();
+      await safeRefetchProposals();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -342,7 +364,7 @@ export default function ProposalsPage() {
         recipientName: session?.user?.name || "",
       });
       setIsWithdrawalOpen(false);
-      void refetchProposals();
+      await safeRefetchProposals();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -415,7 +437,6 @@ export default function ProposalsPage() {
                 t={t}
                 onVote={handleVote}
                 votingProposalId={votingProposalId}
-                refetchProposals={refetchProposals}
               />
             ))}
           </div>
@@ -753,19 +774,31 @@ function ProposalCard({
   t,
   onVote,
   votingProposalId,
-  refetchProposals,
 }: {
   proposal: Proposal;
   t: ReturnType<typeof useTranslations>;
   onVote: (proposalId: string, choice: boolean) => Promise<void>;
   votingProposalId: string | null;
-  refetchProposals: () => void;
 }) {
-  const { data: eligibilityData } = useQuery(GET_WITHDRAWAL_ELIGIBILITY, {
+  const { data: eligibilityData, refetch: refetchEligibility } = useQuery(
+    GET_WITHDRAWAL_ELIGIBILITY,
+    {
     variables: { proposalId: proposal.id },
     skip: proposal.type !== "WITHDRAWAL",
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
+    },
+  );
+
+  useEffect(() => {
+    if (proposal.type !== "WITHDRAWAL") {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refetchEligibility();
+    }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [proposal.type, refetchEligibility]);
 
   const eligibility: WithdrawalEligibility | undefined =
     eligibilityData?.withdrawalEligibility;
@@ -935,7 +968,16 @@ function ProposalCard({
           <Tooltip open={cannotVoteWithdrawal ? undefined : false}>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => void onVote(proposal.id, true)}
+                onClick={() => {
+                  void onVote(proposal.id, true).catch((error) => {
+                    console.error("Vote action failed:", error);
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : t("errors.voteFailed"),
+                    );
+                  });
+                }}
                 disabled={
                   disableVoting ||
                   votingProposalId === proposal.id ||
@@ -964,7 +1006,16 @@ function ProposalCard({
           <Tooltip open={cannotVoteWithdrawal ? undefined : false}>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => void onVote(proposal.id, false)}
+                onClick={() => {
+                  void onVote(proposal.id, false).catch((error) => {
+                    console.error("Vote action failed:", error);
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : t("errors.voteFailed"),
+                    );
+                  });
+                }}
                 disabled={
                   disableVoting ||
                   votingProposalId === proposal.id ||

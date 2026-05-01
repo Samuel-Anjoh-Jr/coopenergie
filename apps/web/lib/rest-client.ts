@@ -6,6 +6,8 @@ type RequestOptions = {
   body?: unknown;
 };
 
+const REST_REQUEST_TIMEOUT_MS = 25000;
+
 async function getToken() {
   if (typeof window === "undefined") {
     const { auth } = await import("./auth");
@@ -28,11 +30,31 @@ async function request<T>({ method, path, body }: RequestOptions): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}/api/v1${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, REST_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/api/v1${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timeout. Please try again.");
+    }
+
+    throw error;
+  }
+
+  clearTimeout(timeoutId);
 
   const data = (await response.json().catch(() => ({}))) as {
     message?: string;

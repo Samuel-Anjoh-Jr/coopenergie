@@ -76,6 +76,7 @@ export default function ReportPage() {
       const token = session?.user?.token;
       if (!token) {
         toast.error(t("errors.notAuthenticated"));
+        setIsDownloading(false);
         return;
       }
 
@@ -89,7 +90,10 @@ export default function ReportPage() {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+        toast.error(t("errors.downloadFailed"));
+        console.error("Download failed:", errorMsg);
+        return;
       }
 
       const blob = await response.blob();
@@ -167,7 +171,7 @@ export default function ReportPage() {
           <Button
             onClick={handleDownloadReport}
             disabled={isDownloading}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg btn-glow w-full sm:w-fit print:hidden group min-h-[44px]"
+            className="bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg btn-glow w-full sm:w-fit print:hidden group min-h-11"
           >
             {isDownloading ? (
               <>
@@ -250,7 +254,7 @@ export default function ReportPage() {
               <div className="flex items-center gap-3">
                 <div className="w-full h-3 md:h-4 bg-muted rounded-full overflow-hidden shadow-inner print:h-3">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-500 via-green-500 to-amber-500 transition-all duration-700 shadow-lg"
+                    className="h-full bg-linear-to-r from-emerald-500 via-green-500 to-amber-500 transition-all duration-700 shadow-lg"
                     style={{ width: `${report.completionPercent}%` }}
                   />
                 </div>
@@ -346,7 +350,7 @@ export default function ReportPage() {
       </div>
 
       {/* Transparency Section */}
-      <Card className="border-border bg-gradient-to-br from-primary/10 to-accent/10 print:border-gray-300 print:bg-gray-50">
+      <Card className="border-border bg-linear-to-br from-primary/10 to-accent/10 print:border-gray-300 print:bg-gray-50">
         <CardContent className="pt-6 print:pt-4">
           <div className="text-center space-y-2">
             <p className="text-sm font-medium text-primary uppercase tracking-wide print:text-gray-700">

@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ApolloAppProvider } from "@/lib/apollo/provider";
 import { AuthSessionProvider } from "@/lib/auth/session-provider";
 import { ThemeProvider } from "@/lib/theme-context";
+import { ErrorHandler } from "@/components/error-handler";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -54,6 +55,7 @@ export default function RootLayout({
         <ApolloAppProvider>
           <ThemeProvider>
             <AuthSessionProvider>
+              <ErrorHandler />
               {children}
               <Toaster />
             </AuthSessionProvider>

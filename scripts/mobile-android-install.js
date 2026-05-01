@@ -40,7 +40,20 @@ const gradleProblemsReportFile = path.join(
   "problems-report.html",
 );
 const appCxxCacheDir = path.join(androidDir, "app", ".cxx");
-const minimumFreeDiskGb = 4;
+const buildLogicLockFile = path.join(
+  androidDir,
+  ".gradle",
+  "noVersion",
+  "buildLogic",
+  "buildLogic.lock",
+);
+const minimumFreeDiskGb = Number.parseFloat(
+  process.env.MOBILE_ANDROID_MIN_FREE_DISK_GB || "3",
+);
+const gradleXmxMb = Number.parseInt(
+  process.env.MOBILE_ANDROID_GRADLE_XMX_MB || "1536",
+  10,
+);
 
 // Prefer JDK 17 for Android/Gradle toolchain compatibility.
 const jdk17Path = "C:\\Program Files\\Java\\jdk-17";
@@ -118,10 +131,21 @@ if (fs.existsSync(bunCacheDir)) {
             full.includes("react-native-mmkv");
           if (!isNitroOrMmkv) continue;
           const content = fs.readFileSync(full, "utf8");
-          const patched = content.replace(
-            /def variants = proj\.android\.hasProperty\('applicationVariants'\) \? proj\.android\.applicationVariants : proj\.android\.libraryVariants/g,
-            "def androidExt = proj.extensions.findByName('android')\n    if (androidExt == null || androidExt instanceof String) return\n    def variants = androidExt.hasProperty('applicationVariants') ? androidExt.applicationVariants : (androidExt.hasProperty('libraryVariants') ? androidExt.libraryVariants : null)\n    if (variants == null) return",
+          let patched = content.replace(
+            /proj\.android\.hasProperty\('applicationVariants'\) \? proj\.android\.applicationVariants : proj\.android\.libraryVariants/g,
+            "androidExt.hasProperty('applicationVariants') ? androidExt.applicationVariants : (androidExt.hasProperty('libraryVariants') ? androidExt.libraryVariants : null)",
           );
+          if (
+            patched !== content &&
+            !patched.includes(
+              "def androidExt = proj.extensions.findByName('android')",
+            )
+          ) {
+            patched = patched.replace(
+              /(\n\s*if \(!proj\.plugins\.hasPlugin\('com\.android\.application'\) && !proj\.plugins\.hasPlugin\('com\.android\.library'\)\) \{\n\s*return\n\s*\}\n)/,
+              "$1\n    def androidExt = proj.extensions.findByName('android')\n    if (androidExt == null || androidExt instanceof String) return\n",
+            );
+          }
           if (patched !== content) {
             fs.writeFileSync(full, patched);
             console.log(
@@ -583,6 +607,37 @@ function stopWindowsGradleCacheLockers() {
   }
 }
 
+function clearWindowsBuildLogicLock() {
+  if (process.platform !== "win32") return;
+  const psCommand = [
+    "$targets = Get-CimInstance Win32_Process | Where-Object {",
+    "  $_.Name -eq 'java.exe' -and $_.CommandLine -match 'gradle-wrapper\\.jar' -and $_.CommandLine -match 'apps\\\\mobile\\\\android'",
+    "}",
+    "if ($targets) {",
+    "  $targets | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+    "}",
+  ].join(" ");
+
+  try {
+    execSync(`powershell -NoProfile -Command \"${psCommand}\"`, {
+      stdio: "ignore",
+    });
+  } catch {
+    // Best-effort; we'll still attempt lock file cleanup.
+  }
+
+  try {
+    if (fs.existsSync(buildLogicLockFile)) {
+      fs.rmSync(buildLogicLockFile, { force: true });
+      console.log(
+        `[mobile] Cleared stale build logic lock: ${buildLogicLockFile}`,
+      );
+    }
+  } catch {
+    // Best-effort cleanup.
+  }
+}
+
 function getFreeSubstDrive() {
   for (const letter of ["X", "Y", "Z", "W", "V"]) {
     if (!fs.existsSync(`${letter}:\\`)) return letter;
@@ -830,7 +885,7 @@ if (fs.existsSync(gradlePropsPath)) {
   let props = fs.readFileSync(gradlePropsPath, "utf8");
   props = props.replace(
     /org\.gradle\.jvmargs=.*/,
-    "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8",
+    `org.gradle.jvmargs=-Xmx${gradleXmxMb}m -XX:MaxMetaspaceSize=512m -Dkotlin.daemon.jvm.options=-Xmx512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8`,
   );
   if (!props.includes("org.gradle.internal.http.connectionTimeout")) {
     props +=
@@ -842,6 +897,7 @@ if (fs.existsSync(gradlePropsPath)) {
   props = upsertGradleProp(props, "Nitro_minSdkVersion", "24");
   props = upsertGradleProp(props, "org.gradle.parallel", "false");
   props = upsertGradleProp(props, "org.gradle.workers.max", "1");
+  props = upsertGradleProp(props, "org.gradle.daemon", "false");
   // Remove in-process strategy to let Kotlin use a forked daemon with separate heap
   props = props.replace(/^kotlin\.compiler\.execution\.strategy=.*\n?/m, "");
   if (fs.existsSync(jdk17Path)) {
@@ -893,7 +949,9 @@ if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
   try {
     // Remove any existing B: subst first (ignore errors if not mapped).
     execSync("cmd /c subst B: /D", { stdio: "ignore" });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   try {
     execSync(`cmd /c subst B: "${bunCachePathForSubst}"`, { stdio: "inherit" });
     console.log(`[mobile] SUBST B: => ${bunCachePathForSubst}`);
@@ -909,7 +967,36 @@ rewriteNitroAutolinkingPathToShortBuildDir();
 
 process.env.CMAKE_BUILD_PARALLEL_LEVEL = "1";
 process.env.NINJAFLAGS = "-j1";
+process.env.GRADLE_OPTS = "-Dorg.gradle.daemon=false";
 delete process.env.SUBST_REPO_ROOT;
+
+if (process.platform === "win32") {
+  clearWindowsBuildLogicLock();
+}
+
+// Clean stale Gradle daemon state to ensure fresh start
+const gradleDaemonDir = path.join(
+  process.env.USERPROFILE || "",
+  ".gradle",
+  "daemon",
+);
+if (process.platform === "win32" && fs.existsSync(gradleDaemonDir)) {
+  try {
+    const daemonFiles = fs.readdirSync(gradleDaemonDir);
+    for (const file of daemonFiles) {
+      const daemonPath = path.join(gradleDaemonDir, file);
+      if (fs.lstatSync(daemonPath).isDirectory()) {
+        removePathWithVerification(daemonPath, {
+          recursive: true,
+          label: `Gradle daemon state: ${file}`,
+          tolerateError: () => true, // ignore all errors for daemon state cleanup
+        });
+      }
+    }
+  } catch {
+    // best-effort: ignore failures to clean daemon state
+  }
+}
 
 const gradleCmd = `cmd /c gradlew.bat ${gradleArgs.join(" ")}`;
 const runGradleWithRetry = (cwd) => {
@@ -921,8 +1008,18 @@ const runGradleWithRetry = (cwd) => {
     );
     // Re-apply SUBST B: in case it was lost between attempts.
     if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
-      try { execSync("cmd /c subst B: /D", { stdio: "ignore" }); } catch { /* ignore */ }
-      try { execSync(`cmd /c subst B: "${bunCachePathForSubst}"`, { stdio: "ignore" }); } catch { /* ignore */ }
+      try {
+        execSync("cmd /c subst B: /D", { stdio: "ignore" });
+      } catch {
+        /* ignore */
+      }
+      try {
+        execSync(`cmd /c subst B: "${bunCachePathForSubst}"`, {
+          stdio: "ignore",
+        });
+      } catch {
+        /* ignore */
+      }
     }
     rewriteNitroAutolinkingPathToShortBuildDir();
     // Kill stale java processes before aggressive cache clear to release locks.

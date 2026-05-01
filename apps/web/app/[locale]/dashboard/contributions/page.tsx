@@ -35,7 +35,7 @@ import { SUBSCRIPTION_ON_CONTRIBUTION } from "@/lib/graphql/subscriptions/cooper
 import { detectCameroonMobileMoney } from "@/lib/phone-utils";
 import {
   createTrailingThrottle,
-  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS,
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
@@ -90,9 +90,9 @@ export default function ContributionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
+  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
+    GET_MY_COOPERATIVES,
+  );
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
 
   const {
@@ -102,7 +102,6 @@ export default function ContributionsPage() {
   } = useQuery(GET_CONTRIBUTIONS, {
     variables: { cooperativeId },
     skip: !cooperativeId,
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const isInitialContributionsLoading =
@@ -121,6 +120,23 @@ export default function ContributionsPage() {
       throttledContributionsRefetch.cancel();
     };
   }, [throttledContributionsRefetch]);
+
+  useEffect(() => {
+    if (!cooperativeId) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refetchMyCooperatives();
+      throttledContributionsRefetch.trigger();
+    }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [
+    cooperativeId,
+    refetchMyCooperatives,
+    throttledContributionsRefetch,
+  ]);
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
     variables: { cooperativeId },

@@ -47,7 +47,7 @@ import {
 } from "@/lib/graphql/subscriptions/cooperative";
 import {
   createTrailingThrottle,
-  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS,
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
@@ -159,9 +159,9 @@ export default function LedgerPage() {
     string | null
   >(null);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
+  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
+    GET_MY_COOPERATIVES,
+  );
   const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
   const vaultAddress =
     myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
@@ -181,7 +181,6 @@ export default function LedgerPage() {
       offset: 0,
     },
     skip: !cooperativeId,
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const events: LedgerEvent[] = ledgerData?.ledger ?? [];
@@ -200,6 +199,19 @@ export default function LedgerPage() {
       throttledLedgerRefetch.cancel();
     };
   }, [throttledLedgerRefetch]);
+
+  useEffect(() => {
+    if (!cooperativeId) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refetchMyCooperatives();
+      throttledLedgerRefetch.trigger();
+    }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [cooperativeId, refetchMyCooperatives, throttledLedgerRefetch]);
   const activityIdToHighlight = searchParams.get("activity");
 
   useEffect(() => {

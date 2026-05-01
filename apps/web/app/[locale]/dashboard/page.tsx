@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
-import { Activity, Building2, TrendingUp, Users, Wallet } from "lucide-react";
+import { Activity, Building2, ExternalLink, TrendingUp, Users, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -28,7 +28,7 @@ import {
 } from "@/lib/graphql/subscriptions/cooperative";
 import {
   createTrailingThrottle,
-  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+  DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS,
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
@@ -97,9 +97,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     data: myCooperativesData,
     loading: loadingMyCooperatives,
     refetch: refetchMyCooperatives,
-  } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
+  } = useQuery(GET_MY_COOPERATIVES);
 
   useEffect(() => {
     if (
@@ -117,7 +115,6 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   } = useQuery(GET_COOPERATIVE_DETAIL, {
     variables: { id: activeCooperativeId },
     skip: !activeCooperativeId,
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const { data: reportData, refetch: refetchReport } = useQuery(
@@ -125,7 +122,6 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     {
       variables: { cooperativeId: activeCooperativeId },
       skip: !activeCooperativeId,
-      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     },
   );
 
@@ -144,6 +140,23 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       throttledRealtimeRefresh.cancel();
     };
   }, [throttledRealtimeRefresh]);
+
+  useEffect(() => {
+    if (!activeCooperativeId) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void refetchMyCooperatives();
+      throttledRealtimeRefresh.trigger();
+    }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [
+    activeCooperativeId,
+    refetchMyCooperatives,
+    throttledRealtimeRefresh,
+  ]);
 
   const onRealtimeEvent = () => {
     throttledRealtimeRefresh.trigger();
@@ -550,7 +563,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 {recentActivity.map((activity: ActivityItem) => (
                   <div
                     key={`${activity.id}-${recentSubscriptionTick}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4 cursor-pointer hover:border-primary/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-xl bg-linear-to-r from-background/50 to-background/30 border border-border/50 gap-3 sm:gap-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
                     role="link"
                     tabIndex={0}
                     onClick={() => router.push(activity.href)}
@@ -562,7 +575,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     }}
                   >
                     <div className="flex items-start sm:items-center gap-3 md:gap-4 min-w-0 flex-1">
-                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-linear-to-r from-primary/20 to-secondary/20 flex items-center justify-center shrink-0 group-hover:shadow-md transition-shadow duration-200">
                         <span className="text-base md:text-lg">
                           {activity.icon === "money"
                             ? "💰"
@@ -572,7 +585,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm md:text-base truncate">
+                        <p className="font-semibold text-sm md:text-base truncate group-hover:text-primary transition-colors duration-200">
                           {activity.user}
                         </p>
                         <p className="text-xs md:text-sm text-muted-foreground truncate">
@@ -581,15 +594,18 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right shrink-0 pl-12 sm:pl-0">
-                      {activity.amount && (
-                        <p className="font-semibold text-sm md:text-base text-gradient-green">
-                          {activity.amount}
+                    <div className="text-left sm:text-right shrink-0 pl-12 sm:pl-0 flex items-center gap-2">
+                      <div>
+                        {activity.amount && (
+                          <p className="font-semibold text-sm md:text-base text-gradient-green">
+                            {activity.amount}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {activity.timestamp}
                         </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {activity.timestamp}
-                      </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0" />
                     </div>
                   </div>
                 ))}

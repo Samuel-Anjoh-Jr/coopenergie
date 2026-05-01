@@ -156,28 +156,42 @@ export class VotesService {
         }
 
         if (!proposal.blockNumber || proposal.blockNumber < 1) {
-          throw new BadRequestException(
-            "Proposal is not ready for on-chain voting yet.",
+          this.logger.warn(
+            `Proposal ${proposalId} is not ready for on-chain voting yet (missing blockNumber). Falling back to off-chain tx hash.`,
           );
+
+          updatedVote = await this.prisma.vote.update({
+            where: {
+              id: vote.id,
+            },
+            data: {
+              txHash: this.generateFakeTxHash(
+                proposal.cooperativeId,
+                userId,
+                proposalId,
+                choice,
+              ),
+            },
+          });
+        } else {
+          const relayResult = await this.relayerService.relayVote(
+            cooperative.vaultAddress,
+            user.celoAddress,
+            user.celoKeyEncrypted,
+            proposal.blockNumber,
+            choice,
+          );
+
+          updatedVote = await this.prisma.vote.update({
+            where: {
+              id: vote.id,
+            },
+            data: {
+              txHash: relayResult.txHash,
+              blockNumber: Number(relayResult.blockNumber),
+            },
+          });
         }
-
-        const relayResult = await this.relayerService.relayVote(
-          cooperative.vaultAddress,
-          user.celoAddress,
-          user.celoKeyEncrypted,
-          proposal.blockNumber,
-          choice,
-        );
-
-        updatedVote = await this.prisma.vote.update({
-          where: {
-            id: vote.id,
-          },
-          data: {
-            txHash: relayResult.txHash,
-            blockNumber: Number(relayResult.blockNumber),
-          },
-        });
       } else if (blockchainEnabled && !vaultReady) {
         this.logger.warn(
           `Cooperative ${proposal.cooperativeId} has no vault address yet`,
