@@ -38,7 +38,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CELOSCAN_BASE, celoScanTx, withCeloScanLogsTab } from "@/lib/config";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_LEDGER } from "@/lib/graphql/queries/ledger";
 import {
   SUBSCRIPTION_ON_CONTRIBUTION,
@@ -51,6 +50,7 @@ import {
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type LedgerEvent = {
   id: string;
@@ -159,15 +159,13 @@ export default function LedgerPage() {
     string | null
   >(null);
 
-  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const vaultAddress =
-    myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
-
-  const filterType =
-    activeFilter === "all" ? undefined : (activeFilter as string);
+  const {
+    activeCoopId: cooperativeId,
+    selectedCoop,
+    refetchMyCooperatives,
+    isResolvingSelection,
+  } = useSelectedCooperative();
+  const vaultAddress = selectedCoop?.vaultAddress || "";
 
   const {
     data: ledgerData,
@@ -176,7 +174,6 @@ export default function LedgerPage() {
   } = useQuery(GET_LEDGER, {
     variables: {
       cooperativeId,
-      type: filterType,
       limit: 50,
       offset: 0,
     },
@@ -184,7 +181,15 @@ export default function LedgerPage() {
   });
 
   const events: LedgerEvent[] = ledgerData?.ledger ?? [];
-  const isInitialLedgerLoading = loadingLedger && !ledgerData?.ledger;
+  const filteredEvents = useMemo(
+    () =>
+      activeFilter === "all"
+        ? events
+        : events.filter((event) => event.type.toUpperCase() === activeFilter),
+    [activeFilter, events],
+  );
+  const isInitialLedgerLoading =
+    isResolvingSelection || (loadingLedger && !ledgerData?.ledger);
 
   const throttledLedgerRefetch = useMemo(
     () =>
@@ -264,7 +269,7 @@ export default function LedgerPage() {
 
   const groupedByBlock = useMemo(() => {
     const blockMap = new Map<number, LedgerEvent[]>();
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const existing = blockMap.get(event.blockNumber) || [];
       blockMap.set(event.blockNumber, [...existing, event]);
     });
@@ -276,10 +281,29 @@ export default function LedgerPage() {
           (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
         ),
       }))
-      .sort((a, b) => b.blockNumber - a.blockNumber);
+      .sort(
+        (a, b) =>
+          +new Date(b.transactions[0]?.createdAt ?? 0) -
+          +new Date(a.transactions[0]?.createdAt ?? 0),
+      );
+  }, [filteredEvents]);
+
+  const totalGroupedByBlock = useMemo(() => {
+    const blockMap = new Map<number, LedgerEvent[]>();
+    events.forEach((event) => {
+      const existing = blockMap.get(event.blockNumber) || [];
+      blockMap.set(event.blockNumber, [...existing, event]);
+    });
+
+    return Array.from(blockMap.entries()).map(
+      ([blockNumber, transactions]) => ({
+        blockNumber,
+        transactions,
+      }),
+    );
   }, [events]);
 
-  const uniqueBlockCount = groupedByBlock.length;
+  const uniqueBlockCount = totalGroupedByBlock.length;
 
   const copyToClipboard = async (hash: string) => {
     try {
@@ -600,7 +624,7 @@ export default function LedgerPage() {
               </div>
             </CardContent>
           </Card>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <Card className="border-border bg-card">
             <CardContent className="flex flex-col items-center justify-center h-64 gap-4">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">

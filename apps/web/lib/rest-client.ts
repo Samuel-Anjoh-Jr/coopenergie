@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/config";
+import { getCachedClientToken } from "@/lib/auth/client-session";
 
 type RequestOptions = {
   method: "GET" | "POST" | "PATCH" | "DELETE";
@@ -15,9 +16,7 @@ async function getToken() {
     return session?.user?.token;
   }
 
-  const { getSession } = await import("next-auth/react");
-  const session = await getSession();
-  return session?.user?.token;
+  return getCachedClientToken();
 }
 
 async function request<T>({ method, path, body }: RequestOptions): Promise<T> {

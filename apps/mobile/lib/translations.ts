@@ -1,17 +1,29 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { api } from "@/lib/api";
+import { storage, tokenStorage } from "@/lib/storage";
 
 const translations = {
   en: {
     auth: {
+      loginTitle: "Login",
       loginSubtitle: "Sign in to your cooperative.",
       registerTitle: "Register",
+      vendorRegisterTitle: "Vendor registration",
+      invitationTitle: "Invitation",
       registerSubtitle: "Create your CoopEnergie account.",
       processingInvitation: "Processing your invitation...",
+      checkingBackend: "Checking backend connectivity...",
+      backendUnreachableTitle: "Backend unreachable",
+      backendUnreachableMessage:
+        "Cannot reach the backend right now. Check that your API is running and your EXPO_PUBLIC_API_URL is reachable from this device.",
       emailPlaceholder: "name@example.com",
       passwordPlaceholder: "Enter your password",
       namePlaceholder: "Your name",
       createAccount: "Create an account",
       backToLogin: "Back to login",
+      vendorSignupCta: "Register as a solar vendor",
+      vendorSignupPrompt: "Are you a solar panel vendor? Register here",
     },
     common: {
       email: "Email",
@@ -23,11 +35,15 @@ const translations = {
       copy: "Copy",
       close: "Close",
       cancel: "Cancel",
+      retry: "Retry",
+      refresh: "Refresh",
       submit: "Submit",
+      language: "Language",
       cooperative: "Cooperative",
       members: "Members",
       recentActivity: "Recent Activity",
       walletAddress: "Wallet Address",
+      logout: "Logout",
     },
     tabs: {
       dashboard: "Dashboard",
@@ -152,18 +168,122 @@ const translations = {
       downloadCsv: "Download CSV",
       csvTitle: "CoopEnergie CSV report",
     },
+    adminPayments: {
+      title: "Payments and monetisation",
+      subtitle: "Track platform revenue and update fee settings.",
+      loadFailed: "Failed to load payments data.",
+      saveFailed: "Failed to save monetisation settings.",
+      saved: "Monetisation settings saved.",
+      withdrawalFeeRange: "Withdrawal fee must stay between 0 and 50%.",
+      vendorFeeRange: "Vendor fees must be positive values.",
+      overview: {
+        totalRevenue: "Total revenue",
+        withdrawalFees: "Withdrawal fees",
+        vendorPayments: "Vendor payments",
+        activeSubscriptions: "Active subscriptions",
+      },
+      withdrawals: {
+        title: "Withdrawal fees",
+        empty: "No withdrawal fee records yet.",
+      },
+      vendors: {
+        title: "Vendor payments",
+        empty: "No vendor payment records yet.",
+      },
+      editor: {
+        title: "Monetisation editor",
+        withdrawalFeePercent: "Withdrawal fee percent",
+        vendorPaymentModel: "Vendor payment model",
+        vendorOneTimeFee: "One-time fee (XAF)",
+        vendorMonthlyFee: "Monthly fee (XAF)",
+        vendorYearlyFee: "Yearly fee (XAF)",
+      },
+      model: {
+        oneTime: "One-time",
+        subscription: "Subscription",
+      },
+      pagination: {
+        previous: "Previous",
+        next: "Next",
+        page: "Page",
+      },
+      status: {
+        disbursed: "Disbursed",
+        pending: "Pending",
+        failed: "Failed",
+        active: "Active",
+        cancelled: "Cancelled",
+        expired: "Expired",
+      },
+      cycle: {
+        monthly: "Monthly",
+        yearly: "Yearly",
+      },
+      destination: {
+        mtnMomo: "MTN MoMo",
+        orangeMoney: "Orange Money",
+        bankTransfer: "Bank transfer",
+      },
+    },
+    vendorSignup: {
+      title: "Vendor registration",
+      subtitle: "Create your solar vendor account.",
+      fullName: "Full name",
+      email: "Email",
+      password: "Password",
+      businessName: "Business name",
+      city: "City",
+      whatsapp: "WhatsApp number",
+      description: "Business description",
+      acceptTerms: "I accept the vendor terms and conditions",
+      submit: "Create vendor account",
+      switchToCoopSignup: "Register as cooperative member instead",
+      termsTitle: "Terms required",
+      termsRequiredMessage: "You must accept terms before continuing.",
+      accountCreatedTitle: "Account created",
+      completePaymentMessage:
+        "Complete your vendor payment to activate your account.",
+      registrationFailedTitle: "Registration failed",
+      unknownError: "An unexpected error occurred.",
+      sessionTitle: "Session expired",
+      reconnectMessage: "Please sign in again before making payment.",
+      paymentTitle: "Payment required",
+      paymentPhoneRequired: "Enter a payment phone number.",
+      paymentFailedTitle: "Payment failed",
+      paymentStartedTitle: "Payment started",
+      paymentStartedMessage:
+        "Payment request sent. We are checking your activation status.",
+      paymentPendingTitle: "Activation pending",
+      paymentPendingMessage:
+        "Your payment is still processing. Please try again in a moment.",
+      paymentRequired: "Vendor payment required",
+      amount: "Amount:",
+      paymentPhone: "Payment phone number",
+      later: "Later",
+      pay: "Pay now",
+    },
   },
   fr: {
     auth: {
+      loginTitle: "Connexion",
       loginSubtitle: "Connectez-vous a votre cooperative.",
       registerTitle: "Inscription",
+      vendorRegisterTitle: "Inscription fournisseur",
+      invitationTitle: "Invitation",
       registerSubtitle: "Creez votre compte CoopEnergie.",
       processingInvitation: "Traitement de votre invitation...",
+      checkingBackend: "Verification de la connectivite du backend...",
+      backendUnreachableTitle: "Backend inaccessible",
+      backendUnreachableMessage:
+        "Impossible de joindre le backend. Verifiez que l'API tourne et que EXPO_PUBLIC_API_URL est accessible depuis cet appareil.",
       emailPlaceholder: "vous@exemple.com",
       passwordPlaceholder: "********",
       namePlaceholder: "Votre nom",
       createAccount: "Creer un compte",
       backToLogin: "Retour a la connexion",
+      vendorSignupCta: "Inscription fournisseur solaire",
+      vendorSignupPrompt:
+        "Vous etes fournisseur de panneaux solaires ? Inscrivez-vous ici",
     },
     common: {
       email: "Email",
@@ -175,11 +295,15 @@ const translations = {
       copy: "Copier",
       close: "Fermer",
       cancel: "Annuler",
+      retry: "Reessayer",
+      refresh: "Actualiser",
       submit: "Valider",
+      language: "Langue",
       cooperative: "Cooperative",
       members: "Membres",
       recentActivity: "Activite recente",
       walletAddress: "Adresse du wallet",
+      logout: "Deconnexion",
     },
     tabs: {
       dashboard: "Tableau de bord",
@@ -307,15 +431,169 @@ const translations = {
       downloadCsv: "Telecharger CSV",
       csvTitle: "Rapport CSV CoopEnergie",
     },
+    adminPayments: {
+      title: "Paiements et monetisation",
+      subtitle:
+        "Suivez les revenus de la plateforme et mettez a jour les frais.",
+      loadFailed: "Chargement des paiements impossible.",
+      saveFailed: "Enregistrement des parametres impossible.",
+      saved: "Parametres de monetisation enregistres.",
+      withdrawalFeeRange: "Les frais de retrait doivent etre entre 0 et 50%.",
+      vendorFeeRange: "Les frais fournisseur doivent etre positifs.",
+      overview: {
+        totalRevenue: "Revenus totaux",
+        withdrawalFees: "Frais de retrait",
+        vendorPayments: "Paiements fournisseurs",
+        activeSubscriptions: "Abonnements actifs",
+      },
+      withdrawals: {
+        title: "Frais de retrait",
+        empty: "Aucun frais de retrait pour le moment.",
+      },
+      vendors: {
+        title: "Paiements fournisseurs",
+        empty: "Aucun paiement fournisseur pour le moment.",
+      },
+      editor: {
+        title: "Editeur de monetisation",
+        withdrawalFeePercent: "Pourcentage des frais de retrait",
+        vendorPaymentModel: "Modele de paiement fournisseur",
+        vendorOneTimeFee: "Frais unique (XAF)",
+        vendorMonthlyFee: "Frais mensuel (XAF)",
+        vendorYearlyFee: "Frais annuel (XAF)",
+      },
+      model: {
+        oneTime: "Unique",
+        subscription: "Abonnement",
+      },
+      pagination: {
+        previous: "Precedent",
+        next: "Suivant",
+        page: "Page",
+      },
+      status: {
+        disbursed: "Decaisse",
+        pending: "En attente",
+        failed: "Echoue",
+        active: "Actif",
+        cancelled: "Annule",
+        expired: "Expire",
+      },
+      cycle: {
+        monthly: "Mensuel",
+        yearly: "Annuel",
+      },
+      destination: {
+        mtnMomo: "MTN MoMo",
+        orangeMoney: "Orange Money",
+        bankTransfer: "Virement bancaire",
+      },
+    },
+    vendorSignup: {
+      title: "Inscription fournisseur",
+      subtitle: "Creez votre compte fournisseur solaire.",
+      fullName: "Nom complet",
+      email: "Email",
+      password: "Mot de passe",
+      businessName: "Nom de l'entreprise",
+      city: "Ville",
+      whatsapp: "Numero WhatsApp",
+      description: "Description de l'activite",
+      acceptTerms: "J'accepte les conditions fournisseur",
+      submit: "Creer le compte fournisseur",
+      switchToCoopSignup: "S'inscrire comme membre de cooperative",
+      termsTitle: "Conditions requises",
+      termsRequiredMessage: "Vous devez accepter les conditions pour continuer.",
+      accountCreatedTitle: "Compte cree",
+      completePaymentMessage:
+        "Finalisez le paiement fournisseur pour activer votre compte.",
+      registrationFailedTitle: "Inscription impossible",
+      unknownError: "Une erreur inattendue est survenue.",
+      sessionTitle: "Session expiree",
+      reconnectMessage: "Reconnectez-vous avant d'effectuer le paiement.",
+      paymentTitle: "Paiement requis",
+      paymentPhoneRequired: "Renseignez un numero de paiement.",
+      paymentFailedTitle: "Paiement echoue",
+      paymentStartedTitle: "Paiement demarre",
+      paymentStartedMessage:
+        "La demande de paiement a ete envoyee. Verification de l'activation en cours.",
+      paymentPendingTitle: "Activation en attente",
+      paymentPendingMessage:
+        "Le paiement est toujours en cours. Reessayez dans un instant.",
+      paymentRequired: "Paiement fournisseur requis",
+      amount: "Montant :",
+      paymentPhone: "Numero de paiement",
+      later: "Plus tard",
+      pay: "Payer",
+    },
   },
 } as const;
 
 export type MobileLocale = keyof typeof translations;
 export type TranslationKey = string;
 
+const MOBILE_LOCALE_STORAGE_KEY = "mobile_locale";
+let profileLocaleSyncPromise: Promise<MobileLocale | null> | null = null;
+const localeListeners = new Set<(locale: MobileLocale) => void>();
+let globalLocale: MobileLocale | null = null;
+
+function normalizeLocale(value?: string | null): MobileLocale {
+  return value?.toLowerCase().startsWith("en") ? "en" : "fr";
+}
+
 function resolveLocale(): MobileLocale {
-  const locale = Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase();
-  return locale.startsWith("fr") ? "fr" : "en";
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+  return normalizeLocale(locale);
+}
+
+function resolveStoredLocale(): MobileLocale | null {
+  const stored = storage.getString(MOBILE_LOCALE_STORAGE_KEY);
+
+  if (!stored) {
+    return null;
+  }
+
+  return normalizeLocale(stored);
+}
+
+function resolveGlobalLocale() {
+  if (globalLocale) {
+    return globalLocale;
+  }
+
+  globalLocale = resolveStoredLocale() ?? resolveLocale();
+  return globalLocale;
+}
+
+function broadcastLocale(nextLocale: MobileLocale) {
+  globalLocale = nextLocale;
+  for (const listener of localeListeners) {
+    listener(nextLocale);
+  }
+}
+
+function syncProfileLocaleOnce(): Promise<MobileLocale | null> {
+  if (profileLocaleSyncPromise) {
+    return profileLocaleSyncPromise;
+  }
+
+  profileLocaleSyncPromise = api
+    .get<{ preferredLocale?: string }>("/users/me")
+    .then((profile) => {
+      if (!profile.preferredLocale) {
+        return null;
+      }
+
+      const nextLocale = normalizeLocale(profile.preferredLocale);
+      storage.set(MOBILE_LOCALE_STORAGE_KEY, nextLocale);
+      return nextLocale;
+    })
+    .catch(() => null)
+    .finally(() => {
+      profileLocaleSyncPromise = null;
+    });
+
+  return profileLocaleSyncPromise;
 }
 
 export function translate(locale: MobileLocale, key: TranslationKey): string {
@@ -326,16 +604,97 @@ export function translate(locale: MobileLocale, key: TranslationKey): string {
     value = (value as Record<string, unknown> | undefined)?.[segment];
   }
 
-  return typeof value === "string" ? value : key;
+  if (typeof value === "string") {
+    return value;
+  }
+
+  let fallbackValue: unknown = translations.en;
+  for (const segment of keys) {
+    fallbackValue = (fallbackValue as Record<string, unknown> | undefined)?.[segment];
+  }
+
+  if (typeof fallbackValue === "string") {
+    return fallbackValue;
+  }
+
+  const lastSegment = keys[keys.length - 1] || key;
+  return lastSegment
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]/g, " ")
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 export function useMobileTranslations(localeOverride?: MobileLocale) {
-  const locale = localeOverride ?? resolveLocale();
+  const [locale, setLocaleState] = useState<MobileLocale>(
+    () => localeOverride ?? resolveGlobalLocale(),
+  );
+
+  useEffect(() => {
+    if (!localeOverride) {
+      const listener = (nextLocale: MobileLocale) => {
+        setLocaleState(nextLocale);
+      };
+
+      localeListeners.add(listener);
+      setLocaleState(resolveGlobalLocale());
+
+      return () => {
+        localeListeners.delete(listener);
+      };
+    }
+
+    setLocaleState(localeOverride);
+    return;
+  }, [localeOverride]);
+
+  useEffect(() => {
+    if (localeOverride) {
+      return;
+    }
+
+    if (!tokenStorage.get()) {
+      return;
+    }
+
+    let active = true;
+
+    void syncProfileLocaleOnce().then((nextLocale) => {
+      if (!active || !nextLocale) {
+          return;
+      }
+
+      broadcastLocale(nextLocale);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [localeOverride]);
+
+  const setLocale = async (nextLocale: MobileLocale) => {
+    if (localeOverride) {
+      setLocaleState(nextLocale);
+    } else {
+      broadcastLocale(nextLocale);
+      storage.set(MOBILE_LOCALE_STORAGE_KEY, nextLocale);
+    }
+
+    if (!tokenStorage.get()) {
+      return;
+    }
+
+    try {
+      await api.patch("/users/me", { preferredLocale: nextLocale });
+    } catch {
+      // Locale still stays updated locally even if backend sync fails.
+    }
+  };
 
   return useMemo(
     () => ({
       locale,
       t: (key: TranslationKey) => translate(locale, key),
+      setLocale,
     }),
     [locale],
   );

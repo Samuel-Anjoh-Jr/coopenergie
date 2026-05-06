@@ -14,11 +14,19 @@ const WITHDRAWAL_METHODS = [
 ] as const;
 export type WithdrawalMethod = (typeof WITHDRAWAL_METHODS)[number];
 
+const LOCALES = ["en", "fr"] as const;
+export type Locale = (typeof LOCALES)[number];
+
 export class UpdateProfileDto {
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  name!: string;
+  name?: string;
+
+  @IsOptional()
+  @IsIn(LOCALES)
+  preferredLocale?: Locale;
 
   @IsOptional()
   @IsString()

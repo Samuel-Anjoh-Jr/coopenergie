@@ -8,6 +8,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Locale, useTranslations } from "@/lib/translations";
 import { useTheme } from "@/lib/theme-context";
 import { unregisterNotificationToken } from "@/lib/firebase/use-notifications";
+import { restClient } from "@/lib/rest-client";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -72,6 +73,11 @@ export function Navbar({ locale }: NavbarProps) {
       `/${newLocale}`,
     );
     router.push(path);
+    if (session?.user) {
+      void restClient
+        .patch("/users/me", { preferredLocale: newLocale })
+        .catch(() => {});
+    }
   };
 
   const handleLogout = async () => {
@@ -81,7 +87,8 @@ export function Navbar({ locale }: NavbarProps) {
       // Keep logout non-blocking if token cleanup fails.
     }
 
-    await signOut({ callbackUrl: "/login" });
+    await signOut({ redirect: false });
+    window.location.href = "/login";
   };
 
   useEffect(() => {
@@ -297,22 +304,6 @@ export function Navbar({ locale }: NavbarProps) {
                           </SheetClose>
                         );
                       })}
-
-                      {session?.user && (
-                        <SheetClose asChild>
-                          <Link
-                            href={`/${locale}/dashboard`}
-                            className={mobileNavItemClass(false)}
-                          >
-                            <span
-                              className="absolute left-1.5 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary opacity-0"
-                              aria-hidden="true"
-                            />
-                            <LayoutDashboard className="h-4 w-4" />
-                            {t("navbar.dashboard")}
-                          </Link>
-                        </SheetClose>
-                      )}
                     </>
                   ) : (
                     <>
@@ -346,32 +337,7 @@ export function Navbar({ locale }: NavbarProps) {
                       })()}
 
                       {(() => {
-                        const isDashboardActive = pathname.startsWith(
-                          `/${locale}/dashboard`,
-                        );
-                        return (
-                          <SheetClose asChild>
-                            <Link
-                              href={`/${locale}/dashboard`}
-                              className={mobileNavItemClass(isDashboardActive)}
-                            >
-                              <span
-                                className={`absolute left-1.5 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full transition-all duration-300 ${
-                                  isDashboardActive
-                                    ? "bg-primary opacity-100"
-                                    : "bg-primary opacity-0"
-                                }`}
-                                aria-hidden="true"
-                              />
-                              <LayoutDashboard
-                                className={`h-4 w-4 transition-transform duration-300 ${
-                                  isDashboardActive ? "scale-105" : ""
-                                }`}
-                              />
-                              {t("navbar.dashboard")}
-                            </Link>
-                          </SheetClose>
-                        );
+                        return null;
                       })()}
                     </>
                   )}
@@ -415,7 +381,35 @@ export function Navbar({ locale }: NavbarProps) {
                         {t("common.logout")}
                       </Button>
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <Button asChild variant="outline" className="w-full">
+                        <SheetClose asChild>
+                          <Link href={`/${locale}/login`}>
+                            {t("navbar.login")}
+                          </Link>
+                        </SheetClose>
+                      </Button>
+                      <Button asChild className="w-full">
+                        <SheetClose asChild>
+                          <Link href={`/${locale}/signup`}>
+                            {t("navbar.signup")}
+                          </Link>
+                        </SheetClose>
+                      </Button>
+                    </>
+                  )}
+
+                  {session?.user && (
+                    <SheetClose asChild>
+                      <Button asChild className="w-full">
+                        <Link href={`/${locale}/dashboard`}>
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          {t("navbar.dashboard")}
+                        </Link>
+                      </Button>
+                    </SheetClose>
+                  )}
                 </div>
               </div>
             </SheetContent>
@@ -450,14 +444,6 @@ export function Navbar({ locale }: NavbarProps) {
                     {item.label}
                   </a>
                 ))}
-                {session?.user && (
-                  <Link
-                    href={`/${locale}/dashboard`}
-                    className={desktopLandingNavItemClass(false)}
-                  >
-                    {t("navbar.dashboard")}
-                  </Link>
-                )}
               </>
             ) : (
               <>
@@ -466,12 +452,6 @@ export function Navbar({ locale }: NavbarProps) {
                   className="text-foreground/80 hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
                 >
                   {t("navbar.home")}
-                </Link>
-                <Link
-                  href={`/${locale}/dashboard`}
-                  className="text-foreground/80 hover:text-foreground transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  {t("navbar.dashboard")}
                 </Link>
               </>
             )}
@@ -546,6 +526,39 @@ export function Navbar({ locale }: NavbarProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+
+            {!session?.user && (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 md:h-9 px-3 text-sm font-medium"
+                >
+                  <Link href={`/${locale}/login`}>{t("navbar.login")}</Link>
+                </Button>
+                <Button
+                  asChild
+                  size="sm"
+                  className="h-10 md:h-9 px-4 text-sm font-medium"
+                >
+                  <Link href={`/${locale}/signup`}>{t("navbar.signup")}</Link>
+                </Button>
+              </>
+            )}
+
+            {session?.user && (
+              <Button
+                asChild
+                size="sm"
+                className="h-10 md:h-9 px-4 text-sm font-medium"
+              >
+                <Link href={`/${locale}/dashboard`}>
+                  <LayoutDashboard className="w-4 h-4 mr-1.5" />
+                  {t("navbar.dashboard")}
+                </Link>
+              </Button>
             )}
           </div>
         </div>

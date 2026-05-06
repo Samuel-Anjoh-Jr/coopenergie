@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { getSession } from "next-auth/react";
 
+import { getCachedClientToken } from "@/lib/auth/client-session";
 import { API_URL } from "@/lib/config";
 
 type RealtimeCallback = () => void;
@@ -26,8 +26,7 @@ export function useAdminRealtime(onUpdate: RealtimeCallback) {
     let closed = false;
 
     const connect = async () => {
-      const session = await getSession();
-      const token = session?.user?.token;
+      const token = await getCachedClientToken();
 
       if (!token || closed) {
         return;

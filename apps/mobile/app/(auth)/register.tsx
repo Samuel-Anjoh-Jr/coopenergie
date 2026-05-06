@@ -11,10 +11,11 @@ import {
 } from "react-native";
 
 import { api } from "@/lib/api";
-import { login } from "@/lib/auth";
+import { getPostLoginPath, login } from "@/lib/auth";
 import { invitationTokenStorage } from "@/lib/storage";
 import { useMobileTranslations } from "@/lib/translations";
 import PressableScale from "@/components/pressable-scale";
+import BackendPreflightBanner from "@/components/backend-preflight-banner";
 import { ScreenReveal } from "@/components/screen-reveal";
 
 export default function RegisterScreen() {
@@ -35,7 +36,7 @@ export default function RegisterScreen() {
         password,
       });
 
-      await login(email.trim(), password);
+      const loginResult = await login(email.trim(), password);
 
       const invitationToken = invitationTokenStorage.get();
       if (invitationToken) {
@@ -45,7 +46,7 @@ export default function RegisterScreen() {
         invitationTokenStorage.clear();
       }
 
-      router.replace("/(dashboard)/dashboard");
+      router.replace(getPostLoginPath(loginResult.user));
     } catch (error) {
       Alert.alert(
         t("errors.registrationFailed"),
@@ -59,6 +60,8 @@ export default function RegisterScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
+        <BackendPreflightBanner />
+
         <View className="mb-3 flex-row items-center gap-3">
           <Image
             source={require("../../assets/logo-full.png")}
@@ -126,6 +129,14 @@ export default function RegisterScreen() {
           <PressableScale className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
               {t("auth.backToLogin")}
+            </Text>
+          </PressableScale>
+        </Link>
+
+        <Link href="/(auth)/vendor-register" asChild>
+          <PressableScale className="mt-3 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
+            <Text className="text-[#1B5E20] font-medium">
+              {t("auth.vendorSignupPrompt")}
             </Text>
           </PressableScale>
         </Link>

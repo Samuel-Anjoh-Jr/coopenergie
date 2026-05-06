@@ -586,7 +586,9 @@ export class WithdrawalsService {
       .slice(0, 64)}`;
   }
 
-  private async getCooperativeMemberEmails(cooperativeId: string) {
+  private async getCooperativeMemberEmails(
+    cooperativeId: string,
+  ): Promise<{ email: string; locale: string }[]> {
     const memberships = await this.prisma.membership.findMany({
       where: {
         cooperativeId,
@@ -595,11 +597,26 @@ export class WithdrawalsService {
         user: {
           select: {
             email: true,
+            preferredLocale: true,
           },
         },
       },
     });
 
-    return [...new Set(memberships.map((membership) => membership.user.email))];
+    const recipients = memberships
+      .map((membership) => ({
+        email: membership.user.email,
+        locale: membership.user.preferredLocale ?? "fr",
+      }))
+      .filter(
+        (recipient): recipient is { email: string; locale: string } =>
+          Boolean(recipient.email),
+      );
+
+    return [
+      ...new Map(
+        recipients.map((recipient) => [recipient.email, recipient]),
+      ).values(),
+    ];
   }
 }

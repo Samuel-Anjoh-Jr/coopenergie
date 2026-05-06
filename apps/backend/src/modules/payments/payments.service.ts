@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { PaymentProvider, PaymentStatus, Prisma } from "@prisma/client";
 import { PubSub } from "graphql-subscriptions";
@@ -17,9 +18,12 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { ContributionsService } from "../contributions/contributions.service";
 import { CampayService } from "./campay.service";
 
+const PENDING_STATUS_SYNC_MIN_INTERVAL_MS = 15000;
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private readonly pendingStatusLastSyncAt = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -188,7 +192,27 @@ export class PaymentsService {
         );
       }
 
-      throw error;
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+
+      if (
+        errorMessage.toLowerCase().includes("timeout") ||
+        errorMessage.toLowerCase().includes("network") ||
+        errorMessage.toLowerCase().includes("fetch failed")
+      ) {
+        throw new ServiceUnavailableException(
+          "Unable to reach payment provider now. Please retry in a few moments.",
+        );
+      }
+
+      throw new InternalServerErrorException(
+        "Unable to initiate payment right now. Please try again.",
+      );
     }
 
     return this.buildInitiateResponse(payment);
@@ -199,15 +223,12 @@ export class PaymentsService {
       where: {
         id: paymentId,
       },
-      select: {
-        id: true,
-        reference: true,
-        status: true,
-        amountXAF: true,
-        cooperativeId: true,
-        userId: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        contribution: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -219,14 +240,16 @@ export class PaymentsService {
       throw new ForbiddenException("You do not have access to this payment.");
     }
 
+    const resolvedPayment = await this.tryResolvePendingPaymentStatus(payment);
+
     return {
-      paymentId: payment.id,
-      reference: payment.reference,
-      status: payment.status,
-      amountXAF: payment.amountXAF,
-      cooperativeId: payment.cooperativeId,
-      createdAt: payment.createdAt,
-      updatedAt: payment.updatedAt,
+      paymentId: resolvedPayment.id,
+      reference: resolvedPayment.reference,
+      status: resolvedPayment.status,
+      amountXAF: resolvedPayment.amountXAF,
+      cooperativeId: resolvedPayment.cooperativeId,
+      createdAt: resolvedPayment.createdAt,
+      updatedAt: resolvedPayment.updatedAt,
     };
   }
 
@@ -277,9 +300,9 @@ export class PaymentsService {
       };
     }
 
-    const status = (this.readString(payload.status) || "").toUpperCase();
+    const providerStatus = this.resolveProviderPaymentStatus(payload);
 
-    if (status === "SUCCESSFUL") {
+    if (providerStatus === PaymentStatus.SUCCESS) {
       const updatedPayment = await this.prisma.payment.update({
         where: {
           id: payment.id,
@@ -310,7 +333,7 @@ export class PaymentsService {
       };
     }
 
-    if (status === "FAILED") {
+    if (providerStatus === PaymentStatus.FAILED) {
       const updatedPayment = await this.prisma.payment.update({
         where: {
           id: payment.id,
@@ -389,5 +412,173 @@ export class PaymentsService {
 
   private readString(value: unknown) {
     return typeof value === "string" ? value : undefined;
+  }
+
+  private async tryResolvePendingPaymentStatus(payment: {
+    id: string;
+    reference: string;
+    status: PaymentStatus;
+    amountXAF: number;
+    cooperativeId: string;
+    userId: string;
+    provider: PaymentProvider;
+    createdAt: Date;
+    updatedAt: Date;
+    contribution?: {
+      id: string;
+    } | null;
+  }) {
+    if (
+      payment.status !== PaymentStatus.PENDING ||
+      payment.provider !== PaymentProvider.CAMPAY
+    ) {
+      this.pendingStatusLastSyncAt.delete(payment.id);
+      return payment;
+    }
+
+    const now = Date.now();
+    const lastSyncedAt = this.pendingStatusLastSyncAt.get(payment.id);
+
+    if (
+      typeof lastSyncedAt === "number" &&
+      now - lastSyncedAt < PENDING_STATUS_SYNC_MIN_INTERVAL_MS
+    ) {
+      return payment;
+    }
+
+    this.pendingStatusLastSyncAt.set(payment.id, now);
+
+    try {
+      const providerPayload = await this.campayService.checkStatus(
+        payment.reference,
+      );
+      const providerStatus = this.resolveProviderPaymentStatus(providerPayload);
+
+      if (!providerStatus || providerStatus === PaymentStatus.PENDING) {
+        return payment;
+      }
+
+      const updatedPayment = await this.prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          status: providerStatus,
+        },
+      });
+
+      if (providerStatus === PaymentStatus.SUCCESS) {
+        await this.ensureContributionRecorded({
+          ...updatedPayment,
+          contribution: payment.contribution,
+        });
+        await this.notificationsService.notifyPaymentConfirmed(
+          updatedPayment.userId,
+          updatedPayment.amountXAF,
+        );
+      }
+
+      if (providerStatus === PaymentStatus.FAILED) {
+        await this.notificationsService.notifyPaymentFailed(
+          updatedPayment.userId,
+          updatedPayment.amountXAF,
+        );
+      }
+
+      await this.pubSub.publish(
+        `payment.updated.${updatedPayment.cooperativeId}`,
+        {
+          onPayment: updatedPayment,
+        },
+      );
+
+      if (updatedPayment.status !== PaymentStatus.PENDING) {
+        this.pendingStatusLastSyncAt.delete(payment.id);
+      }
+
+      return {
+        ...payment,
+        status: updatedPayment.status,
+        updatedAt: updatedPayment.updatedAt,
+      };
+    } catch (error) {
+      this.logger.debug(
+        `Unable to refresh pending payment ${payment.id} status from provider: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+
+      return payment;
+    }
+  }
+
+  private resolveProviderPaymentStatus(payload: Record<string, unknown>) {
+    const candidates: unknown[] = [
+      payload.status,
+      payload.campay_status,
+      payload.payment_status,
+      payload.transaction_status,
+    ];
+
+    const nestedData = payload.data;
+    if (nestedData && typeof nestedData === "object") {
+      const nestedRecord = nestedData as Record<string, unknown>;
+      candidates.push(
+        nestedRecord.status,
+        nestedRecord.campay_status,
+        nestedRecord.payment_status,
+        nestedRecord.transaction_status,
+      );
+    }
+
+    for (const candidate of candidates) {
+      const normalized = this.normalizeProviderStatusValue(candidate);
+
+      if (normalized === PaymentStatus.SUCCESS) {
+        return PaymentStatus.SUCCESS;
+      }
+
+      if (normalized === PaymentStatus.FAILED) {
+        return PaymentStatus.FAILED;
+      }
+    }
+
+    return PaymentStatus.PENDING;
+  }
+
+  private normalizeProviderStatusValue(value: unknown) {
+    if (typeof value !== "string") {
+      return undefined;
+    }
+
+    const normalized = value
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_");
+
+    if (
+      normalized === "SUCCESS" ||
+      normalized === "SUCCESSFUL" ||
+      normalized === "SUCCEEDED" ||
+      normalized === "COMPLETED" ||
+      normalized === "PAID"
+    ) {
+      return PaymentStatus.SUCCESS;
+    }
+
+    if (
+      normalized === "FAILED" ||
+      normalized === "FAILURE" ||
+      normalized === "REJECTED" ||
+      normalized === "CANCELLED" ||
+      normalized === "CANCELED" ||
+      normalized === "EXPIRED" ||
+      normalized === "TIMED_OUT" ||
+      normalized === "TIMEOUT"
+    ) {
+      return PaymentStatus.FAILED;
+    }
+
+    return undefined;
   }
 }

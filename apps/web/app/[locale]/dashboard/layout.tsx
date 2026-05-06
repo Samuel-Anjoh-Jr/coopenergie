@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useQuery } from "@apollo/client";
 import { useSession } from "next-auth/react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -17,22 +16,30 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   BarChart3,
   Bell,
   BellOff,
   HandshakeIcon,
   Mail,
   Lightbulb,
+  MessageSquare,
   FileText,
   Download,
   Menu,
-  X,
   Settings,
   User,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useNotifications } from "@/lib/firebase/use-notifications";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import { getDashboardRouteForUser } from "@/lib/dashboard-routing";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 const navItems = [
   { key: "overview", icon: BarChart3, href: "/dashboard" },
@@ -48,22 +55,23 @@ const navItems = [
     requiresCoopAdmin: true,
   },
   { key: "proposals", icon: Lightbulb, href: "/dashboard/proposals" },
+  {
+    key: "vendorReviews",
+    icon: MessageSquare,
+    href: "/dashboard/vendor-reviews",
+  },
   { key: "ledger", icon: FileText, href: "/dashboard/ledger" },
   { key: "report", icon: Download, href: "/dashboard/report" },
   {
     key: "settings",
     icon: Settings,
     href: "/dashboard/settings",
-    requiresPlatformAdmin: true,
+    requiresCoopAdmin: true,
   },
   { key: "profile", icon: User, href: "/dashboard/profile" },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -74,19 +82,38 @@ export default function DashboardLayout({
   const [notificationBannerDismissed, setNotificationBannerDismissed] =
     useState(false);
   const { notificationsEnabled, requestPermission } = useNotifications();
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+  const {
+    allCoops,
+    selectedCoop: activeCoop,
+    setActiveCoopId,
+    isResolvingSelection,
+  } = useSelectedCooperative({
     skip: status !== "authenticated",
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
-  const cooperativeName = myCooperativesData?.myCooperatives?.[0]?.name ?? "-";
-  const userRole = myCooperativesData?.myCooperatives?.[0]?.membership?.role;
+  const cooperativeName = activeCoop?.name ?? "-";
+  const userRole = activeCoop?.membership?.role;
+
+  const handleCoopSwitch = (id: string) => {
+    setActiveCoopId(id);
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.replace(`/${locale}/login`);
+      return;
     }
-  }, [status, router]);
+
+    if (status === "authenticated") {
+      const expectedDashboard = getDashboardRouteForUser(session?.user, locale);
+      const memberDashboard = `/${locale}/dashboard`;
+
+      if (expectedDashboard !== memberDashboard) {
+        router.replace(expectedDashboard);
+      }
+    }
+  }, [locale, router, session?.user, status]);
 
   // Close sidebar when route changes
   useEffect(() => {
@@ -111,16 +138,33 @@ export default function DashboardLayout({
     setNotificationBannerDismissed(true);
   }, []);
 
-  if (status !== "authenticated") {
-    return null;
+  if (status === "loading" || status === "unauthenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <span>{t("common.loading")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isResolvingSelection) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <span>{t("common.loading")}</span>
+        </div>
+      </div>
+    );
   }
 
   const visibleNavItems = navItems.filter(
     (item) =>
-      (!item.requiresCoopAdmin ||
-        userRole === "COOP_ADMIN" ||
-        userRole === "PLATFORM_ADMIN") &&
-      (!item.requiresPlatformAdmin || userRole === "PLATFORM_ADMIN"),
+      !item.requiresCoopAdmin ||
+      userRole === "COOP_ADMIN" ||
+      userRole === "PLATFORM_ADMIN",
   );
 
   return (
@@ -185,9 +229,35 @@ export default function DashboardLayout({
                 <p className="mb-2 text-xs text-muted-foreground">
                   {t("dashboard.currentCooperative")}
                 </p>
-                <p className="text-sm font-semibold text-foreground">
-                  {cooperativeName}
-                </p>
+                {allCoops.length > 1 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex w-full items-center justify-between gap-1 text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                        <span className="truncate">{cooperativeName}</span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52">
+                      {allCoops.map((coop) => (
+                        <DropdownMenuItem
+                          key={coop.id}
+                          onClick={() => handleCoopSwitch(coop.id)}
+                          className={
+                            coop.id === activeCoop?.id
+                              ? "font-semibold text-primary"
+                              : ""
+                          }
+                        >
+                          {coop.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground">
+                    {cooperativeName}
+                  </p>
+                )}
                 {session?.user ? (
                   <p className="mt-2 truncate text-xs text-muted-foreground">
                     {t("dashboard.loggedInAs")}: {session.user.name}
@@ -242,9 +312,35 @@ export default function DashboardLayout({
             <p className="mb-2 text-xs text-muted-foreground">
               {t("dashboard.currentCooperative")}
             </p>
-            <p className="text-sm font-semibold text-foreground">
-              {cooperativeName}
-            </p>
+            {allCoops.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex w-full items-center justify-between gap-1 text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                    <span className="truncate">{cooperativeName}</span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  {allCoops.map((coop) => (
+                    <DropdownMenuItem
+                      key={coop.id}
+                      onClick={() => handleCoopSwitch(coop.id)}
+                      className={
+                        coop.id === activeCoop?.id
+                          ? "font-semibold text-primary"
+                          : ""
+                      }
+                    >
+                      {coop.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <p className="text-sm font-semibold text-foreground">
+                {cooperativeName}
+              </p>
+            )}
             {session?.user ? (
               <p className="mt-2 truncate text-xs text-muted-foreground">
                 {t("dashboard.loggedInAs")}: {session.user.name}
@@ -289,4 +385,12 @@ export default function DashboardLayout({
       </main>
     </div>
   );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <DashboardLayoutInner>{children}</DashboardLayoutInner>;
 }

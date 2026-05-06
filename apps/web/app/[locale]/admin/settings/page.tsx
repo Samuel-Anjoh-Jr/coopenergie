@@ -30,7 +30,6 @@ type PlatformSettings = {
   withdrawalThresholdDefault: number;
   withdrawalThresholdMin: number;
   withdrawalThresholdMax: number;
-  withdrawalQuorumMinVotes: number;
   maintenanceMode: boolean;
 };
 
@@ -38,7 +37,6 @@ export default function AdminSettingsPage() {
   const [thresholdDefault, setThresholdDefault] = useState("");
   const [thresholdMin, setThresholdMin] = useState("");
   const [thresholdMax, setThresholdMax] = useState("");
-  const [quorumMinVotes, setQuorumMinVotes] = useState("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<PlatformSettings | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,20 +45,23 @@ export default function AdminSettingsPage() {
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     onCompleted: (data: { platformSettings: PlatformSettings }) => {
       if (data?.platformSettings) {
-        setThresholdDefault(
-          String(data.platformSettings.withdrawalThresholdDefault ?? ""),
-        );
-        setThresholdMin(
-          String(data.platformSettings.withdrawalThresholdMin ?? ""),
-        );
-        setThresholdMax(
-          String(data.platformSettings.withdrawalThresholdMax ?? ""),
-        );
-        setQuorumMinVotes(
-          String(data.platformSettings.withdrawalQuorumMinVotes ?? ""),
-        );
-        setMaintenanceMode(data.platformSettings.maintenanceMode ?? false);
-        setLastLoaded(data.platformSettings);
+        // Only populate form fields on the first load; subsequent polls must
+        // NOT reset user edits — they only refresh the change-tracking baseline.
+        setLastLoaded((prev) => {
+          if (prev === null) {
+            setThresholdDefault(
+              String(data.platformSettings.withdrawalThresholdDefault ?? ""),
+            );
+            setThresholdMin(
+              String(data.platformSettings.withdrawalThresholdMin ?? ""),
+            );
+            setThresholdMax(
+              String(data.platformSettings.withdrawalThresholdMax ?? ""),
+            );
+            setMaintenanceMode(data.platformSettings.maintenanceMode ?? false);
+          }
+          return data.platformSettings;
+        });
       }
     },
   });
@@ -68,11 +69,10 @@ export default function AdminSettingsPage() {
   const parsedThresholdDefault = Number(thresholdDefault);
   const parsedThresholdMin = Number(thresholdMin);
   const parsedThresholdMax = Number(thresholdMax);
-  const parsedQuorum = Number(quorumMinVotes);
 
   const validationErrors: string[] = [];
 
-  if (!thresholdDefault || !thresholdMin || !thresholdMax || !quorumMinVotes) {
+  if (!thresholdDefault || !thresholdMin || !thresholdMax) {
     validationErrors.push("All settings fields are required.");
   }
 
@@ -118,22 +118,11 @@ export default function AdminSettingsPage() {
     );
   }
 
-  if (
-    !Number.isInteger(parsedQuorum) ||
-    parsedQuorum < 1 ||
-    parsedQuorum > 10000
-  ) {
-    validationErrors.push(
-      "Minimum quorum votes must be an integer between 1 and 10,000.",
-    );
-  }
-
   const hasChanges =
     lastLoaded !== null &&
     (parsedThresholdDefault !== lastLoaded.withdrawalThresholdDefault ||
       parsedThresholdMin !== lastLoaded.withdrawalThresholdMin ||
       parsedThresholdMax !== lastLoaded.withdrawalThresholdMax ||
-      parsedQuorum !== lastLoaded.withdrawalQuorumMinVotes ||
       maintenanceMode !== lastLoaded.maintenanceMode);
 
   const handleSave = async () => {
@@ -156,13 +145,23 @@ export default function AdminSettingsPage() {
         withdrawalThresholdDefault: parsedThresholdDefault,
         withdrawalThresholdMin: parsedThresholdMin,
         withdrawalThresholdMax: parsedThresholdMax,
-        withdrawalQuorumMinVotes: parsedQuorum,
         maintenanceMode,
       });
       toast.success("Platform settings saved");
       const { data } = await refetch();
       if (data?.platformSettings) {
         setLastLoaded(data.platformSettings);
+        // After a confirmed save, re-sync form fields to the saved values
+        setThresholdDefault(
+          String(data.platformSettings.withdrawalThresholdDefault ?? ""),
+        );
+        setThresholdMin(
+          String(data.platformSettings.withdrawalThresholdMin ?? ""),
+        );
+        setThresholdMax(
+          String(data.platformSettings.withdrawalThresholdMax ?? ""),
+        );
+        setMaintenanceMode(data.platformSettings.maintenanceMode ?? false);
       }
     } catch (error) {
       toast.error(
@@ -181,7 +180,6 @@ export default function AdminSettingsPage() {
     setThresholdDefault(String(lastLoaded.withdrawalThresholdDefault));
     setThresholdMin(String(lastLoaded.withdrawalThresholdMin));
     setThresholdMax(String(lastLoaded.withdrawalThresholdMax));
-    setQuorumMinVotes(String(lastLoaded.withdrawalQuorumMinVotes));
     setMaintenanceMode(lastLoaded.maintenanceMode);
   };
 
@@ -209,21 +207,14 @@ export default function AdminSettingsPage() {
             <div>
               <p className="font-medium">Default Threshold (%)</p>
               <p className="text-muted-foreground">
-                Baseline yes-vote percentage required for withdrawal proposals
-                across cooperatives.
+                Baseline yes-vote percentage required for proposals across
+                cooperatives.
               </p>
             </div>
             <div>
               <p className="font-medium">Minimum and Maximum Threshold (%)</p>
               <p className="text-muted-foreground">
                 Allowed bounds for cooperative-level threshold overrides.
-              </p>
-            </div>
-            <div>
-              <p className="font-medium">Minimum Quorum Votes</p>
-              <p className="text-muted-foreground">
-                The least number of votes needed before any withdrawal vote can
-                be valid.
               </p>
             </div>
             <div>
@@ -253,11 +244,6 @@ export default function AdminSettingsPage() {
               Cooperative admins can set thresholds only between
               <span className="font-medium"> {thresholdMin || "-"}%</span> and
               <span className="font-medium"> {thresholdMax || "-"}%</span>.
-            </p>
-            <p>
-              Every withdrawal proposal requires at least
-              <span className="font-medium"> {quorumMinVotes || "-"}</span>{" "}
-              total votes.
             </p>
             <p>
               Maintenance mode is currently
@@ -350,17 +336,6 @@ export default function AdminSettingsPage() {
                     value={thresholdMax}
                     onChange={(e) => setThresholdMax(e.target.value)}
                     placeholder="e.g. 90"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quorumMinVotes">Minimum Quorum Votes</Label>
-                  <Input
-                    id="quorumMinVotes"
-                    type="number"
-                    min="1"
-                    value={quorumMinVotes}
-                    onChange={(e) => setQuorumMinVotes(e.target.value)}
-                    placeholder="e.g. 3"
                   />
                 </div>
               </div>

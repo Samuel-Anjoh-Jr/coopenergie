@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Animated } from "react-native";
+import { Animated, Platform, Pressable, Text } from "react-native";
 
 import { usePushNotifications } from "@/lib/notifications/use-push-notifications";
 import { useMobileTranslations } from "@/lib/translations";
@@ -19,7 +19,7 @@ function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
   useEffect(() => {
     Animated.spring(scale, {
       toValue: focused ? 1.12 : 1,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
       speed: 18,
       bounciness: 7,
     }).start();
@@ -34,13 +34,25 @@ function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
 
 export default function DashboardLayout() {
   usePushNotifications();
-  const { t } = useMobileTranslations();
+  const { t, locale, setLocale } = useMobileTranslations();
 
   return (
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: "#1B5E20" },
         headerTintColor: "#F4FBF4",
+        headerRight: () => (
+          <Pressable
+            onPress={() => {
+              void setLocale(locale === "en" ? "fr" : "en");
+            }}
+            className="mr-4 rounded-full border border-[#D9E8D9] px-3 py-1"
+          >
+            <Text className="text-xs font-semibold text-[#F4FBF4]">
+              {locale.toUpperCase()}
+            </Text>
+          </Pressable>
+        ),
         sceneStyle: { backgroundColor: "#F5F8F5" },
         tabBarStyle: {
           backgroundColor: "#F4FBF4",
@@ -105,6 +117,34 @@ export default function DashboardLayout() {
               focused={focused}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="vendor-reviews"
+        options={{
+          title: t("tabs.vendorReviews"),
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="verified-user"
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="vendors/index"
+        options={{
+          href: null,
+          title: t("vendorsBrowser.title"),
+        }}
+      />
+      <Tabs.Screen
+        name="vendors/[id]"
+        options={{
+          href: null,
+          title: t("vendorsBrowser.detailTitle"),
         }}
       />
       <Tabs.Screen

@@ -1,5 +1,10 @@
 import { getApps, initializeApp } from "firebase/app";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import {
+  getMessaging,
+  getToken,
+  isSupported,
+  onMessage,
+} from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,6 +28,9 @@ export async function requestNotificationPermission(): Promise<string | null> {
   if (!app) return null;
   if (!("Notification" in window)) return null;
   if (!("serviceWorker" in navigator)) return null;
+
+  const messagingSupported = await isSupported().catch(() => false);
+  if (!messagingSupported) return null;
 
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return null;
@@ -48,7 +56,13 @@ export async function requestNotificationPermission(): Promise<string | null> {
 export function onForegroundMessage(callback: (payload: any) => void) {
   if (typeof window === "undefined") return () => {};
   if (!app) return () => {};
+  if (!("Notification" in window)) return () => {};
+  if (!("serviceWorker" in navigator)) return () => {};
 
-  const messaging = getMessaging(app);
-  return onMessage(messaging, callback);
+  try {
+    const messaging = getMessaging(app);
+    return onMessage(messaging, callback);
+  } catch {
+    return () => {};
+  }
 }

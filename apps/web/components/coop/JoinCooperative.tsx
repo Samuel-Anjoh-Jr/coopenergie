@@ -204,9 +204,8 @@ export function JoinCooperative({ locale, token }: JoinCooperativeProps) {
   ]);
 
   const handleSwitchAccount = async () => {
-    await signOut({
-      callbackUrl: loginHref,
-    });
+    await signOut({ redirect: false });
+    window.location.href = loginHref;
   };
 
   const heroBadgeLabel = isLoading

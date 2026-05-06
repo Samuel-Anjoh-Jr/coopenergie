@@ -23,6 +23,7 @@ export const GET_COOPERATIVE_DETAIL = gql`
       id
       name
       slug
+      baseTargetXAF
       targetAmountXAF
       vaultAddress
       celoScanUrl

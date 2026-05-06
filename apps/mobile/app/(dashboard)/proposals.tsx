@@ -1,9 +1,10 @@
 import { gql, useQuery } from "@apollo/client";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -27,7 +28,7 @@ type Proposal = {
   title: string;
   description: string;
   status: string;
-  type: "GENERAL" | "WITHDRAWAL" | string;
+  type: "GENERAL" | "WITHDRAWAL" | "VENDOR_PURCHASE" | string;
   yesVotes: number;
   noVotes: number;
   hasUserVoted: boolean;
@@ -43,6 +44,41 @@ type Proposal = {
     recipientBankName?: string | null;
     recipientBankAccount?: string | null;
   } | null;
+  vendorLink?: {
+    id: string;
+    note?: string | null;
+    vendor: {
+      id: string;
+      businessName: string;
+      logoUrl?: string | null;
+    };
+    product?: {
+      id: string;
+      title: string;
+      description?: string | null;
+      priceXAF: number;
+      unit?: string | null;
+    } | null;
+  } | null;
+};
+
+type VendorBrowserProduct = {
+  id: string;
+  title: string;
+  description?: string | null;
+  priceXAF: number;
+  unit?: string | null;
+};
+
+type VendorBrowserVendor = {
+  id: string;
+  businessName: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  city?: string | null;
+  avgRating?: number | null;
+  totalReviews?: number | null;
+  products: VendorBrowserProduct[];
 };
 
 type WithdrawalDestinationType = "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER";
@@ -81,6 +117,22 @@ const PROPOSALS_QUERY = gql`
         recipientPhone
         recipientBankName
         recipientBankAccount
+      }
+      vendorLink {
+        id
+        note
+        vendor {
+          id
+          businessName
+          logoUrl
+        }
+        product {
+          id
+          title
+          description
+          priceXAF
+          unit
+        }
       }
     }
   }
@@ -133,10 +185,21 @@ function getDestinationLabel(
 }
 
 export default function ProposalsScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{
     focusProposalId?: string;
     withdrawalRequestId?: string;
     cooperativeId?: string;
+    vendorId?: string;
+    vendorName?: string;
+    vendorLogoUrl?: string;
+    vendorCity?: string;
+    vendorRating?: string;
+    vendorTotalReviews?: string;
+    productId?: string;
+    productTitle?: string;
+    productPriceXAF?: string;
+    productUnit?: string;
   }>();
   const { activeCooperative, activeCooperativeId } = useActiveCooperative();
   const { isOnline } = useNetworkStatus();
@@ -145,6 +208,13 @@ export default function ProposalsScreen() {
   const [withdrawalModalVisible, setWithdrawalModalVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [proposalType, setProposalType] = useState<"STANDARD" | "VENDOR">(
+    "STANDARD",
+  );
+  const [selectedVendor, setSelectedVendor] =
+    useState<VendorBrowserVendor | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<VendorBrowserProduct | null>(null);
   const [localItems, setLocalItems] = useState<Proposal[]>([]);
   const [withdrawalForm, setWithdrawalForm] = useState({
     amountXAF: "",
@@ -208,6 +278,56 @@ export default function ProposalsScreen() {
   }, [focusedProposalId, localItems, proposals]);
 
   useEffect(() => {
+    if (!params.vendorId || !params.vendorName) {
+      return;
+    }
+
+    const normalizedProductPrice = Number.parseInt(params.productPriceXAF ?? "", 10);
+
+    setSelectedVendor({
+      id: params.vendorId,
+      businessName: params.vendorName,
+      logoUrl: params.vendorLogoUrl || null,
+      city: params.vendorCity || null,
+      avgRating: Number.parseFloat(params.vendorRating ?? "") || 0,
+      totalReviews: Number.parseInt(params.vendorTotalReviews ?? "", 10) || 0,
+      products: [],
+    });
+
+    if (params.productId && params.productTitle) {
+      setSelectedProduct({
+        id: params.productId,
+        title: params.productTitle,
+        priceXAF: Number.isFinite(normalizedProductPrice) ? normalizedProductPrice : 0,
+        unit: params.productUnit || null,
+      });
+    }
+
+    setProposalType("VENDOR");
+
+    if (!title.trim()) {
+      setTitle(
+        `${t("proposals.autoTitleVendor")} ${params.vendorName}${
+          params.productTitle ? ` - ${params.productTitle}` : ""
+        }`,
+      );
+    }
+  }, [
+    params.productId,
+    params.productPriceXAF,
+    params.productTitle,
+    params.productUnit,
+    params.vendorCity,
+    params.vendorId,
+    params.vendorLogoUrl,
+    params.vendorName,
+    params.vendorRating,
+    params.vendorTotalReviews,
+    t,
+    title,
+  ]);
+
+  useEffect(() => {
     async function persistFresh() {
       if (!activeCooperativeId || !data?.proposals) {
         return;
@@ -267,20 +387,47 @@ export default function ProposalsScreen() {
       return;
     }
 
-    if (!title.trim() || !description.trim()) {
+    if (!title.trim()) {
       Alert.alert(t("errors.error"), t("errors.invalidFormValues"));
       return;
     }
 
+    if (proposalType === "STANDARD" && !description.trim()) {
+      Alert.alert(t("errors.error"), t("errors.invalidFormValues"));
+      return;
+    }
+
+    if (proposalType === "VENDOR" && !selectedVendor) {
+      Alert.alert(t("errors.error"), t("errors.invalidFormValues"));
+      return;
+    }
+
+    const fallbackVendorDescription =
+      selectedVendor && proposalType === "VENDOR"
+        ? `${t("proposals.vendorDescriptionAuto")}: ${selectedVendor.businessName}${
+            selectedProduct ? ` - ${selectedProduct.title}` : ""
+          }`
+        : "";
+
+    const normalizedDescription = description.trim() || fallbackVendorDescription;
+
     try {
       if (!isOnline) {
+        const payload: Record<string, unknown> = {
+          cooperativeId: activeCooperativeId,
+          title: title.trim(),
+          description: normalizedDescription,
+        };
+
+        if (proposalType === "VENDOR" && selectedVendor) {
+          payload.vendorId = selectedVendor.id;
+          payload.productId = selectedProduct?.id;
+          payload.vendorNote = description.trim() || undefined;
+        }
+
         enqueue({
           type: "proposal.create",
-          payload: {
-            cooperativeId: activeCooperativeId,
-            title: title.trim(),
-            description: description.trim(),
-          },
+          payload,
           idempotencyKey: `proposal-${Date.now()}-${Math.random()
             .toString(16)
             .slice(2)}`,
@@ -289,18 +436,32 @@ export default function ProposalsScreen() {
 
         setTitle("");
         setDescription("");
+        setProposalType("STANDARD");
+        setSelectedVendor(null);
+        setSelectedProduct(null);
         setModalVisible(false);
         Alert.alert(t("status.offlineProposals"), t("feedback.proposalQueued"));
         return;
       }
 
-      await api.post("/proposals", {
+      const payload: Record<string, unknown> = {
         cooperativeId: activeCooperativeId,
         title: title.trim(),
-        description: description.trim(),
-      });
+        description: normalizedDescription,
+      };
+
+      if (proposalType === "VENDOR" && selectedVendor) {
+        payload.vendorId = selectedVendor.id;
+        payload.productId = selectedProduct?.id;
+        payload.vendorNote = description.trim() || undefined;
+      }
+
+      await api.post("/proposals", payload);
       setTitle("");
       setDescription("");
+      setProposalType("STANDARD");
+      setSelectedVendor(null);
+      setSelectedProduct(null);
       setModalVisible(false);
       await refetch();
     } catch (error) {
@@ -490,6 +651,9 @@ export default function ProposalsScreen() {
               item={item}
               onVote={submitVote}
               t={t}
+              onOpenVendorProfile={(vendorId) =>
+                router.push({ pathname: "/(dashboard)/vendors/[id]", params: { id: vendorId } })
+              }
               isFocused={item.id === focusedProposalId}
             />
           )}
@@ -502,16 +666,99 @@ export default function ProposalsScreen() {
             <Text className="text-[#1B5E20] text-lg font-bold mb-3">
               {t("proposals.newProposal")}
             </Text>
+
+            <Text className="text-[#1B5E20] font-semibold mb-2">
+              {t("proposals.vendorProposalTypeLabel")}
+            </Text>
+            <View className="flex-row gap-2 mb-3">
+              <PressableScale
+                className={`flex-1 rounded-xl border px-3 py-3 ${
+                  proposalType === "STANDARD"
+                    ? "bg-[#1B5E20] border-[#1B5E20]"
+                    : "bg-white border-[#CFE3CF]"
+                }`}
+                onPress={() => setProposalType("STANDARD")}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    proposalType === "STANDARD" ? "text-white" : "text-[#1B5E20]"
+                  }`}
+                >
+                  {t("proposals.vendorProposalToggleStandard")}
+                </Text>
+              </PressableScale>
+              <PressableScale
+                className={`flex-1 rounded-xl border px-3 py-3 ${
+                  proposalType === "VENDOR"
+                    ? "bg-[#1B5E20] border-[#1B5E20]"
+                    : "bg-white border-[#CFE3CF]"
+                }`}
+                onPress={() => setProposalType("VENDOR")}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    proposalType === "VENDOR" ? "text-white" : "text-[#1B5E20]"
+                  }`}
+                >
+                  {t("proposals.vendorProposalToggleVendor")}
+                </Text>
+              </PressableScale>
+            </View>
+
+            {proposalType === "VENDOR" ? (
+              <View className="mb-3">
+                <PressableScale
+                  className="rounded-xl border border-dashed border-[#9CC59C] bg-[#F1F7F1] px-4 py-3"
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(dashboard)/vendors",
+                      params: { select: "1" },
+                    });
+                  }}
+                >
+                  {selectedVendor ? (
+                    <View>
+                      <Text className="text-[#1B5E20] font-semibold">
+                        {selectedVendor.businessName}
+                      </Text>
+                      {selectedProduct ? (
+                        <Text className="text-slate-600 mt-1">
+                          {selectedProduct.title}
+                        </Text>
+                      ) : null}
+                      <Text className="text-[#1B5E20] mt-1 text-xs font-semibold">
+                        {t("proposals.vendorSelectorChange")}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-[#1B5E20] font-medium">
+                      {t("proposals.vendorSelectorPlaceholder")}
+                    </Text>
+                  )}
+                </PressableScale>
+              </View>
+            ) : null}
+
             <TextInput
               value={title}
               onChangeText={setTitle}
               placeholder={t("proposals.titlePlaceholder")}
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
             />
+
+            {proposalType === "VENDOR" ? (
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("proposals.vendorNoteLabel")}
+              </Text>
+            ) : null}
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder={t("proposals.descriptionPlaceholder")}
+              placeholder={
+                proposalType === "VENDOR"
+                  ? t("proposals.vendorNotePlaceholder")
+                  : t("proposals.descriptionPlaceholder")
+              }
               multiline
               className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-4 min-h-[96px]"
             />
@@ -525,8 +772,13 @@ export default function ProposalsScreen() {
                 </Text>
               </PressableScale>
               <PressableScale
-                className="flex-1 bg-[#1B5E20] rounded-xl py-3"
+                className={`flex-1 rounded-xl py-3 ${
+                  proposalType === "VENDOR" && !selectedVendor
+                    ? "bg-slate-300"
+                    : "bg-[#1B5E20]"
+                }`}
                 onPress={submitProposal}
+                disabled={proposalType === "VENDOR" && !selectedVendor}
               >
                 <Text className="text-center text-white font-semibold">
                   {t("common.submit")}
@@ -735,17 +987,20 @@ function ProposalCard({
   item,
   onVote,
   t,
+  onOpenVendorProfile,
   isFocused,
 }: {
   item: Proposal;
   onVote: (proposalId: string, choice: boolean) => Promise<void>;
   t: (key: string) => string;
+  onOpenVendorProfile: (vendorId: string) => void;
   isFocused?: boolean;
 }) {
   const isQueuedOffline =
     item.localSyncState === "QUEUED_OFFLINE" ||
     item.id.startsWith("queued-withdrawal-");
   const isWithdrawal = item.type === "WITHDRAWAL";
+  const isVendorPurchase = item.type === "VENDOR_PURCHASE";
   const { data: eligibilityData } = useQuery<{
     withdrawalEligibility: WithdrawalEligibility;
   }>(WITHDRAWAL_ELIGIBILITY_QUERY, {
@@ -774,6 +1029,11 @@ function ProposalCard({
           {item.title}
         </Text>
         <View className="flex-row items-center gap-2">
+          {isVendorPurchase ? (
+            <Text className="text-[10px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold">
+              {t("proposals.vendorBadge")}
+            </Text>
+          ) : null}
           {isWithdrawal && (
             <Text className="text-[10px] px-2 py-1 rounded-full bg-orange-100 text-orange-700 font-semibold">
               {t("proposals.withdrawalTag")}
@@ -792,6 +1052,60 @@ function ProposalCard({
       </View>
 
       <Text className="text-slate-600 mt-2">{item.description}</Text>
+
+      {item.vendorLink ? (
+        <View className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3">
+          <View className="flex-row items-center">
+            {item.vendorLink.vendor.logoUrl ? (
+              <Image
+                source={{ uri: item.vendorLink.vendor.logoUrl }}
+                className="w-10 h-10 rounded-lg mr-3"
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-10 h-10 rounded-lg mr-3 bg-blue-200 items-center justify-center">
+                <Text className="text-blue-700 font-bold text-xs">
+                  {item.vendorLink.vendor.businessName.slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View className="flex-1">
+              <Text className="text-blue-900 font-semibold">
+                {item.vendorLink.vendor.businessName}
+              </Text>
+              {item.vendorLink.product ? (
+                <Text className="text-blue-800 text-xs mt-0.5">
+                  {t("proposals.vendorLinkProduct")}: {item.vendorLink.product.title}
+                </Text>
+              ) : null}
+              {item.vendorLink.product?.priceXAF ? (
+                <Text className="text-blue-800 text-xs mt-0.5">
+                  {t("proposals.vendorLinkPrice")}: {item.vendorLink.product.priceXAF.toLocaleString()} FCFA
+                  {item.vendorLink.product.unit
+                    ? ` / ${item.vendorLink.product.unit}`
+                    : ""}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          {item.vendorLink.note ? (
+            <Text className="text-blue-900 mt-2">{item.vendorLink.note}</Text>
+          ) : null}
+
+          <Text className="text-blue-700 text-xs mt-2 font-semibold">
+            {t("proposals.vendorApprovedCta")}
+          </Text>
+          <PressableScale
+            className="mt-2 rounded-lg border border-blue-300 px-3 py-2"
+            onPress={() => onOpenVendorProfile(item.vendorLink!.vendor.id)}
+          >
+            <Text className="text-blue-800 text-xs font-semibold">
+              {t("vendorReviewCenter.openProfile")}
+            </Text>
+          </PressableScale>
+        </View>
+      ) : null}
 
       {isQueuedOffline ? (
         <View className="mt-3 rounded-xl border border-amber-300 bg-amber-100 px-3 py-2">
@@ -899,3 +1213,4 @@ function ProposalCard({
     </View>
   );
 }
+

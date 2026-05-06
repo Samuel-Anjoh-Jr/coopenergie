@@ -1,0 +1,34 @@
+{
+  "vendorLanding": {
+    "hero": {
+      "badge": "For solar vendors",
+      "title": "Sell to trusted cooperatives across Cameroon",
+      "subtitle": "Publish your solar offers, gain qualified demand, and turn cooperative decisions into confirmed orders.",
+      "ctaSignup": "Create vendor account",
+      "ctaLogin": "Login",
+      "ctaDashboard": "Open dashboard"
+    },
+    "howItWorks": {
+      "title": "How it works"
+    },
+    "pricing": {
+      "title": "Simple pricing",
+      "subtitle": "Choose the model that fits your growth rhythm."
+    },
+    "whyUs": {
+      "title": "Why sell with CoopEnergie"
+    },
+    "faq": {
+      "title": "Frequently asked questions"
+    }
+  },
+  "vendorDashboard": {
+    "navigationTitle": "Vendor dashboard",
+    "overview": "Overview",
+    "profile": "Profile",
+    "contact": "Contact",
+    "products": "Products",
+    "subscription": "Subscription",
+    "reviews": "Reviews"
+  }
+}

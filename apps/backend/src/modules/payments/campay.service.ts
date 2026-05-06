@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 
 type CampayCollectResponse = {
@@ -13,6 +14,9 @@ type CampayCollectResponse = {
   message?: string;
   [key: string]: unknown;
 };
+
+const CAMPAY_REQUEST_TIMEOUT_MS = 12000;
+const CAMPAY_MAX_ATTEMPTS = 3;
 
 @Injectable()
 export class CampayService {
@@ -150,27 +154,72 @@ export class CampayService {
       );
     }
 
-    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
-      method: init.method,
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: init.body,
-    });
+    const endpoint = `${baseUrl.replace(/\/+$/, "")}${path}`;
 
-    const text = await response.text();
-    const data = this.tryParseJson(text);
+    for (let attempt = 1; attempt <= CAMPAY_MAX_ATTEMPTS; attempt += 1) {
+      const isLastAttempt = attempt === CAMPAY_MAX_ATTEMPTS;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, CAMPAY_REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new BadRequestException(
-        this.readString(data?.message) ||
+      try {
+        const response = await fetch(endpoint, {
+          method: init.method,
+          headers: {
+            Authorization: `Token ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: init.body,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        const text = await response.text();
+        const data = this.tryParseJson(text);
+        const providerMessage =
+          this.readString(data?.message) ||
           this.readString(data?.detail) ||
-          "CamPay request failed.",
-      );
+          "CamPay request failed.";
+
+        if (response.ok) {
+          return (data ?? {}) as T;
+        }
+
+        if (this.isRetryableStatus(response.status) && !isLastAttempt) {
+          await this.sleep(this.retryDelayMs(attempt));
+          continue;
+        }
+
+        if (response.status >= 500) {
+          throw new ServiceUnavailableException(
+            "Payment provider is temporarily unavailable. Please retry in a few moments.",
+          );
+        }
+
+        throw new BadRequestException(providerMessage);
+      } catch (error) {
+        clearTimeout(timeoutId);
+
+        if (!this.isRetryableNetworkError(error)) {
+          throw error;
+        }
+
+        if (!isLastAttempt) {
+          await this.sleep(this.retryDelayMs(attempt));
+          continue;
+        }
+
+        throw new ServiceUnavailableException(
+          "Payment provider is temporarily unavailable. Please retry in a few moments.",
+        );
+      }
     }
 
-    return (data ?? {}) as T;
+    throw new ServiceUnavailableException(
+      "Payment provider is temporarily unavailable. Please retry in a few moments.",
+    );
   }
 
   private tryParseJson(value: string) {
@@ -187,6 +236,54 @@ export class CampayService {
 
   private readString(value: unknown) {
     return typeof value === "string" ? value : undefined;
+  }
+
+  private isRetryableStatus(status: number) {
+    return (
+      status === 408 ||
+      status === 429 ||
+      status === 502 ||
+      status === 503 ||
+      status === 504
+    );
+  }
+
+  private isRetryableNetworkError(error: unknown) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return true;
+    }
+
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const code = (error as { code?: string }).code;
+    const message = error.message.toLowerCase();
+
+    if (
+      code === "UND_ERR_CONNECT_TIMEOUT" ||
+      code === "UND_ERR_HEADERS_TIMEOUT"
+    ) {
+      return true;
+    }
+
+    return (
+      message.includes("fetch failed") ||
+      message.includes("connect timeout") ||
+      message.includes("network") ||
+      message.includes("timed out")
+    );
+  }
+
+  private retryDelayMs(attempt: number) {
+    const baseDelayMs = 300;
+    return baseDelayMs * Math.pow(2, attempt - 1);
+  }
+
+  private sleep(delayMs: number) {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
   }
 
   private readApiKey(value: string | undefined) {

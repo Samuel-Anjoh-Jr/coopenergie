@@ -52,7 +52,9 @@ export default function LoginPage() {
         return;
       }
 
-      if (session?.user?.isPlatformAdmin) {
+      if (session?.user?.role === "VENDOR") {
+        router.replace(`/${locale}/vendor-dashboard`);
+      } else if (session?.user?.isPlatformAdmin) {
         router.replace(`/${locale}/admin`);
       } else {
         router.replace(`/${locale}/dashboard`);
@@ -89,7 +91,9 @@ export default function LoginPage() {
 
     const { getSession } = await import("next-auth/react");
     const session = await getSession();
-    if (session?.user?.isPlatformAdmin) {
+    if (session?.user?.role === "VENDOR") {
+      router.push(`/${locale}/vendor-dashboard`);
+    } else if (session?.user?.isPlatformAdmin) {
       router.push(`/${locale}/admin`);
     } else {
       router.push(`/${locale}/dashboard`);

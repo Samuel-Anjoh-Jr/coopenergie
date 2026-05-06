@@ -25,6 +25,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAdminRealtime } from "@/lib/admin-realtime";
 import { restClient } from "@/lib/rest-client";
+import { useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
 
 type Metrics = {
@@ -63,6 +64,7 @@ function formatXaf(value: number) {
 export default function AdminPage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
+  const t = useTranslations(locale);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export default function AdminPage() {
       setCooperatives(coopsData.items);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to load admin data",
+        error instanceof Error ? error.message : t("adminDashboard.loadFailed"),
       );
     } finally {
       setLoading(false);
@@ -108,81 +110,90 @@ export default function AdminPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-foreground">
-          Platform Overview
+          {t("adminDashboard.title")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Monitor platform health, review cooperatives, and enforce global
-          safeguards.
+          {t("adminDashboard.subtitle")}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+        <Card className="min-w-0 overflow-hidden">
+          <CardContent className="min-w-0 p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Building2 className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="min-w-0 text-xl font-bold leading-tight wrap-anywhere md:text-2xl">
               {metrics?.totalCooperatives ?? 0}
             </div>
-            <p className="text-sm text-muted-foreground">Cooperatives</p>
+            <p className="text-sm text-muted-foreground wrap-anywhere">
+              {t("adminDashboard.metrics.cooperatives")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="min-w-0 overflow-hidden">
+          <CardContent className="min-w-0 p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Users className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold">{metrics?.totalUsers ?? 0}</div>
-            <p className="text-sm text-muted-foreground">Total Users</p>
+            <div className="min-w-0 text-xl font-bold leading-tight wrap-anywhere md:text-2xl">
+              {metrics?.totalUsers ?? 0}
+            </div>
+            <p className="text-sm text-muted-foreground wrap-anywhere">
+              {t("adminDashboard.metrics.totalUsers")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="min-w-0 overflow-hidden">
+          <CardContent className="min-w-0 p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Wallet className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="min-w-0 text-xl font-bold leading-tight wrap-anywhere md:text-2xl">
               {formatXaf(metrics?.totalContributionsXAF ?? 0)}
             </div>
-            <p className="text-sm text-muted-foreground">Total Contributions</p>
+            <p className="text-sm text-muted-foreground wrap-anywhere">
+              {t("adminDashboard.metrics.totalContributions")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="min-w-0 overflow-hidden">
+          <CardContent className="min-w-0 p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Activity className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="min-w-0 text-xl font-bold leading-tight wrap-anywhere md:text-2xl">
               {metrics?.totalPayments ?? 0}
             </div>
-            <p className="text-sm text-muted-foreground">Total Payments</p>
+            <p className="text-sm text-muted-foreground wrap-anywhere">
+              {t("adminDashboard.metrics.totalPayments")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="min-w-0 overflow-hidden">
+          <CardContent className="min-w-0 p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <ShieldAlert className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="min-w-0 text-xl font-bold leading-tight wrap-anywhere md:text-2xl">
               {metrics?.activeSubscriptions ?? 0}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Active Subscriptions
+            <p className="text-sm text-muted-foreground wrap-anywhere">
+              {t("adminDashboard.metrics.activeSubscriptions")}
             </p>
           </CardContent>
         </Card>
@@ -191,29 +202,34 @@ export default function AdminPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Admin Actions</CardTitle>
+            <CardTitle>{t("adminDashboard.actions.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Use these entry points to manage cooperatives and platform-wide
-              governance.
+              {t("adminDashboard.actions.subtitle")}
             </p>
             <div className="flex flex-wrap gap-3">
               <Button asChild>
                 <Link href={`/${locale}/admin/cooperatives`}>
-                  Open Cooperative Manager
+                  {t("adminDashboard.actions.openCooperatives")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/${locale}/admin/settings`}>
-                  Open Global Settings
+                  {t("adminDashboard.actions.openSettings")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/${locale}/admin/users`}>
-                  Open Users & Audit
+                  {t("adminDashboard.actions.openUsers")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/admin/payments`}>
+                  {t("adminDashboard.openPayments")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -223,28 +239,33 @@ export default function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>What Settings Affect</CardTitle>
+            <CardTitle>{t("adminDashboard.settingsImpact.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
-              <p className="font-medium">Withdrawal Thresholds</p>
+              <p className="font-medium">
+                {t("adminDashboard.settingsImpact.withdrawalThresholds.title")}
+              </p>
               <p className="text-muted-foreground">
-                Controls pass conditions for withdrawal proposals across all
-                cooperatives.
+                {t(
+                  "adminDashboard.settingsImpact.withdrawalThresholds.description",
+                )}
               </p>
             </div>
             <div>
-              <p className="font-medium">Quorum Minimum Votes</p>
+              <p className="font-medium">
+                {t("adminDashboard.settingsImpact.quorum.title")}
+              </p>
               <p className="text-muted-foreground">
-                Sets the minimum number of votes required before any withdrawal
-                vote can pass.
+                {t("adminDashboard.settingsImpact.quorum.description")}
               </p>
             </div>
             <div>
-              <p className="font-medium">Maintenance Mode</p>
+              <p className="font-medium">
+                {t("adminDashboard.settingsImpact.maintenance.title")}
+              </p>
               <p className="text-muted-foreground">
-                Globally blocks withdrawal processing platform-wide until
-                switched off.
+                {t("adminDashboard.settingsImpact.maintenance.description")}
               </p>
             </div>
           </CardContent>

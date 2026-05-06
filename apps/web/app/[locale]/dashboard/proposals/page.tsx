@@ -13,6 +13,7 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -44,8 +45,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { celoScanTx } from "@/lib/config";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
-import { GET_PROPOSALS } from "@/lib/graphql/queries/proposals";
+import { GET_PROPOSALS_WITH_VENDOR } from "@/lib/graphql/queries/proposals";
 import { GET_WITHDRAWAL_ELIGIBILITY } from "@/lib/graphql/queries/withdrawal";
 import { SUBSCRIPTION_ON_PROPOSAL } from "@/lib/graphql/subscriptions/cooperative";
 import { SUBSCRIPTION_ON_VOTE } from "@/lib/graphql/subscriptions/cooperative";
@@ -57,6 +57,14 @@ import {
 } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
+
+import {
+  VendorBrowserModal,
+  type VendorSelection,
+  type VendorBrowserVendor,
+} from "@/components/coop/VendorBrowserModal";
+import { StarRating } from "@/components/shared/StarRating";
 
 type Proposal = {
   id: string;
@@ -75,6 +83,18 @@ type Proposal = {
     status: string;
   } | null;
 };
+type ProposalVendorLink = {
+  id: string;
+  note?: string | null;
+  vendor: { id: string; businessName: string; logoUrl?: string | null };
+  product?: {
+    id: string;
+    title: string;
+    priceXAF: number;
+    unit?: string | null;
+  } | null;
+};
+type ProposalWithVendor = Proposal & { vendorLink?: ProposalVendorLink | null };
 
 type WithdrawalEligibility = {
   canVote: boolean;
@@ -140,7 +160,17 @@ export default function ProposalsPage() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: "", description: "" });
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    proposalType: "STANDARD" as "STANDARD" | "VENDOR",
+    vendorId: "",
+    productId: "",
+    vendorNote: "",
+    selectedVendor: null as VendorBrowserVendor | null,
+    selectedProduct: null as VendorBrowserVendor["products"][number] | null,
+  });
+  const [vendorBrowserOpen, setVendorBrowserOpen] = useState(false);
   const [withdrawalForm, setWithdrawalForm] = useState({
     amountXAF: "",
     reason: "",
@@ -155,27 +185,27 @@ export default function ProposalsPage() {
   const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
   const [votingProposalId, setVotingProposalId] = useState<string | null>(null);
 
-  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const cooperativeBalance =
-    myCooperativesData?.myCooperatives?.[0]?.confirmedBalanceXAF || 0;
-  const userRole =
-    (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
-    "MEMBER";
+  const {
+    activeCoopId: cooperativeId,
+    selectedCoop,
+    refetchMyCooperatives,
+    userRole,
+    isResolvingSelection,
+  } = useSelectedCooperative();
+  const cooperativeBalance = selectedCoop?.confirmedBalanceXAF || 0;
+  const normalizedUserRole = (userRole as UserRole | null) || "MEMBER";
 
   const {
     data: proposalsData,
     loading: loadingProposals,
     refetch: refetchProposals,
-  } = useQuery(GET_PROPOSALS, {
+  } = useQuery(GET_PROPOSALS_WITH_VENDOR, {
     variables: { cooperativeId },
     skip: !cooperativeId,
   });
 
   const isInitialProposalsLoading =
-    loadingProposals && !proposalsData?.proposals;
+    isResolvingSelection || (loadingProposals && !proposalsData?.proposals);
 
   const throttledProposalsRefetch = useMemo(
     () =>
@@ -220,7 +250,7 @@ export default function ProposalsPage() {
     },
   });
 
-  const proposals: Proposal[] = proposalsData?.proposals ?? [];
+  const proposals: ProposalWithVendor[] = proposalsData?.proposals ?? [];
 
   const sortedProposals = useMemo(
     () =>
@@ -253,13 +283,17 @@ export default function ProposalsPage() {
           : t("toasts.voteRecorded"),
       );
 
-      await safeRefetchProposals();
+      await Promise.all([safeRefetchProposals(), refetchMyCooperatives()]);
+      setTimeout(() => {
+        void safeRefetchProposals();
+        void refetchMyCooperatives();
+      }, 1200);
     } catch (error) {
       console.error("Vote error:", error);
       const errorMessage =
         error instanceof Error ? error.message : t("errors.voteFailed");
       toast.error(errorMessage);
-      await safeRefetchProposals();
+      await Promise.all([safeRefetchProposals(), refetchMyCooperatives()]);
     } finally {
       setVotingProposalId(null);
     }
@@ -283,9 +317,15 @@ export default function ProposalsPage() {
           cooperativeId,
           title: formData.title.trim(),
           description: formData.description.trim(),
+          ...(formData.proposalType === "VENDOR" && formData.vendorId
+            ? {
+                vendorId: formData.vendorId,
+                productId: formData.productId || undefined,
+                vendorNote: formData.vendorNote.trim() || undefined,
+              }
+            : {}),
         },
       );
-
       const txHash = response?.txHash;
       toast.success(
         txHash
@@ -293,7 +333,16 @@ export default function ProposalsPage() {
           : t("toasts.proposalCreated"),
       );
 
-      setFormData({ title: "", description: "" });
+      setFormData({
+        title: "",
+        description: "",
+        proposalType: "STANDARD",
+        vendorId: "",
+        productId: "",
+        vendorNote: "",
+        selectedVendor: null,
+        selectedProduct: null,
+      });
       setIsOpen(false);
       await safeRefetchProposals();
     } catch (error) {
@@ -306,6 +355,24 @@ export default function ProposalsPage() {
       setIsSubmittingProposal(false);
     }
   };
+
+  const handleVendorSelect = useCallback(
+    (selection: VendorSelection) => {
+      const autoTitle =
+        `${t("proposals.autoTitleVendor")} ${selection.vendor.businessName}` +
+        (selection.product ? ` — ${selection.product.title}` : "");
+      setFormData((prev) => ({
+        ...prev,
+        vendorId: selection.vendor.id,
+        productId: selection.product?.id ?? "",
+        selectedVendor: selection.vendor,
+        selectedProduct: selection.product ?? null,
+        title: prev.title || autoTitle,
+      }));
+      setVendorBrowserOpen(false);
+    },
+    [t],
+  );
 
   const handleCreateWithdrawal = async () => {
     if (
@@ -456,6 +523,92 @@ export default function ProposalsPage() {
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  {t("proposals.vendorProposalTypeLabel")}
+                </p>
+                <div className="flex rounded-lg border border-border overflow-hidden">
+                  {(["STANDARD", "VENDOR"] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          proposalType: type,
+                          vendorId: "",
+                          productId: "",
+                          vendorNote: "",
+                          selectedVendor: null,
+                          selectedProduct: null,
+                        }))
+                      }
+                      className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                        formData.proposalType === type
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {type === "STANDARD"
+                        ? t("proposals.vendorProposalToggleStandard")
+                        : t("proposals.vendorProposalToggleVendor")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {formData.proposalType === "VENDOR" && (
+                <div className="space-y-2">
+                  {formData.selectedVendor ? (
+                    <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 flex items-center gap-3">
+                      {formData.selectedVendor.logoUrl ? (
+                        <img
+                          src={formData.selectedVendor.logoUrl}
+                          alt={formData.selectedVendor.businessName}
+                          className="h-10 w-10 rounded-lg object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary font-bold text-xs">
+                          {formData.selectedVendor.businessName
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">
+                          {formData.selectedVendor.businessName}
+                        </p>
+                        {formData.selectedProduct && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {formData.selectedProduct.title} —{" "}
+                            {formData.selectedProduct.priceXAF.toLocaleString()}{" "}
+                            XAF
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setVendorBrowserOpen(true)}
+                        className="text-xs text-primary"
+                      >
+                        {t("proposals.vendorSelectorChange")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setVendorBrowserOpen(true)}
+                      className="w-full rounded-lg border border-dashed border-border bg-muted/30 p-4 flex items-center justify-between text-sm text-muted-foreground hover:bg-muted/60 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {t("proposals.vendorSelectorPlaceholder")}
+                      </span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
                 <label
                   htmlFor="title"
                   className="text-sm font-medium text-foreground"
@@ -478,11 +631,17 @@ export default function ProposalsPage() {
                   htmlFor="description"
                   className="text-sm font-medium text-foreground"
                 >
-                  {t("proposals.proposalDescription")}
+                  {formData.proposalType === "VENDOR"
+                    ? t("proposals.vendorNoteLabel")
+                    : t("proposals.proposalDescription")}
                 </label>
                 <Textarea
                   id="description"
-                  placeholder={t("proposals.descriptionPlaceholder")}
+                  placeholder={
+                    formData.proposalType === "VENDOR"
+                      ? t("proposals.vendorNotePlaceholder")
+                      : t("proposals.descriptionPlaceholder")
+                  }
                   value={formData.description}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -509,7 +668,8 @@ export default function ProposalsPage() {
                     !formData.title.trim() ||
                     !formData.description.trim() ||
                     !cooperativeId ||
-                    isSubmittingProposal
+                    isSubmittingProposal ||
+                    (formData.proposalType === "VENDOR" && !formData.vendorId)
                   }
                   className="flex-1 bg-primary hover:bg-accent text-primary-foreground min-h-11 active:animate-button-press"
                 >
@@ -764,6 +924,13 @@ export default function ProposalsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <VendorBrowserModal
+          open={vendorBrowserOpen}
+          onClose={() => setVendorBrowserOpen(false)}
+          onSelect={handleVendorSelect}
+          locale={normalizedLocale}
+        />
       </div>
     </TooltipProvider>
   );
@@ -775,16 +942,18 @@ function ProposalCard({
   onVote,
   votingProposalId,
 }: {
-  proposal: Proposal;
+  proposal: ProposalWithVendor;
   t: ReturnType<typeof useTranslations>;
   onVote: (proposalId: string, choice: boolean) => Promise<void>;
   votingProposalId: string | null;
 }) {
+  const params = useParams();
+  const locale = String(params.locale || "en");
   const { data: eligibilityData, refetch: refetchEligibility } = useQuery(
     GET_WITHDRAWAL_ELIGIBILITY,
     {
-    variables: { proposalId: proposal.id },
-    skip: proposal.type !== "WITHDRAWAL",
+      variables: { proposalId: proposal.id },
+      skip: proposal.type !== "WITHDRAWAL",
     },
   );
 
@@ -803,6 +972,7 @@ function ProposalCard({
   const eligibility: WithdrawalEligibility | undefined =
     eligibilityData?.withdrawalEligibility;
   const isWithdrawal = proposal.type === "WITHDRAWAL";
+  const isVendorPurchase = proposal.type === "VENDOR_PURCHASE";
   const totalVotes = proposal.yesVotes + proposal.noVotes;
   const yesPercentage =
     totalVotes > 0 ? (proposal.yesVotes / totalVotes) * 100 : 0;
@@ -827,6 +997,11 @@ function ProposalCard({
             {isWithdrawal && (
               <Badge className="bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30">
                 {t("proposals.withdrawalTag")}
+              </Badge>
+            )}
+            {isVendorPurchase && (
+              <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30">
+                {t("proposals.vendorBadge")}
               </Badge>
             )}
             <Badge
@@ -904,6 +1079,56 @@ function ProposalCard({
             <p className="text-xs text-muted-foreground">
               {t("proposals.thresholdRequired")}: {eligibility.threshold}%
             </p>
+          </div>
+        )}
+
+        {/* Vendor info block */}
+        {isVendorPurchase && proposal.vendorLink && (
+          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
+            <div className="flex items-center gap-3">
+              {proposal.vendorLink.vendor.logoUrl ? (
+                <img
+                  src={proposal.vendorLink.vendor.logoUrl}
+                  alt={proposal.vendorLink.vendor.businessName}
+                  className="h-10 w-10 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-600 font-bold text-xs">
+                  {proposal.vendorLink.vendor.businessName
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-foreground truncate">
+                  {proposal.vendorLink.vendor.businessName}
+                </p>
+                {proposal.vendorLink.product && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("proposals.vendorLinkProduct")}:{" "}
+                    {proposal.vendorLink.product.title}
+                    {" · "}
+                    {proposal.vendorLink.product.priceXAF.toLocaleString()} XAF
+                  </p>
+                )}
+              </div>
+            </div>
+            {proposal.vendorLink.note && (
+              <p className="text-xs text-muted-foreground italic">
+                {proposal.vendorLink.note}
+              </p>
+            )}
+            {proposal.status.toLowerCase() === "approved" && (
+              <a
+                href={`/${locale}/vendors/${proposal.vendorLink.vendor.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+              >
+                {t("proposals.vendorApprovedCta")}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
         )}
 

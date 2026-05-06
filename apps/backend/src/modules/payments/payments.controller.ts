@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -12,6 +14,7 @@ import {
 
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { VendorPaymentsService } from "../vendors/vendor-payments.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 import { PaymentsService } from "./payments.service";
 
@@ -43,7 +46,12 @@ export class PaymentsController {
 
 @Controller("payments/webhook")
 export class PaymentsWebhookController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  private readonly logger = new Logger(PaymentsWebhookController.name);
+
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly vendorPaymentsService: VendorPaymentsService,
+  ) {}
 
   @Get()
   handleWebhookGet(
@@ -56,7 +64,7 @@ export class PaymentsWebhookController {
       this.readAuthorizationBearerToken(request) ||
       "";
 
-    return this.paymentsService.handleWebhook(payload, String(signature), "");
+    return this.handleWithVendorFallback(payload, String(signature), "");
   }
 
   @Post()
@@ -84,11 +92,52 @@ export class PaymentsWebhookController {
       this.readPayloadSignature(queryPayload) ||
       "";
 
-    return this.paymentsService.handleWebhook(
-      payload,
-      String(signature),
-      rawBody,
-    );
+    return this.handleWithVendorFallback(payload, String(signature), rawBody);
+  }
+
+  private async handleWithVendorFallback(
+    payload: Record<string, unknown>,
+    signature: string,
+    rawBody: string,
+  ) {
+    try {
+      return await this.paymentsService.handleWebhook(payload, signature, rawBody);
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        throw error;
+      }
+
+      this.logger.debug("Primary payment webhook did not match a contribution payment reference.");
+    }
+
+    const reference = this.readReference(payload);
+    const campayStatus = this.readStatus(payload);
+
+    if (!reference || !campayStatus) {
+      throw new NotFoundException("No matching payment reference was found for this webhook payload.");
+    }
+
+    try {
+      const vendorResult = await this.vendorPaymentsService.handleVendorPaymentWebhook(
+        reference,
+        campayStatus,
+      );
+
+      if (!vendorResult.handled) {
+        throw new NotFoundException("No matching payment reference was found for this webhook payload.");
+      }
+
+      return {
+        acknowledged: true,
+        type: "vendor",
+        result: vendorResult,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Vendor webhook fallback failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
   }
 
   private normalizePayload(payload: Record<string, unknown>) {
@@ -183,6 +232,34 @@ export class PaymentsWebhookController {
       payload.campay_signature,
       payload.token,
     ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+
+    return undefined;
+  }
+
+  private readReference(payload: Record<string, unknown>) {
+    const candidates = [
+      payload.reference,
+      payload.external_reference,
+      payload.externalReference,
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+
+    return undefined;
+  }
+
+  private readStatus(payload: Record<string, unknown>) {
+    const candidates = [payload.status, payload.campay_status, payload.payment_status];
 
     for (const candidate of candidates) {
       if (typeof candidate === "string" && candidate.trim()) {

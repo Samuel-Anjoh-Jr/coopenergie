@@ -22,10 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  GET_COOPERATIVE_DETAIL,
-  GET_MY_COOPERATIVES,
-} from "@/lib/graphql/queries/cooperative";
+import { GET_COOPERATIVE_DETAIL } from "@/lib/graphql/queries/cooperative";
 import {
   createTrailingThrottle,
   DASHBOARD_INVITATIONS_REFRESH_INTERVAL_MS,
@@ -34,6 +31,7 @@ import {
 } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type UserRole = "MEMBER" | "COOP_ADMIN" | "PLATFORM_ADMIN";
 
@@ -84,15 +82,11 @@ export default function InvitationsPage() {
   const hasLoadedPendingRef = useRef(false);
   const pendingRequestInFlightRef = useRef(false);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
+  const { activeCoopId, userRole } = useSelectedCooperative({
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id as
-    | string
-    | undefined;
-  const userRole =
-    (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
-    "MEMBER";
+  const cooperativeId = activeCoopId ?? undefined;
+  const normalizedUserRole = (userRole as UserRole | null) ?? "MEMBER";
 
   const [items, setItems] = useState<Invitation[]>([]);
   const [promotingId, setPromotingId] = useState<string | null>(null);
@@ -101,7 +95,7 @@ export default function InvitationsPage() {
     GET_COOPERATIVE_DETAIL,
     {
       variables: { id: cooperativeId },
-      skip: !cooperativeId || userRole !== "COOP_ADMIN",
+      skip: !cooperativeId || normalizedUserRole !== "COOP_ADMIN",
       pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
     },
   );
@@ -109,7 +103,7 @@ export default function InvitationsPage() {
 
   const loadPendingInvitations = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!cooperativeId || userRole !== "COOP_ADMIN") {
+      if (!cooperativeId || normalizedUserRole !== "COOP_ADMIN") {
         setItems([]);
         hasLoadedPendingRef.current = false;
         return;
@@ -143,7 +137,7 @@ export default function InvitationsPage() {
         }
       }
     },
-    [cooperativeId, userRole],
+    [cooperativeId, normalizedUserRole],
   );
 
   const throttledInvitationsRefresh = useMemo(

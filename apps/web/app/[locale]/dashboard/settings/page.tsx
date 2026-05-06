@@ -1,6 +1,6 @@
 "use client";
 
-import { SetStateAction, useState } from "react";
+import { useState } from "react";
 
 import { useQuery } from "@apollo/client";
 import { AlertCircle, Save } from "lucide-react";
@@ -29,7 +29,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import {
   GET_COOPERATIVE_SETTINGS,
   GET_PLATFORM_SETTINGS,
@@ -37,6 +36,7 @@ import {
 import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
 import { Locale, useTranslations } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type UserRole = "MEMBER" | "COOP_ADMIN" | "PLATFORM_ADMIN";
 
@@ -60,28 +60,30 @@ export default function SettingsPage() {
   const [quorumMinVotes, setQuorumMinVotes] = useState<string>("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const userRole =
-    (myCooperativesData?.myCooperatives?.[0]?.membership?.role as UserRole) ||
-    "MEMBER";
+  const { activeCoopId, userRole, isResolvingSelection } =
+    useSelectedCooperative({
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+    });
+  const cooperativeId = activeCoopId ?? undefined;
+  const normalizedUserRole = (userRole as UserRole | null) || "MEMBER";
 
   const { data: coopSettingsData, loading: loadingCoopSettings } = useQuery(
     GET_COOPERATIVE_SETTINGS,
     {
       variables: { cooperativeId },
-      skip: !cooperativeId || userRole !== "COOP_ADMIN",
+      skip: !cooperativeId || normalizedUserRole !== "COOP_ADMIN",
       pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
       onCompleted: (data: {
         cooperativeSettings: {
-          withdrawalThreshold: { toString: () => SetStateAction<string> };
+          withdrawalThreshold: { toString: () => string };
         };
       }) => {
+        // Only populate on first load — polls must not reset user edits
         if (data?.cooperativeSettings?.withdrawalThreshold) {
-          setCoopThreshold(
-            data.cooperativeSettings.withdrawalThreshold.toString(),
+          setCoopThreshold((prev) =>
+            prev === ""
+              ? String(data.cooperativeSettings.withdrawalThreshold)
+              : prev,
           );
         }
       },
@@ -90,7 +92,7 @@ export default function SettingsPage() {
 
   const { data: platformSettingsData, loading: loadingPlatformSettings } =
     useQuery(GET_PLATFORM_SETTINGS, {
-      skip: userRole !== "PLATFORM_ADMIN",
+      skip: normalizedUserRole !== "PLATFORM_ADMIN",
       pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
       onCompleted: (data: {
         platformSettings: {
@@ -101,28 +103,44 @@ export default function SettingsPage() {
           maintenanceMode: any;
         };
       }) => {
+        // Only populate on first load — polls must not reset user edits
         if (data?.platformSettings) {
-          setPlatformThresholdDefault(
-            data.platformSettings.withdrawalThresholdDefault?.toString() || "",
+          setPlatformThresholdDefault((prev) =>
+            prev === ""
+              ? data.platformSettings.withdrawalThresholdDefault?.toString() ||
+                ""
+              : prev,
           );
-          setPlatformThresholdMin(
-            data.platformSettings.withdrawalThresholdMin?.toString() || "",
+          setPlatformThresholdMin((prev) =>
+            prev === ""
+              ? data.platformSettings.withdrawalThresholdMin?.toString() || ""
+              : prev,
           );
-          setPlatformThresholdMax(
-            data.platformSettings.withdrawalThresholdMax?.toString() || "",
+          setPlatformThresholdMax((prev) =>
+            prev === ""
+              ? data.platformSettings.withdrawalThresholdMax?.toString() || ""
+              : prev,
           );
-          setQuorumMinVotes(
-            data.platformSettings.withdrawalQuorumMinVotes?.toString() || "",
+          setQuorumMinVotes((prev) =>
+            prev === ""
+              ? data.platformSettings.withdrawalQuorumMinVotes?.toString() || ""
+              : prev,
           );
-          setMaintenanceMode(data.platformSettings.maintenanceMode || false);
+          setMaintenanceMode((prev) =>
+            platformSettingsData?.platformSettings
+              ? prev
+              : data.platformSettings.maintenanceMode || false,
+          );
         }
       },
     });
 
   const isInitialCoopSettingsLoading =
-    loadingCoopSettings && !coopSettingsData?.cooperativeSettings;
+    isResolvingSelection ||
+    (loadingCoopSettings && !coopSettingsData?.cooperativeSettings);
   const isInitialPlatformSettingsLoading =
-    loadingPlatformSettings && !platformSettingsData?.platformSettings;
+    isResolvingSelection ||
+    (loadingPlatformSettings && !platformSettingsData?.platformSettings);
 
   const handleSaveCoopSettings = async () => {
     if (!cooperativeId || !coopThreshold) {
@@ -202,7 +220,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Cooperative Admin Section */}
-        {userRole === "COOP_ADMIN" && (
+        {normalizedUserRole === "COOP_ADMIN" && (
           <Card className="border-border/50 bg-card/50 backdrop-blur">
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
@@ -300,7 +318,7 @@ export default function SettingsPage() {
         )}
 
         {/* Platform Admin Section */}
-        {userRole === "PLATFORM_ADMIN" && (
+        {normalizedUserRole === "PLATFORM_ADMIN" && (
           <Card className="border-border/50 bg-card/50 backdrop-blur">
             <CardHeader>
               <div className="flex items-center justify-between gap-2">

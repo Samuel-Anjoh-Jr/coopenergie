@@ -15,6 +15,7 @@ import { PlatformAdminGuard } from "../../common/guards/platform-admin.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PlatformSettingsService } from "../platform-settings/platform-settings.service";
+import { UpdateMonetisationSettingsDto } from "../platform-settings/dto/update-monetisation-settings.dto";
 import { UpdatePlatformSettingsDto } from "../platform-settings/dto/update-platform-settings.dto";
 import { RenameCooperativeSlugDto } from "./dto/rename-cooperative-slug.dto";
 import { UpdateCooperativeSuspensionDto } from "./dto/update-cooperative-suspension.dto";
@@ -149,9 +150,40 @@ export class AdminController {
   ) {
     return this.platformSettingsService.updateSettings(user.userId, dto);
   }
+
+  @Get("monetisation")
+  getMonetisationSettings() {
+    return this.platformSettingsService.getMonetisationSettings();
+  }
+
+  @UseGuards(JwtAuthGuard, PlatformAdminGuard)
+  @Patch("monetisation")
+  async updateMonetisationSettings(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: UpdateMonetisationSettingsDto,
+  ) {
+    const previous = await this.platformSettingsService.getMonetisationSettings();
+    const updated = await this.platformSettingsService.updateMonetisationSettings(
+      user.userId,
+      dto,
+    );
+
+    if (previous.withdrawalFeePercent !== updated.withdrawalFeePercent) {
+      await this.platformSettingsService.recomputeCooperativeTargets();
+    }
+
+    return updated;
+  }
+
   @UseGuards(JwtAuthGuard, PlatformAdminGuard)
   @Get("cooperatives/admin-key-health")
   async cooperativesAdminKeyHealth() {
     return this.adminService.getCooperativesAdminKeyHealth();
+  }
+
+  @UseGuards(JwtAuthGuard, PlatformAdminGuard)
+  @Get("payments-insights")
+  paymentsInsights() {
+    return this.adminService.getPaymentsInsights();
   }
 }

@@ -29,6 +29,22 @@ export const authOptions: NextAuthConfig = {
   session: {
     strategy: "jwt",
   },
+  logger: {
+    error(code, ...message) {
+      const normalizedCode =
+        typeof code === "string"
+          ? code
+          : ((code as { type?: string; name?: string }).type ??
+            (code as { name?: string }).name);
+
+      // Invalid credentials are expected user input and shouldn't spam server error logs.
+      if (normalizedCode === "CredentialsSignin") {
+        return;
+      }
+
+      console.error(`[auth][error] ${normalizedCode ?? "unknown"}`, ...message);
+    },
+  },
   providers: [
     Credentials({
       name: "Credentials",
@@ -61,6 +77,7 @@ export const authOptions: NextAuthConfig = {
             id?: string;
             email?: string;
             name?: string;
+            role?: string;
           };
           token?: string;
           isPlatformAdmin?: boolean;
@@ -75,12 +92,75 @@ export const authOptions: NextAuthConfig = {
           return null;
         }
 
+        let role = data.user.role;
+        let vendor: { id?: string; status?: string } | undefined;
+
+        try {
+          const vendorLoginResponse = await fetch(
+            `${API_URL}/api/v1/vendors/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password }),
+            },
+          );
+
+          if (vendorLoginResponse.ok) {
+            const vendorLoginData = (await vendorLoginResponse.json()) as {
+              vendor?: {
+                id?: string;
+                status?: string;
+              };
+            };
+            if (vendorLoginData.vendor?.id) {
+              role = "VENDOR";
+              vendor = {
+                id: vendorLoginData.vendor.id,
+                status: vendorLoginData.vendor.status,
+              };
+            }
+          }
+        } catch {
+          // Ignore vendor login lookup failures and keep base auth data.
+        }
+
+        if (data.token && !vendor) {
+          try {
+            const vendorResponse = await fetch(
+              `${API_URL}/api/v1/vendors/dashboard/me`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${data.token}`,
+                },
+              },
+            );
+
+            if (vendorResponse.ok) {
+              const vendorDashboard = (await vendorResponse.json()) as {
+                accountStatus?: string;
+              };
+              role = "VENDOR";
+              vendor = {
+                id: data.user.id,
+                status: vendorDashboard.accountStatus,
+              };
+            }
+          } catch {
+            // Ignore vendor metadata enrichment failures so login can proceed.
+          }
+        }
+
         return {
           id: data.user.id,
           email: data.user.email,
           name: data.user.name,
           token: data.token,
           isPlatformAdmin: data.isPlatformAdmin ?? false,
+          role: role ?? (data.isPlatformAdmin ? "PLATFORM_ADMIN" : "MEMBER"),
+          vendor,
         };
       },
     }),
@@ -94,6 +174,15 @@ export const authOptions: NextAuthConfig = {
         token.accessToken = (user as { token?: string }).token;
         token.isPlatformAdmin =
           (user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
+        token.role =
+          (user as { role?: string }).role ??
+          ((user as { isPlatformAdmin?: boolean }).isPlatformAdmin
+            ? "PLATFORM_ADMIN"
+            : "MEMBER");
+        token.vendorId = (user as { vendor?: { id?: string } }).vendor?.id;
+        token.vendorStatus = (
+          user as { vendor?: { status?: string } }
+        ).vendor?.status;
       }
 
       return token;
@@ -105,6 +194,11 @@ export const authOptions: NextAuthConfig = {
         session.user.name = (token.name as string) || "";
         session.user.token = (token.accessToken as string) || "";
         session.user.isPlatformAdmin = token.isPlatformAdmin ?? false;
+        session.user.role = token.role ?? "MEMBER";
+        session.user.vendor = {
+          id: token.vendorId,
+          status: token.vendorStatus,
+        };
       }
 
       return session;

@@ -40,6 +40,7 @@ import {
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 import { restClient } from "@/lib/rest-client";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type Contribution = {
   id: string;
@@ -77,6 +78,18 @@ function truncateHash(hash?: string | null): string {
   return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
 }
 
+function isContributionPaymentTemporaryFailure(message: string) {
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("unable to reach payment provider") ||
+    normalized.includes("network") ||
+    normalized.includes("timeout") ||
+    normalized.includes("timed out")
+  );
+}
+
 export default function ContributionsPage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
@@ -90,10 +103,12 @@ export default function ContributionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
+  const {
+    selectedCoop,
+    activeCoopId: cooperativeId,
+    refetchMyCooperatives,
+    isResolvingSelection,
+  } = useSelectedCooperative({ fetchPolicy: "cache-and-network" });
 
   const {
     data: contributionsData,
@@ -105,7 +120,8 @@ export default function ContributionsPage() {
   });
 
   const isInitialContributionsLoading =
-    contributionsLoading && !contributionsData?.contributions;
+    isResolvingSelection ||
+    (contributionsLoading && !contributionsData?.contributions);
 
   const throttledContributionsRefetch = useMemo(
     () =>
@@ -132,30 +148,27 @@ export default function ContributionsPage() {
     }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [
-    cooperativeId,
-    refetchMyCooperatives,
-    throttledContributionsRefetch,
-  ]);
+  }, [cooperativeId, refetchMyCooperatives, throttledContributionsRefetch]);
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
       throttledContributionsRefetch.trigger();
+      void refetchMyCooperatives();
     },
   });
 
   const contributions: Contribution[] = contributionsData?.contributions ?? [];
 
-  const totalCollected = useMemo(
-    () => contributions.reduce((sum, item) => sum + item.amountXAF, 0),
-    [contributions],
-  );
-
-  const targetAmount = 5000000;
-  const progressPercent =
-    targetAmount > 0 ? Math.min((totalCollected / targetAmount) * 100, 100) : 0;
+  const targetAmount = selectedCoop?.targetAmountXAF ?? 0;
+  const totalCollected = selectedCoop?.confirmedBalanceXAF ?? 0;
+  const rawProgressPercent =
+    targetAmount > 0 ? (totalCollected / targetAmount) * 100 : 0;
+  const progressPercent = Math.min(rawProgressPercent, 100);
+  const surplusAmount = Math.max(totalCollected - targetAmount, 0);
+  const surplusPercent =
+    targetAmount > 0 ? Math.min((surplusAmount / targetAmount) * 100, 100) : 0;
 
   const copyToClipboard = async (hash: string) => {
     try {
@@ -217,9 +230,15 @@ export default function ContributionsPage() {
         `/${locale}/dashboard/contributions/payment?${query.toString()}`,
       );
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.contributionFailed"),
-      );
+      if (error instanceof Error) {
+        toast.error(
+          isContributionPaymentTemporaryFailure(error.message)
+            ? t("errors.paymentServiceUnavailable")
+            : error.message,
+        );
+      } else {
+        toast.error(t("errors.contributionFailed"));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -270,6 +289,20 @@ export default function ContributionsPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+            {surplusAmount > 0 ? (
+              <div className="space-y-1">
+                <div className="w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-linear-to-r from-emerald-400 to-lime-400 rounded-full"
+                    style={{ width: `${surplusPercent}%` }}
+                  />
+                </div>
+                <p className="text-xs text-emerald-700 font-medium">
+                  +{formatXaf(surplusAmount)}{" "}
+                  {locale === "fr" ? "au-dessus de l'objectif" : "above goal"}
+                </p>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {Math.round(progressPercent)}%{" "}

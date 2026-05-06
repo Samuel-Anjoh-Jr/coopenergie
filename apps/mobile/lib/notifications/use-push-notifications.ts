@@ -1,4 +1,4 @@
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { Platform } from "react-native";
 import { useEffect, useState } from "react";
@@ -19,13 +19,29 @@ function readString(value: unknown) {
   return typeof value === "string" ? value : undefined;
 }
 
+function isExpoGo() {
+  return (
+    Constants.executionEnvironment === "storeClient" ||
+    Constants.appOwnership === "expo"
+  );
+}
+
+function getNotificationsModule() {
+  return require("expo-notifications") as typeof import("expo-notifications");
+}
+
 export function usePushNotifications() {
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
+    if (Platform.OS === "web" || isExpoGo()) {
+      return;
+    }
+
     configurePushHandlers();
+    const Notifications = getNotificationsModule();
 
     let mounted = true;
 

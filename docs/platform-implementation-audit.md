@@ -327,6 +327,22 @@ Display and interactability:
 - Web report page downloads CSV through the backend export endpoint
 - Mobile report page fetches CSV and shares its content through native share APIs
 - Ledger and report UIs reflect proposal status counts and cooperative funding progress
+- Backend ingests blockchain events to ensure ledger and report data reflect on-chain activity even if it originated outside the platform (for example, through direct contract interactions)
+- Report page includes explanations of how to interpret the report and verify proof links on CeloScan, as per supplement 3 guidance
+- Mobile report page includes additional contextual details in withdrawal notification deep-link payloads to surface more information about withdrawal transactions in the report view, as per supplement 3 guidance
+- About Estimated Time to Reach Goal
+It is computed as:
+
+totalCollected = sum of confirmed contributions
+monthsActive = months since first confirmed contribution (minimum 1)
+averageMonthlyContributions = totalCollected / monthsActive
+remainingAmount = max(0, targetAmount - totalCollected)
+estimatedMonthsToGoal =
+remainingAmount / averageMonthlyContributions, if averageMonthlyContributions > 0
+null (displayed as ∞) otherwise
+- This provides users with an estimate of how long it will take to reach the funding goal based on current contribution patterns, while handling edge cases like no contributions or very recent cooperatives.
+- The estimate is displayed on the dashboard and updates in real time with new contributions.
+- 
 
 ### 9. Notifications
 

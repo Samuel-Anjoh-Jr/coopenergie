@@ -3,6 +3,7 @@ import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 import { ConfigModule } from "@nestjs/config";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { GraphQLModule } from "@nestjs/graphql";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { GraphQLJSON } from "graphql-scalars";
 
@@ -19,11 +20,14 @@ import { HealthModule } from "./modules/health/health.module";
 import { LedgerModule } from "./modules/ledger/ledger.module";
 import { MembershipsModule } from "./modules/memberships/memberships.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
+import { PublicModule } from "./modules/public/public.module";
 import { PlatformSettingsModule } from "./modules/platform-settings/platform-settings.module";
 import { ProposalsModule } from "./modules/proposals/proposals.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { UsersModule } from "./modules/users/users.module";
+import { VendorsModule } from "./modules/vendors/vendors.module";
 import { VotesModule } from "./modules/votes/votes.module";
+import { FaqModule } from "./modules/faq/faq.module";
 import { WithdrawalsModule } from "./modules/withdrawals/withdrawals.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -55,6 +59,7 @@ import { PrismaModule } from "./prisma/prisma.module";
       },
     }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60,
@@ -75,11 +80,14 @@ import { PrismaModule } from "./prisma/prisma.module";
     LedgerModule,
     MembershipsModule,
     PaymentsModule,
+    PublicModule,
     PlatformSettingsModule,
     ProposalsModule,
     ReportsModule,
     UsersModule,
+    VendorsModule,
     VotesModule,
+    FaqModule,
     WithdrawalsModule,
     PrismaModule,
   ],

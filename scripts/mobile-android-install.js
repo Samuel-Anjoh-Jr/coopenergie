@@ -16,6 +16,7 @@ const path = require("node:path");
 const repoRoot = path.resolve(__dirname, "..");
 const mobileDir = path.resolve(__dirname, "..", "apps", "mobile");
 const androidDir = path.join(mobileDir, "android");
+const mobileNodeModulesDir = path.join(mobileDir, "node_modules");
 const adb = `${process.env.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe`;
 const gradleVersion = "8.14.3";
 const gradleVersionCacheDir = path.join(
@@ -161,12 +162,12 @@ if (fs.existsSync(bunCacheDir)) {
           if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
             patched = patched.replace(
               /set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g,
-              "set(CMAKE_OBJECT_PATH_MAX 128)",
+              "set(CMAKE_OBJECT_PATH_MAX 250)",
             );
           } else {
             patched = patched.replace(
               /cmake_minimum_required\(VERSION\s+3\.9\.0\)\r?\n/,
-              "cmake_minimum_required(VERSION 3.9.0)\n\n# Keep this low so CMake hashes object paths and avoids Windows path-limit churn.\nset(CMAKE_OBJECT_PATH_MAX 128)\n",
+              "cmake_minimum_required(VERSION 3.9.0)\n\n# Keep this low so CMake hashes object paths and avoids Windows path-limit churn.\nset(CMAKE_OBJECT_PATH_MAX 250)\n",
             );
           }
           if (patched !== content) {
@@ -178,7 +179,7 @@ if (fs.existsSync(bunCacheDir)) {
     }
   })(bunCacheDir);
 
-  (function patchOtherNativeModules(dir) {
+  function patchOtherNativeModules(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -192,6 +193,10 @@ if (fs.existsSync(bunCacheDir)) {
       const isWorklets = full.includes("react-native-worklets");
       const isReanimated = full.includes("react-native-reanimated");
       const isExpoModulesCore = full.includes("expo-modules-core");
+      const isSafeAreaContext = full.includes("react-native-safe-area-context");
+      const isScreens = full.includes("react-native-screens");
+      const isSvg = full.includes("react-native-svg");
+      const isNitroModules = full.includes("react-native-nitro-modules");
 
       if (
         entry.name === "build.gradle" &&
@@ -202,7 +207,7 @@ if (fs.existsSync(bunCacheDir)) {
 
         // Keep this idempotent across repeated runs.
         patched = patched.replace(
-          /\r?\n\s*"-DCMAKE_OBJECT_PATH_MAX=128",/g,
+          /\r?\n\s*"-DCMAKE_OBJECT_PATH_MAX=250",/g,
           "",
         );
         patched = patched.replace(
@@ -216,7 +221,7 @@ if (fs.existsSync(bunCacheDir)) {
 
         patched = patched.replace(
           /arguments\s+"-DANDROID_STL=c\+\+_shared",/g,
-          'arguments "-DANDROID_STL=c++_shared",\n                        "-DCMAKE_OBJECT_PATH_MAX=128",\n                        "-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",\n                        "-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",',
+          'arguments "-DANDROID_STL=c++_shared",\n                        "-DCMAKE_OBJECT_PATH_MAX=250",\n                        "-DCMAKE_CXX_FLAGS_DEBUG=-g0 -O1",\n                        "-DCMAKE_C_FLAGS_DEBUG=-g0 -O1",',
         );
 
         if (
@@ -259,7 +264,15 @@ if (fs.existsSync(bunCacheDir)) {
 
       if (
         entry.name === "CMakeLists.txt" &&
-        (isWorklets || isReanimated || isExpoModulesCore)
+        (
+          isWorklets ||
+          isReanimated ||
+          isExpoModulesCore ||
+          isSafeAreaContext ||
+          isScreens ||
+          isSvg ||
+          isNitroModules
+        )
       ) {
         const content = fs.readFileSync(full, "utf8");
         let patched = content;
@@ -267,13 +280,13 @@ if (fs.existsSync(bunCacheDir)) {
         if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
           patched = patched.replace(
             /set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g,
-            "set(CMAKE_OBJECT_PATH_MAX 128)",
+            "set(CMAKE_OBJECT_PATH_MAX 250)",
           );
         } else {
           patched = patched.replace(
             /cmake_minimum_required\(VERSION\s+\d+\.\d+\)\r?\n/,
             (m) =>
-              `${m}\n# Keep low to force hashed object paths on Windows.\nset(CMAKE_OBJECT_PATH_MAX 128)\n`,
+              `${m}\n# Keep low to force hashed object paths on Windows.\nset(CMAKE_OBJECT_PATH_MAX 250)\n`,
           );
         }
 
@@ -296,6 +309,56 @@ if (fs.existsSync(bunCacheDir)) {
           patched = patched.replace(
             /file\(GLOB_RECURSE REANIMATED_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\s*\r?\n\s*"\$\{ANDROID_CPP_DIR\}\/reanimated\/\*\.cpp"\)/,
             'file(GLOB_RECURSE REANIMATED_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS\n     RELATIVE ${CMAKE_SOURCE_DIR}\n     "src/main/cpp/reanimated/*.cpp")',
+          );
+        }
+
+        if (isSafeAreaContext) {
+          patched = patched.replace(
+            /file\(GLOB LIB_CUSTOM_SRCS CONFIGURE_DEPENDS \*\.cpp \$\{LIB_COMMON_DIR\}\/react\/renderer\/components\/\$\{LIB_LITERAL\}\/\*\.cpp\)/,
+            `file(GLOB LIB_CUSTOM_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "*.cpp"
+  "../../../common/cpp/react/renderer/components/{LIB_LITERAL}/*.cpp")`.replace(/\u007f/g, "$"),
+          );
+          patched = patched.replace(
+            /file\(GLOB LIB_CODEGEN_SRCS CONFIGURE_DEPENDS \$\{LIB_ANDROID_GENERATED_JNI_DIR\}\/\*\.cpp \$\{LIB_ANDROID_GENERATED_COMPONENTS_DIR\}\/\*\.cpp\)/,
+            `file(GLOB LIB_CODEGEN_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "../../../build/generated/source/codegen/jni/*.cpp"
+  "../../../build/generated/source/codegen/jni/react/renderer/components/{LIB_LITERAL}/*.cpp")`.replace(/\u007f/g, "$"),
+          );
+        }
+
+        if (isScreens) {
+          patched = patched.replace(
+            /file\(GLOB LIB_CUSTOM_SRCS CONFIGURE_DEPENDS \*\.cpp \$\{LIB_COMMON_COMPONENTS_DIR\}\/\*\.cpp \$\{LIB_COMMON_COMPONENTS_DIR\}\/utils\/\*\.cpp\)/,
+            `file(GLOB LIB_CUSTOM_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "*.cpp"
+  "../../../common/cpp/react/renderer/components/{LIB_LITERAL}/*.cpp"
+  "../../../common/cpp/react/renderer/components/{LIB_LITERAL}/utils/*.cpp")`.replace(/\u007f/g, "$"),
+          );
+          patched = patched.replace(
+            /file\(GLOB LIB_CODEGEN_SRCS CONFIGURE_DEPENDS \$\{LIB_ANDROID_GENERATED_COMPONENTS_DIR\}\/\*\.cpp\)/,
+            `file(GLOB LIB_CODEGEN_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "../../../build/generated/source/codegen/jni/react/renderer/components/{LIB_LITERAL}/*.cpp")`.replace(/\u007f/g, "$"),
+          );
+        }
+
+        if (isSvg) {
+          patched = patched.replace(
+            /file\(GLOB rnsvg_SRCS CONFIGURE_DEPENDS \*\.cpp \$\{RNSVG_COMMON_DIR\}\/react\/renderer\/components\/rnsvg\/\*\.cpp\)/,
+            `file(GLOB rnsvg_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "*.cpp"
+  "../../../common/cpp/react/renderer/components/rnsvg/*.cpp")`.replace(/\u007f/g, "$"),
+          );
+          patched = patched.replace(
+            /file\(GLOB rnsvg_codegen_SRCS CONFIGURE_DEPENDS \$\{RNSVG_GENERATED_REACT_DIR\}\/\*cpp\)/,
+            `file(GLOB rnsvg_codegen_SRCS CONFIGURE_DEPENDS
+  RELATIVE {CMAKE_CURRENT_SOURCE_DIR}
+  "../../../build/generated/source/codegen/jni/react/renderer/components/rnsvg/*.cpp")`.replace(/\u007f/g, "$"),
           );
         }
 
@@ -355,7 +418,42 @@ if (fs.existsSync(bunCacheDir)) {
         }
       }
     }
-  })(bunCacheDir);
+  }
+
+  patchOtherNativeModules(bunCacheDir);
+  if (fs.existsSync(mobileNodeModulesDir)) {
+    patchOtherNativeModules(mobileNodeModulesDir);
+  }
+
+  // Patch codegen-generated CMakeLists.txt files (in build/generated/source/codegen/jni/).
+  // These are skipped by patchOtherNativeModules (which avoids "build" dirs for speed)
+  // but they need CMAKE_OBJECT_PATH_MAX 250 to prevent Windows path-length failures.
+  (function patchCodegenCMakeLists(dir) {
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === ".cxx") continue;
+        patchCodegenCMakeLists(full);
+      } else if (entry.name === "CMakeLists.txt" && full.includes(`${path.sep}build${path.sep}generated${path.sep}source${path.sep}codegen${path.sep}jni`)) {
+        const content = fs.readFileSync(full, "utf8");
+        let patched = content;
+        if (patched.includes("CMAKE_OBJECT_PATH_MAX")) {
+          patched = patched.replace(/set\(CMAKE_OBJECT_PATH_MAX\s+\d+\)/g, "set(CMAKE_OBJECT_PATH_MAX 250)");
+        } else {
+          patched = patched.replace(
+            /cmake_minimum_required\([^)]+\)\r?\n/,
+            (m) => `${m}\nset(CMAKE_OBJECT_PATH_MAX 250)\n`,
+          );
+        }
+        if (patched !== content) {
+          fs.writeFileSync(full, patched);
+          console.log(`[mobile] Patched codegen CMakeLists path max: ${full}`);
+        }
+      }
+    }
+  })(mobileNodeModulesDir);
 
   // Remove stale .cxx CMake caches so they are regenerated with the corrected API level
   (function removeCxxCaches(dir) {
@@ -640,6 +738,12 @@ function clearWindowsBuildLogicLock() {
 
 function getFreeSubstDrive() {
   for (const letter of ["X", "Y", "Z", "W", "V"]) {
+    try {
+      execSync(`cmd /c subst ${letter}: /D`, { stdio: "ignore" });
+    } catch {
+      // Ignore real drives or already-unmapped letters.
+    }
+
     if (!fs.existsSync(`${letter}:\\`)) return letter;
   }
   return null;
@@ -689,6 +793,73 @@ function restoreAutolinkingRealPaths(repoRootPath) {
   }
 }
 
+function findNitroCodegenJniDirFromBunCache(bunCacheDir) {
+  if (!bunCacheDir || !fs.existsSync(bunCacheDir)) return null;
+
+  const candidates = fs
+    .readdirSync(bunCacheDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        entry.name.startsWith("react-native-nitro-modules@"),
+    )
+    .map((entry) => entry.name)
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const candidateName of candidates) {
+    const candidatePath = path.join(
+      bunCacheDir,
+      candidateName,
+      "node_modules",
+      "react-native-nitro-modules",
+      "android",
+      "build",
+      "generated",
+      "source",
+      "codegen",
+      "jni",
+    );
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  return null;
+}
+
+function restoreNitroAutolinkingToRealPath(realNitroCodegenDir) {
+  if (!realNitroCodegenDir) return;
+
+  const autolinkingCmakePath = path.join(
+    androidDir,
+    "app",
+    "build",
+    "generated",
+    "autolinking",
+    "src",
+    "main",
+    "jni",
+    "Android-autolinking.cmake",
+  );
+  if (!fs.existsSync(autolinkingCmakePath)) return;
+
+  const realNitroUnix = `${realNitroCodegenDir.replace(/\\/g, "/")}/`;
+  const content = fs.readFileSync(autolinkingCmakePath, "utf8");
+  const rewritten = content
+    .replaceAll("C:/.b/nitro/generated/source/codegen/jni/", realNitroUnix)
+    .replace(
+      /(?<=add_subdirectory\(")C:[^"\n]*react-native-nitro-modules[^"\n]*?(?:jni\/)?(?="\s+NitroModulesSpec_autolinked_build\))/,
+      realNitroUnix,
+    );
+
+  if (rewritten !== content) {
+    fs.writeFileSync(autolinkingCmakePath, rewritten);
+    console.log(
+      `[mobile] Restored Nitro autolinking path to real codegen dir: ${autolinkingCmakePath}`,
+    );
+  }
+}
+
 function rewriteNitroAutolinkingPathToShortBuildDir() {
   const autolinkingCmakePath = path.join(
     androidDir,
@@ -704,6 +875,10 @@ function rewriteNitroAutolinkingPathToShortBuildDir() {
   if (!fs.existsSync(autolinkingCmakePath)) return;
 
   const shortNitroCodegenDir = "C:/.b/nitro/generated/source/codegen/jni/";
+  const normalizedShortNitroCodegenDir = path.normalize(shortNitroCodegenDir);
+  if (!fs.existsSync(normalizedShortNitroCodegenDir)) {
+    return;
+  }
   const nitroAutolinkPathPattern =
     /[A-Za-z]:\/[^\"\n]*?react-native-nitro-modules[^\"\n]*?\/android\/build\/generated\/source\/codegen\/jni\//g;
   const content = fs.readFileSync(autolinkingCmakePath, "utf8");
@@ -796,30 +971,46 @@ function patchAppBuildGradleWithAutolinkHook(appBuildGradlePath) {
   const content = fs.readFileSync(appBuildGradlePath, "utf8");
   if (content.includes(marker)) return; // already injected
 
-  const hook = `
+    const hook = `
 
-${marker}
-// Rewrite Nitro autolinking path to a short build dir so Ninja stays within
-// Windows 260-char MAX_PATH limits.
-if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
+  ${marker}
+  // Rewrite autolinked native paths to a SUBST drive rooted at the repo so Ninja
+  // stays within Windows 260-char MAX_PATH limits.
+  if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
     afterEvaluate {
-        tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
-            doLast {
-                def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
-                if (autolinkingCmake.exists()) {
-                    def text = autolinkingCmake.text
-          def nitroPattern = /[A-Za-z]:\\/[^\"\\n]*?react-native-nitro-modules[^\"\\n]*?\\/android\\/build\\/generated\\/source\\/codegen\\/jni\\//
-          def fixed = text.replaceAll(nitroPattern, "C:/.b/nitro/generated/source/codegen/jni/")
-          if (fixed != text) {
-                        autolinkingCmake.text = fixed
-                        println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
-                    }
-                }
-            }
+      def rewriteAutolinkingCodegenPaths = {
+        def autolinkingCmake = file("build/generated/autolinking/src/main/jni/Android-autolinking.cmake")
+        if (!autolinkingCmake.exists()) return
+
+        def text = autolinkingCmake.text
+        def fixed = text
+        def substRoot = System.getenv("SUBST_REPO_ROOT")
+            def longRoot = rootDir.parentFile.parentFile.parentFile.absolutePath.replace(File.separatorChar, '/' as char)
+
+        if (substRoot && longRoot) {
+          fixed = fixed.replace(longRoot, substRoot)
         }
+
+        if (fixed != text) {
+          autolinkingCmake.text = fixed
+          println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)
+        }
+      }
+
+      tasks.matching { it.name.contains("generateAutolinking") || it.name.contains("GenerateAutolinking") }.configureEach {
+        doLast {
+          rewriteAutolinkingCodegenPaths()
+        }
+      }
+
+      tasks.matching { it.name.contains("configureCMake") || it.name.contains("ConfigureCMake") }.configureEach {
+        doFirst {
+          rewriteAutolinkingCodegenPaths()
+        }
+      }
     }
-}
-`;
+  }
+  `;
 
   fs.writeFileSync(appBuildGradlePath, content + hook);
   console.log(
@@ -945,6 +1136,31 @@ if (!isRelease) {
 // and not for Gradle's own file system which stays on C:.
 const gradleCwd = androidDir;
 const bunCachePathForSubst = path.join(repoRoot, "node_modules", ".bun");
+const repoRootSubstDrive = getFreeSubstDrive();
+const realNitroCodegenJniDir = findNitroCodegenJniDirFromBunCache(
+  bunCachePathForSubst,
+);
+if (realNitroCodegenJniDir) {
+  process.env.NITRO_CODEGEN_JNI_DIR = realNitroCodegenJniDir;
+}
+if (process.platform === "win32" && repoRootSubstDrive) {
+  try {
+    execSync(`cmd /c subst ${repoRootSubstDrive}: /D`, { stdio: "ignore" });
+  } catch {
+    /* ignore */
+  }
+  try {
+    execSync(`cmd /c subst ${repoRootSubstDrive}: "${repoRoot}"`, {
+      stdio: "inherit",
+    });
+    process.env.SUBST_REPO_ROOT = `${repoRootSubstDrive}:`;
+    console.log(`[mobile] SUBST ${repoRootSubstDrive}: => ${repoRoot}`);
+  } catch (error) {
+    console.warn(
+      `[mobile] Warning: could not set SUBST ${repoRootSubstDrive}: — ${error.message}`,
+    );
+  }
+}
 if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
   try {
     // Remove any existing B: subst first (ignore errors if not mapped).
@@ -963,12 +1179,13 @@ if (process.platform === "win32" && fs.existsSync(bunCachePathForSubst)) {
 // Restore any autolinking cmake that a prior run may have rewritten,
 // then apply the Nitro short path rewrite.
 restoreAutolinkingRealPaths(repoRoot);
+restoreNitroAutolinkingToRealPath(realNitroCodegenJniDir);
+rewriteAutolinkingToSubstDrive(repoRoot, repoRootSubstDrive);
 rewriteNitroAutolinkingPathToShortBuildDir();
 
 process.env.CMAKE_BUILD_PARALLEL_LEVEL = "1";
 process.env.NINJAFLAGS = "-j1";
 process.env.GRADLE_OPTS = "-Dorg.gradle.daemon=false";
-delete process.env.SUBST_REPO_ROOT;
 
 if (process.platform === "win32") {
   clearWindowsBuildLogicLock();
@@ -1021,6 +1238,8 @@ const runGradleWithRetry = (cwd) => {
         /* ignore */
       }
     }
+    rewriteAutolinkingToSubstDrive(repoRoot, repoRootSubstDrive);
+    restoreNitroAutolinkingToRealPath(realNitroCodegenJniDir);
     rewriteNitroAutolinkingPathToShortBuildDir();
     // Kill stale java processes before aggressive cache clear to release locks.
     if (process.platform === "win32") {
