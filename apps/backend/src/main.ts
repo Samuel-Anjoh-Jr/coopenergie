@@ -356,7 +356,7 @@ async function bootstrap() {
     next();
   });
 
-  const port = process.env.API_PORT || process.env.PORT || 4000;
+  const port = process.env.PORT || process.env.API_PORT || 4000;
   const listenHost = process.env.API_HOST?.trim() || "0.0.0.0";
   const listenBaseUrl = resolveListenBaseUrl(listenHost, port);
   const publicBaseUrl = resolvePublicBaseUrl(port);

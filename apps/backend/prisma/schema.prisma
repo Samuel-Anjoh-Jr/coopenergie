@@ -4,6 +4,7 @@ datasource db {
   directUrl  = env("DIRECT_URL")
 }
 
+
 generator client {
   provider = "prisma-client-js"
 }

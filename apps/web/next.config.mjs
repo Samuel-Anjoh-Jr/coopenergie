@@ -51,7 +51,12 @@ function validateRequiredEnv() {
   );
 }
 
-validateRequiredEnv();
+const shouldSkipEnvValidation = process.env.SKIP_ENV_VALIDATION === "1";
+const isGenericCi = process.env.CI === "true" && isMissing(process.env.VERCEL);
+
+if (!shouldSkipEnvValidation && !isGenericCi) {
+  validateRequiredEnv();
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

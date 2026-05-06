@@ -1192,6 +1192,21 @@ if (process.platform === "win32") {
 }
 
 // Clean stale Gradle daemon state to ensure fresh start
+// First, tell Gradle to stop all daemons (releases file locks on caches).
+if (process.platform === "win32") {
+  try {
+    execSync("cmd /c gradlew.bat --stop", { cwd: gradleCwd, stdio: "ignore", timeout: 15000 });
+  } catch {
+    // best-effort: ignore if no daemon running
+  }
+  // Also kill any stray java.exe processes that might hold Gradle cache locks.
+  try {
+    execSync("cmd /c taskkill /F /IM java.exe /T", { stdio: "ignore" });
+  } catch {
+    /* ignore */
+  }
+}
+
 const gradleDaemonDir = path.join(
   process.env.USERPROFILE || "",
   ".gradle",

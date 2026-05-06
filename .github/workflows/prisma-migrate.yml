@@ -27,3 +27,13 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
+
+      - name: Verify migrations recreate schema.prisma on production DB
+        run: |
+          bunx prisma@5.22.0 migrate diff \
+            --from-url "$DIRECT_URL" \
+            --to-schema-datamodel prisma/schema.prisma \
+            --exit-code
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}

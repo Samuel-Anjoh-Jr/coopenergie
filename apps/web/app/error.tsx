@@ -32,8 +32,7 @@ export default function AppError({
   useEffect(() => {
     console.error("App route error:", error);
     toast.error(t("errors.somethingWentWrong"));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [error]);
+  }, [error, t]);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12">

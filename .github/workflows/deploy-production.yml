@@ -105,6 +105,13 @@ jobs:
       - name: Run Prisma migrate deploy
         run: bunx prisma migrate deploy --schema apps/backend/prisma/schema.prisma
 
+      - name: Verify migrations recreate schema.prisma on production DB
+        run: |
+          bunx prisma migrate diff \
+            --from-url "$DIRECT_URL" \
+            --to-schema-datamodel apps/backend/prisma/schema.prisma \
+            --exit-code
+
   notify-success:
     runs-on: ubuntu-latest
     needs:
