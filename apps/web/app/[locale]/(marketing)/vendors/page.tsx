@@ -24,8 +24,6 @@ import { useScrollRevealGroup } from "@/lib/hooks/use-scroll-reveal-group";
 import { Locale, useTranslations } from "@/lib/translations";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
 
-export const PAGE_TYPE = "vendor" as const;
-
 type MonetisationSettings = {
   monetisationSettings: {
     vendorPaymentModel: "ONE_TIME" | "SUBSCRIPTION";

@@ -52,8 +52,6 @@ import {
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
 import { useScrollRevealGroup } from "@/lib/hooks/use-scroll-reveal-group";
 
-export const PAGE_TYPE = "customer" as const;
-
 type CooperativeQueryResult = {
   myCooperatives: Array<{
     id: string;

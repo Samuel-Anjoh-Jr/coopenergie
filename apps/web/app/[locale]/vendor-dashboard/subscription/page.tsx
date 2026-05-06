@@ -24,12 +24,14 @@ export default function VendorSubscriptionPage() {
   const locale = (params.locale as "fr" | "en") || "en";
   const t = useTranslations(locale);
   const { data: session } = useSession();
-  const paymentModel = session?.user?.vendor?.paymentModel;
+  const sessionPaymentModel = session?.user?.vendor?.paymentModel;
 
   const [history, setHistory] = useState<VendorSubscriptionRecord[]>([]);
   const [fees, setFees] = useState({ monthly: 0, yearly: 0, oneTime: 0 });
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">(
+    "MONTHLY",
+  );
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
@@ -47,7 +49,11 @@ export default function VendorSubscriptionPage() {
         oneTime: Number(monetisation.vendorOneTimeFeeXAF || 0),
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.loadFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.loadFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -62,6 +68,32 @@ export default function VendorSubscriptionPage() {
     [billingCycle, fees.monthly, fees.yearly],
   );
 
+  const paymentModel: "ONE_TIME" | "SUBSCRIPTION" = useMemo(() => {
+    const candidate = sessionPaymentModel;
+
+    if (candidate === "ONE_TIME" || candidate === "SUBSCRIPTION") {
+      return candidate;
+    }
+
+    return "SUBSCRIPTION";
+  }, [sessionPaymentModel]);
+
+  const hasActiveOneTimePayment = useMemo(
+    () =>
+      history.some(
+        (record) =>
+          record.billingCycle === "ONE_TIME" &&
+          String(record.status).toUpperCase() === "ACTIVE",
+      ),
+    [history],
+  );
+
+  const effectivePaymentModel: "ONE_TIME" | "SUBSCRIPTION" =
+    hasActiveOneTimePayment ? "ONE_TIME" : paymentModel;
+
+  const canStartPayment =
+    effectivePaymentModel !== "ONE_TIME" || !hasActiveOneTimePayment;
+
   const startPayment = async () => {
     if (!phoneNumber.trim()) {
       toast.error(t("vendorDashboard.feedback.phoneRequired"));
@@ -70,7 +102,7 @@ export default function VendorSubscriptionPage() {
 
     setProcessing(true);
     try {
-      if (paymentModel === "ONE_TIME") {
+      if (effectivePaymentModel === "ONE_TIME") {
         await restClient.post("/vendors/payment/register", {
           phoneNumber: phoneNumber.trim(),
         });
@@ -85,14 +117,22 @@ export default function VendorSubscriptionPage() {
       setPhoneNumber("");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.paymentFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.paymentFailed"),
+      );
     } finally {
       setProcessing(false);
     }
   };
 
   if (loading) {
-    return <div className="p-4 text-sm text-muted-foreground">{t("vendorDashboard.loading")}</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t("vendorDashboard.loading")}
+      </div>
+    );
   }
 
   return (
@@ -103,12 +143,12 @@ export default function VendorSubscriptionPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            {paymentModel === "ONE_TIME"
+            {effectivePaymentModel === "ONE_TIME"
               ? t("vendorDashboard.subscription.oneTimeMode")
               : t("vendorDashboard.subscription.subscriptionMode")}
           </p>
 
-          {paymentModel === "SUBSCRIPTION" && (
+          {effectivePaymentModel === "SUBSCRIPTION" && (
             <div className="flex gap-2">
               <Button
                 variant={billingCycle === "MONTHLY" ? "default" : "outline"}
@@ -128,19 +168,34 @@ export default function VendorSubscriptionPage() {
           )}
 
           <div className="rounded-md border border-border/70 p-3 text-sm">
-            {t("vendorDashboard.subscription.amount")}: {" "}
-            {formatXaf(paymentModel === "ONE_TIME" ? fees.oneTime : amount, locale)}
+            {t("vendorDashboard.subscription.amount")}:{" "}
+            {formatXaf(
+              effectivePaymentModel === "ONE_TIME" ? fees.oneTime : amount,
+              locale,
+            )}
           </div>
 
-          <Input
-            value={phoneNumber}
-            onChange={(event) => setPhoneNumber(event.target.value)}
-            placeholder={t("vendorDashboard.subscription.phonePlaceholder")}
-          />
+          {canStartPayment ? (
+            <>
+              <Input
+                value={phoneNumber}
+                onChange={(event) => setPhoneNumber(event.target.value)}
+                placeholder={t("vendorDashboard.subscription.phonePlaceholder")}
+              />
 
-          <Button onClick={startPayment} disabled={processing}>
-            {processing ? t("vendorDashboard.subscription.processing") : t("vendorDashboard.subscription.payNow")}
-          </Button>
+              <Button onClick={startPayment} disabled={processing}>
+                {processing
+                  ? t("vendorDashboard.subscription.processing")
+                  : t("vendorDashboard.subscription.payNow")}
+              </Button>
+            </>
+          ) : (
+            <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700">
+              {locale === "fr"
+                ? "Le paiement d'activation unique est deja valide pour ce compte."
+                : "The one-time activation payment is already locked in for this account."}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -150,10 +205,15 @@ export default function VendorSubscriptionPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("vendorDashboard.subscription.emptyHistory")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("vendorDashboard.subscription.emptyHistory")}
+            </p>
           ) : (
             history.map((record) => (
-              <div key={record.id} className="rounded-md border border-border/70 p-3">
+              <div
+                key={record.id}
+                className="rounded-md border border-border/70 p-3"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium">
                     {record.billingCycle} · {formatXaf(record.priceXAF, locale)}
@@ -161,10 +221,12 @@ export default function VendorSubscriptionPage() {
                   <Badge variant="secondary">{record.status}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t("vendorDashboard.subscription.createdAt")}: {formatDate(record.createdAt, locale)}
+                  {t("vendorDashboard.subscription.createdAt")}:{" "}
+                  {formatDate(record.createdAt, locale)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t("vendorDashboard.subscription.expiresAt")}: {formatDate(record.expiresAt, locale)}
+                  {t("vendorDashboard.subscription.expiresAt")}:{" "}
+                  {formatDate(record.expiresAt, locale)}
                 </p>
               </div>
             ))

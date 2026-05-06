@@ -29,6 +29,22 @@ export const authOptions: NextAuthConfig = {
   session: {
     strategy: "jwt",
   },
+  logger: {
+    error(code, ...message) {
+      const normalizedCode =
+        typeof code === "string"
+          ? code
+          : ((code as { type?: string; name?: string }).type ??
+            (code as { name?: string }).name);
+
+      // Invalid credentials are expected user input and shouldn't spam server error logs.
+      if (normalizedCode === "CredentialsSignin") {
+        return;
+      }
+
+      console.error(`[auth][error] ${normalizedCode ?? "unknown"}`, ...message);
+    },
+  },
   providers: [
     Credentials({
       name: "Credentials",
@@ -80,13 +96,16 @@ export const authOptions: NextAuthConfig = {
         let vendor: { id?: string; status?: string } | undefined;
 
         try {
-          const vendorLoginResponse = await fetch(`${API_URL}/api/v1/vendors/login`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+          const vendorLoginResponse = await fetch(
+            `${API_URL}/api/v1/vendors/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password }),
             },
-            body: JSON.stringify({ email, password }),
-          });
+          );
 
           if (vendorLoginResponse.ok) {
             const vendorLoginData = (await vendorLoginResponse.json()) as {
@@ -109,12 +128,15 @@ export const authOptions: NextAuthConfig = {
 
         if (data.token && !vendor) {
           try {
-            const vendorResponse = await fetch(`${API_URL}/api/v1/vendors/dashboard/me`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${data.token}`,
+            const vendorResponse = await fetch(
+              `${API_URL}/api/v1/vendors/dashboard/me`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${data.token}`,
+                },
               },
-            });
+            );
 
             if (vendorResponse.ok) {
               const vendorDashboard = (await vendorResponse.json()) as {
@@ -158,8 +180,9 @@ export const authOptions: NextAuthConfig = {
             ? "PLATFORM_ADMIN"
             : "MEMBER");
         token.vendorId = (user as { vendor?: { id?: string } }).vendor?.id;
-        token.vendorStatus = (user as { vendor?: { status?: string } }).vendor
-          ?.status;
+        token.vendorStatus = (
+          user as { vendor?: { status?: string } }
+        ).vendor?.status;
       }
 
       return token;

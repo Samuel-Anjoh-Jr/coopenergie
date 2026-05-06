@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -69,7 +69,15 @@ export default function VendorProductsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const formCardRef = useRef<HTMLDivElement | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
 
   const loadProducts = useCallback(async () => {
     if (!vendorId) {
@@ -81,7 +89,11 @@ export default function VendorProductsPage() {
       const data = await fetchVendorProducts(vendorId);
       setProducts(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.loadFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.loadFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -110,10 +122,12 @@ export default function VendorProductsPage() {
       return;
     }
 
-    const next = arrayMove(sortedProducts, oldIndex, newIndex).map((item, idx) => ({
-      ...item,
-      sortOrder: idx,
-    }));
+    const next = arrayMove(sortedProducts, oldIndex, newIndex).map(
+      (item, idx) => ({
+        ...item,
+        sortOrder: idx,
+      }),
+    );
 
     setProducts(next);
 
@@ -123,7 +137,11 @@ export default function VendorProductsPage() {
       });
       toast.success(t("vendorDashboard.feedback.reorderSaved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.updateFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.updateFailed"),
+      );
       await loadProducts();
     }
   };
@@ -139,6 +157,8 @@ export default function VendorProductsPage() {
       newImages: [],
       deleteImageIds: [],
     });
+
+    formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const removeProduct = async (productId: string) => {
@@ -147,17 +167,27 @@ export default function VendorProductsPage() {
       toast.success(t("vendorDashboard.feedback.deleted"));
       await loadProducts();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.updateFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.updateFailed"),
+      );
     }
   };
 
   const removeImage = async (productId: string, imageId: string) => {
     try {
-      await restClient.delete(`/vendors/products/${productId}/images/${imageId}`);
+      await restClient.delete(
+        `/vendors/products/${productId}/images/${imageId}`,
+      );
       toast.success(t("vendorDashboard.feedback.imageDeleted"));
       await loadProducts();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.updateFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.updateFailed"),
+      );
     }
   };
 
@@ -188,7 +218,11 @@ export default function VendorProductsPage() {
       }
 
       if (form.id) {
-        await multipartVendorRequest("PATCH", `/vendors/products/${form.id}`, payload);
+        await multipartVendorRequest(
+          "PATCH",
+          `/vendors/products/${form.id}`,
+          payload,
+        );
       } else {
         await multipartVendorRequest("POST", "/vendors/products", payload);
       }
@@ -197,19 +231,27 @@ export default function VendorProductsPage() {
       setForm(emptyForm);
       await loadProducts();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("vendorDashboard.feedback.updateFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("vendorDashboard.feedback.updateFailed"),
+      );
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="p-4 text-sm text-muted-foreground">{t("vendorDashboard.loading")}</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t("vendorDashboard.loading")}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <Card className="border-border/70">
+      <Card className="border-border/70" ref={formCardRef}>
         <CardHeader>
           <CardTitle>{t("vendorDashboard.products.title")}</CardTitle>
         </CardHeader>
@@ -217,34 +259,46 @@ export default function VendorProductsPage() {
           <Input
             placeholder={t("vendorDashboard.products.fields.title")}
             value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, title: event.target.value }))
+            }
           />
           <Textarea
             placeholder={t("vendorDashboard.products.fields.description")}
             value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, description: event.target.value }))
+            }
             rows={4}
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
               placeholder={t("vendorDashboard.products.fields.priceXaf")}
               value={form.priceXAF}
-              onChange={(event) => setForm((prev) => ({ ...prev, priceXAF: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, priceXAF: event.target.value }))
+              }
               type="number"
               min={0}
             />
             <Input
               placeholder={t("vendorDashboard.products.fields.unit")}
               value={form.unit}
-              onChange={(event) => setForm((prev) => ({ ...prev, unit: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, unit: event.target.value }))
+              }
             />
           </div>
 
           <div className="flex items-center justify-between rounded-md border border-border/70 p-3">
-            <span className="text-sm">{t("vendorDashboard.products.fields.inStock")}</span>
+            <span className="text-sm">
+              {t("vendorDashboard.products.fields.inStock")}
+            </span>
             <Switch
               checked={form.inStock}
-              onCheckedChange={(value) => setForm((prev) => ({ ...prev, inStock: value }))}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, inStock: value }))
+              }
             />
           </div>
 
@@ -270,7 +324,9 @@ export default function VendorProductsPage() {
 
           <div className="flex gap-2">
             <Button onClick={submitProduct} disabled={saving}>
-              {saving ? t("vendorDashboard.common.saving") : t("vendorDashboard.products.save")}
+              {saving
+                ? t("vendorDashboard.common.saving")
+                : t("vendorDashboard.products.save")}
             </Button>
             <Button
               variant="outline"
@@ -289,7 +345,9 @@ export default function VendorProductsPage() {
         </CardHeader>
         <CardContent>
           {sortedProducts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("vendorDashboard.products.empty")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("vendorDashboard.products.empty")}
+            </p>
           ) : (
             <DndContext
               sensors={sensors}
@@ -302,14 +360,22 @@ export default function VendorProductsPage() {
               >
                 <div className="space-y-2">
                   {sortedProducts.map((product, index) => (
-                    <ScrollReveal key={product.id} direction="up" delay={index * 80} threshold={0.1} subtle>
+                    <ScrollReveal
+                      key={product.id}
+                      direction="up"
+                      delay={index * 80}
+                      threshold={0.1}
+                      subtle
+                    >
                       <SortableProductCard
                         product={product}
                         locale={locale}
                         t={t}
                         onEdit={() => editProduct(product)}
                         onDelete={() => void removeProduct(product.id)}
-                        onDeleteImage={(imageId) => void removeImage(product.id, imageId)}
+                        onDeleteImage={(imageId) =>
+                          void removeImage(product.id, imageId)
+                        }
                       />
                     </ScrollReveal>
                   ))}
@@ -338,9 +404,10 @@ function SortableProductCard({
   onDelete: () => void;
   onDeleteImage: (imageId: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: product.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({
+      id: product.id,
+    });
 
   return (
     <div
@@ -364,7 +431,12 @@ function SortableProductCard({
           <Button type="button" size="sm" variant="outline" onClick={onEdit}>
             {t("vendorDashboard.common.edit")}
           </Button>
-          <Button type="button" size="sm" variant="destructive" onClick={onDelete}>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={onDelete}
+          >
             {t("vendorDashboard.common.delete")}
           </Button>
         </div>
@@ -386,7 +458,11 @@ function SortableProductCard({
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
           {product.images.map((image) => (
             <div key={image.id} className="space-y-1">
-              <img src={image.url} alt={product.title} className="h-20 w-full rounded object-cover" />
+              <img
+                src={image.url}
+                alt={product.title}
+                className="h-20 w-full rounded object-cover"
+              />
               <Button
                 type="button"
                 variant="outline"

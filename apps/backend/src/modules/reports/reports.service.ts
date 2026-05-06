@@ -200,38 +200,45 @@ export class ReportsService {
 
     const rows: string[][] = [
       [
-        "Section",
-        "Catégorie/Category",
-        "Indicateur/Metric",
-        "Valeur/Value",
-        "Unité/Unit",
-        "Notes",
+        i18n.csv.section,
+        i18n.csv.category,
+        i18n.csv.metric,
+        i18n.csv.value,
+        i18n.csv.unit,
+        i18n.csv.notes,
       ],
       [
-        "Métadonnées",
-        "Coopérative",
-        "Nom",
+        i18n.metadata.section,
+        i18n.metadata.cooperativeCategory,
+        i18n.metadata.name,
         report.metadata.cooperativeName,
         "",
         "",
       ],
       [
-        "Métadonnées",
-        "Rapport",
-        "Date générée",
+        i18n.metadata.section,
+        i18n.metadata.reportCategory,
+        i18n.metadata.generatedAt,
         report.metadata.generatedAt,
         "",
         "",
       ],
       [
-        "Métadonnées",
-        "Blockchain",
-        "Adresse portefeuille",
+        i18n.metadata.section,
+        i18n.metadata.blockchainCategory,
+        i18n.metadata.walletAddress,
         report.metadata.vaultAddress ?? "",
-        "CeloScan",
+        i18n.metadata.celoScan,
         report.metadata.celoScanUrl ?? "",
       ],
-      ["Métadonnées", "Langue", "Locale", report.metadata.locale, "", ""],
+      [
+        i18n.metadata.section,
+        i18n.metadata.languageCategory,
+        i18n.metadata.locale,
+        report.metadata.locale,
+        "",
+        "",
+      ],
       ["", "", "", "", "", ""],
       [
         i18n.financial.section,
@@ -358,6 +365,26 @@ export class ReportsService {
   private getTranslations(locale: ReportLocale) {
     if (locale === "en") {
       return {
+        csv: {
+          section: "Section",
+          category: "Category",
+          metric: "Metric",
+          value: "Value",
+          unit: "Unit",
+          notes: "Notes",
+        },
+        metadata: {
+          section: "Metadata",
+          cooperativeCategory: "Cooperative",
+          reportCategory: "Report",
+          blockchainCategory: "Blockchain",
+          languageCategory: "Language",
+          name: "Name",
+          generatedAt: "Generated at",
+          walletAddress: "Wallet address",
+          celoScan: "CeloScan",
+          locale: "Locale",
+        },
         financial: {
           section: "Financial",
           category: "Finance",
@@ -384,6 +411,26 @@ export class ReportsService {
     }
 
     return {
+      csv: {
+        section: "Section",
+        category: "Catégorie",
+        metric: "Indicateur",
+        value: "Valeur",
+        unit: "Unité",
+        notes: "Notes",
+      },
+      metadata: {
+        section: "Métadonnées",
+        cooperativeCategory: "Coopérative",
+        reportCategory: "Rapport",
+        blockchainCategory: "Blockchain",
+        languageCategory: "Langue",
+        name: "Nom",
+        generatedAt: "Date générée",
+        walletAddress: "Adresse portefeuille",
+        celoScan: "CeloScan",
+        locale: "Locale",
+      },
       financial: {
         section: "Financier",
         category: "Finance",

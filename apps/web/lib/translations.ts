@@ -236,6 +236,8 @@ const translations = {
       registrationFailed: "Registration failed",
       enterValidAmount: "Please enter a valid amount.",
       contributionFailed: "Failed to contribute.",
+      paymentServiceUnavailable:
+        "Payment service is temporarily unavailable. Please retry in a few moments.",
       invalidCredentials: "Invalid credentials",
       invalidFormValues: "Invalid form values",
       cooperativeNotFound: "Cooperative not found",
@@ -347,6 +349,7 @@ const translations = {
     common: {
       submit: "Submit",
       cancel: "Cancel",
+      loading: "Loading...",
       next: "Next",
       back: "Back",
       home: "Home",
@@ -882,12 +885,12 @@ const translations = {
       noRecentActivity: "No recent activity.",
       qrAlt: "QR code for wallet address",
       vaultAddress: "Vault Address",
-      surplusLabel: "+{amount} FCFA au-dessus de l'objectif",
-      legendCoop: "• Green: Fonds coopératifs",
-      legendFee: "• Orange: Frais plateforme ({percent}%)",
+      surplusLabel: "+{amount} FCFA above goal",
+      legendCoop: "• Green: Cooperative funds",
+      legendFee: "• Orange: Platform fee ({percent}%)",
     },
     contributions: {
-      title: "My Contributions",
+      title: "Contributions",
       description: "Track and manage all contributions to the cooperative",
       noContributions: "No contributions yet",
       amount: "Amount",
@@ -1091,6 +1094,7 @@ const translations = {
     report: {
       title: "Cooperative Report",
       downloadReport: "Download Report",
+      downloading: "Downloading...",
       reportCard: "Funding Status Report",
       totalCollected: "Total Collected",
       targetAmount: "Target Amount",
@@ -1352,6 +1356,8 @@ const translations = {
       registrationFailed: "Inscription impossible",
       enterValidAmount: "Veuillez entrer un montant valide.",
       contributionFailed: "Impossible de cotiser.",
+      paymentServiceUnavailable:
+        "Le service de paiement est temporairement indisponible. Reessayez dans quelques instants.",
       invalidCredentials: "Identifiants invalides",
       invalidFormValues: "Champs invalides",
       cooperativeNotFound: "Cooperative non trouvee",
@@ -1466,6 +1472,7 @@ const translations = {
     common: {
       submit: "Soumettre",
       cancel: "Annuler",
+      loading: "Chargement...",
       next: "Suivant",
       back: "Retour",
       home: "Accueil",
@@ -2050,11 +2057,11 @@ const translations = {
       qrAlt: "QR code pour l'adresse du wallet",
       vaultAddress: "Adresse du coffre",
       surplusLabel: "+{amount} FCFA au-dessus de l'objectif",
-      legendCoop: "• Green: Fonds coopératifs",
-      legendFee: "• Orange: Frais plateforme ({percent}%)",
+      legendCoop: "• Vert : Fonds cooperatifs",
+      legendFee: "• Orange : Frais plateforme ({percent}%)",
     },
     contributions: {
-      title: "Mes contributions",
+      title: "Contributions",
       description: "Suivez et gerez toutes les contributions a la cooperative",
       noContributions: "Aucune contribution pour le moment",
       amount: "Montant",
@@ -2266,6 +2273,7 @@ const translations = {
     report: {
       title: "Rapport de la cooperative",
       downloadReport: "Telecharger le rapport",
+      downloading: "Telechargement...",
       reportCard: "Rapport d'etat de financement",
       totalCollected: "Total collecte",
       targetAmount: "Montant cible",

@@ -3,10 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import {
-  ProposalStatus,
-  ProposalType,
-} from "@prisma/client";
+import { ProposalStatus, ProposalType } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateVendorReviewDto } from "./dto/create-vendor-review.dto";
@@ -48,7 +45,8 @@ export class VendorReviewsService {
     if (proposals.length === 0) {
       return {
         eligible: false,
-        reason: "No approved vendor purchase proposal was found for this vendor in the cooperative.",
+        reason:
+          "No approved vendor purchase proposal was found for this vendor in the cooperative.",
       };
     }
 
@@ -91,9 +89,34 @@ export class VendorReviewsService {
     );
 
     if (!nextEligibleProposal) {
+      const latestExistingReview = await this.prisma.vendorReview.findFirst({
+        where: {
+          reviewerId,
+          proposalId: {
+            in: proposals.map((proposal) => proposal.id),
+          },
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        select: {
+          proposalId: true,
+        },
+      });
+
+      if (latestExistingReview) {
+        return {
+          eligible: true,
+          proposalId: latestExistingReview.proposalId,
+          reason:
+            "Review already exists for this vendor. Submitting again will update your latest review.",
+        };
+      }
+
       return {
         eligible: false,
-        reason: "Reviewer already submitted a review for the available approved vendor purchase proposal(s).",
+        reason:
+          "Reviewer already submitted a review for the available approved vendor purchase proposal(s).",
       };
     }
 
@@ -124,19 +147,43 @@ export class VendorReviewsService {
     );
 
     if (!eligibility.eligible || !eligibility.proposalId) {
-      throw new ForbiddenException(eligibility.reason ?? "Review is not allowed.");
+      throw new ForbiddenException(
+        eligibility.reason ?? "Review is not allowed.",
+      );
     }
 
-    const review = await this.prisma.vendorReview.create({
-      data: {
-        vendorId: dto.vendorId,
-        reviewerId,
-        cooperativeId: dto.cooperativeId,
-        proposalId: eligibility.proposalId,
-        rating: dto.rating,
-        comment: dto.comment,
+    const existingReview = await this.prisma.vendorReview.findUnique({
+      where: {
+        reviewerId_proposalId: {
+          reviewerId,
+          proposalId: eligibility.proposalId,
+        },
+      },
+      select: {
+        id: true,
       },
     });
+
+    const review = existingReview
+      ? await this.prisma.vendorReview.update({
+          where: {
+            id: existingReview.id,
+          },
+          data: {
+            rating: dto.rating,
+            comment: dto.comment,
+          },
+        })
+      : await this.prisma.vendorReview.create({
+          data: {
+            vendorId: dto.vendorId,
+            reviewerId,
+            cooperativeId: dto.cooperativeId,
+            proposalId: eligibility.proposalId,
+            rating: dto.rating,
+            comment: dto.comment,
+          },
+        });
 
     await this.updateVendorRatingCache(dto.vendorId);
     await this.updateVendorRankScore(dto.vendorId);
@@ -155,7 +202,9 @@ export class VendorReviewsService {
       },
     });
 
-    const reviewerIds = [...new Set(reviews.map((review) => review.reviewerId))];
+    const reviewerIds = [
+      ...new Set(reviews.map((review) => review.reviewerId)),
+    ];
     const users = reviewerIds.length
       ? await this.prisma.user.findMany({
           where: {

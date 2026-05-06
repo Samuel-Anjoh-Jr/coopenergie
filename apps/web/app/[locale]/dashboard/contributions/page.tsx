@@ -78,6 +78,18 @@ function truncateHash(hash?: string | null): string {
   return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
 }
 
+function isContributionPaymentTemporaryFailure(message: string) {
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("unable to reach payment provider") ||
+    normalized.includes("network") ||
+    normalized.includes("timeout") ||
+    normalized.includes("timed out")
+  );
+}
+
 export default function ContributionsPage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
@@ -151,8 +163,12 @@ export default function ContributionsPage() {
 
   const targetAmount = selectedCoop?.targetAmountXAF ?? 0;
   const totalCollected = selectedCoop?.confirmedBalanceXAF ?? 0;
-  const progressPercent =
-    targetAmount > 0 ? Math.min((totalCollected / targetAmount) * 100, 100) : 0;
+  const rawProgressPercent =
+    targetAmount > 0 ? (totalCollected / targetAmount) * 100 : 0;
+  const progressPercent = Math.min(rawProgressPercent, 100);
+  const surplusAmount = Math.max(totalCollected - targetAmount, 0);
+  const surplusPercent =
+    targetAmount > 0 ? Math.min((surplusAmount / targetAmount) * 100, 100) : 0;
 
   const copyToClipboard = async (hash: string) => {
     try {
@@ -214,9 +230,15 @@ export default function ContributionsPage() {
         `/${locale}/dashboard/contributions/payment?${query.toString()}`,
       );
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("errors.contributionFailed"),
-      );
+      if (error instanceof Error) {
+        toast.error(
+          isContributionPaymentTemporaryFailure(error.message)
+            ? t("errors.paymentServiceUnavailable")
+            : error.message,
+        );
+      } else {
+        toast.error(t("errors.contributionFailed"));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -267,6 +289,20 @@ export default function ContributionsPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+            {surplusAmount > 0 ? (
+              <div className="space-y-1">
+                <div className="w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-linear-to-r from-emerald-400 to-lime-400 rounded-full"
+                    style={{ width: `${surplusPercent}%` }}
+                  />
+                </div>
+                <p className="text-xs text-emerald-700 font-medium">
+                  +{formatXaf(surplusAmount)}{" "}
+                  {locale === "fr" ? "au-dessus de l'objectif" : "above goal"}
+                </p>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {Math.round(progressPercent)}%{" "}

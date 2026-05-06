@@ -32,7 +32,9 @@ export class ReportsController {
     response.setHeader("Content-Type", "text/csv; charset=utf-8");
     response.setHeader(
       "Content-Disposition",
-      `attachment; filename=coopenergie-rapport-${date}.csv`,
+      `attachment; filename=coopenergie-${
+        normalizedLocale === "fr" ? "rapport" : "report"
+      }-${date}.csv`,
     );
 
     return csv;

@@ -104,6 +104,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const {
     allCoops,
+    selectedCoop,
     activeCoopId: activeCooperativeId,
     isResolvingSelection,
     loadingCoops: loadingMyCooperatives,
@@ -116,7 +117,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     loading: loadingDetail,
     refetch: refetchCooperativeDetail,
   } = useQuery(GET_COOPERATIVE_DETAIL, {
-    variables: { id: activeCooperativeId },
+    variables: { id: activeCooperativeId ?? "" },
     skip: !activeCooperativeId,
     fetchPolicy: "cache-and-network",
     pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
@@ -125,7 +126,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   const { data: reportData, refetch: refetchReport } = useQuery(
     GET_COOPERATIVE_REPORT,
     {
-      variables: { cooperativeId: activeCooperativeId },
+      variables: { cooperativeId: activeCooperativeId ?? "" },
       skip: !activeCooperativeId,
     },
   );
@@ -187,11 +188,17 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     Number(monetisationData?.monetisationSettings?.withdrawalFeePercent ?? 0) ||
     0;
 
-  const targetAmount = cooperative?.targetAmountXAF ?? 0;
+  const targetAmount =
+    cooperative?.targetAmountXAF ?? selectedCoop?.targetAmountXAF ?? 0;
   const baseTargetAmount = cooperative?.baseTargetXAF ?? targetAmount;
-  const totalCollected = cooperative?.totalCollected ?? 0;
+  const totalCollected =
+    cooperative?.totalCollected ?? selectedCoop?.confirmedBalanceXAF ?? 0;
   const remainingAmount = Math.max(targetAmount - totalCollected, 0);
-  const progress = cooperative?.progress ?? 0;
+  const progress =
+    cooperative?.progress ??
+    (targetAmount > 0
+      ? Number(((totalCollected / targetAmount) * 100).toFixed(2))
+      : 0);
   const memberCount = cooperative?.memberCount ?? 0;
 
   const targetXAFInput = Number.parseInt(coopTarget, 10) || 0;
@@ -291,8 +298,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   ]);
 
   const activeProposals = report?.totalProposals ?? 0;
-  const cooperativeName = cooperative?.name ?? "-";
-  const vaultAddress = cooperative?.vaultAddress ?? "";
+  const cooperativeName = cooperative?.name ?? selectedCoop?.name ?? "-";
+  const vaultAddress =
+    cooperative?.vaultAddress ?? selectedCoop?.vaultAddress ?? "";
   const celoScanUrl =
     cooperative?.celoScanUrl ??
     (vaultAddress ? `${CELOSCAN_BASE}/address/${vaultAddress}` : "");
@@ -551,7 +559,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     {progress.toFixed(1)}%
                   </span>
                 </div>
-                <div className="relative overflow-visible">
+                <div className="space-y-2">
                   <div className="h-3 md:h-4 rounded-full bg-[#E6EFE6] overflow-hidden border border-[#DCE8DC]">
                     <div className="flex h-full w-full">
                       <div
@@ -565,10 +573,12 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     </div>
                   </div>
                   {surplusAmount > 0 ? (
-                    <div
-                      className="absolute left-full top-0 h-3 md:h-4 bg-[#86EFAC] rounded-r-full"
-                      style={{ width: `${Math.min(surplusPercent, 120)}%` }}
-                    />
+                    <div className="h-2 rounded-full bg-emerald-100 overflow-hidden border border-emerald-200">
+                      <div
+                        className="h-full bg-[#86EFAC]"
+                        style={{ width: `${Math.min(surplusPercent, 100)}%` }}
+                      />
+                    </div>
                   ) : null}
                 </div>
                 {surplusAmount > 0 ? (

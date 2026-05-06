@@ -46,6 +46,10 @@ type VendorProfile = {
   email?: string | null;
   whatsappNumber?: string | null;
   website?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  twitterUrl?: string | null;
+  linkedinUrl?: string | null;
   avgRating?: number;
   totalReviews?: number;
   products: VendorProduct[];
@@ -58,6 +62,7 @@ type VendorReview = {
   rating: number;
   comment?: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 type ApprovedVendorProposal = {
@@ -265,18 +270,29 @@ export default function PublicVendorProfilePage() {
         comment: reviewComment.trim() || undefined,
       });
 
+      const existingOwn = reviews.find(
+        (review) => review.reviewerId === session?.user?.id,
+      );
+      const nowIso = new Date().toISOString();
+
       const optimistic: VendorReview = {
-        id: `tmp-${Date.now()}`,
+        id: existingOwn?.id || `tmp-${Date.now()}`,
         reviewerId: session?.user?.id || "self",
         reviewerName: session?.user?.name || t("dashboard.profile"),
         rating: reviewRating,
         comment: reviewComment.trim() || null,
-        createdAt: new Date().toISOString(),
+        createdAt: existingOwn?.createdAt || nowIso,
+        updatedAt: nowIso,
       };
 
-      setReviews((current) => [optimistic, ...current]);
+      setReviews((current) => {
+        const withoutOwn = current.filter(
+          (review) => review.reviewerId !== session?.user?.id,
+        );
+        return [optimistic, ...withoutOwn];
+      });
       setReviewEligibility({
-        eligible: false,
+        eligible: true,
         reason: t("vendorProfile.feedback.reviewSubmitted"),
       });
       setReviewOpen(false);
@@ -461,6 +477,24 @@ export default function PublicVendorProfilePage() {
                             {t("vendorProfile.website")}: {vendor.website}
                           </p>
                         ) : null}
+                        {vendor.facebookUrl ? (
+                          <p className="break-all">
+                            Facebook: {vendor.facebookUrl}
+                          </p>
+                        ) : null}
+                        {vendor.instagramUrl ? (
+                          <p className="break-all">
+                            Instagram: {vendor.instagramUrl}
+                          </p>
+                        ) : null}
+                        {vendor.twitterUrl ? (
+                          <p className="break-all">X: {vendor.twitterUrl}</p>
+                        ) : null}
+                        {vendor.linkedinUrl ? (
+                          <p className="break-all">
+                            LinkedIn: {vendor.linkedinUrl}
+                          </p>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="mt-2 text-sm text-muted-foreground">
@@ -533,7 +567,7 @@ export default function PublicVendorProfilePage() {
                     {reviewEligibility?.eligible ? null : (
                       <Badge
                         variant="outline"
-                        className="text-muted-foreground"
+                        className="max-w-full text-muted-foreground whitespace-normal wrap-break-word"
                       >
                         {reviewEligibility?.reason ||
                           t("vendorProfile.reviewNotAvailable")}
@@ -554,6 +588,12 @@ export default function PublicVendorProfilePage() {
                                   locale === "fr" ? "fr-CM" : "en-CM",
                                 )}
                               </span>
+                              {new Date(review.updatedAt).getTime() >
+                              new Date(review.createdAt).getTime() ? (
+                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                                  {locale === "fr" ? "modifie" : "edited"}
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                           {review.comment ? (
@@ -561,6 +601,21 @@ export default function PublicVendorProfilePage() {
                               {review.comment}
                             </p>
                           ) : null}
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {locale === "fr" ? "Cree le" : "Created"}:{" "}
+                            {new Date(review.createdAt).toLocaleString(
+                              locale === "fr" ? "fr-CM" : "en-CM",
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {locale === "fr"
+                              ? "Derniere modification"
+                              : "Last edited"}
+                            :{" "}
+                            {new Date(review.updatedAt).toLocaleString(
+                              locale === "fr" ? "fr-CM" : "en-CM",
+                            )}
+                          </p>
                         </CardContent>
                       </Card>
                     ))}
@@ -578,7 +633,7 @@ export default function PublicVendorProfilePage() {
       </div>
 
       <Dialog open={proposalOpen} onOpenChange={setProposalOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl w-[calc(100%-1rem)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("vendorProfile.proposalDialogTitle")}</DialogTitle>
             <DialogDescription>
@@ -600,7 +655,7 @@ export default function PublicVendorProfilePage() {
               </option>
               {vendor.products.map((product) => (
                 <option key={product.id} value={product.id}>
-                  {product.title}
+                  {product.title} — {formatXaf(product.priceXAF, locale)}
                 </option>
               ))}
             </select>

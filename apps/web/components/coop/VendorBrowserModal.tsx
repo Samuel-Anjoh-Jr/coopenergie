@@ -39,7 +39,7 @@ const GET_BROWSER_VENDORS = gql`
     $minRating: Float
     $minPriceXAF: Float
     $maxPriceXAF: Float
-    $sortBy: String
+    $sortBy: VendorSortBy
   ) {
     vendors(
       search: $search
@@ -105,6 +105,15 @@ type SortOption =
   | "priceAsc"
   | "priceDesc"
   | "recent";
+
+const SORT_TO_ENUM: Record<SortOption, string> = {
+  ranking: "RANKING",
+  rating: "RATING",
+  name: "NAME",
+  priceAsc: "PRICE_ASC",
+  priceDesc: "PRICE_DESC",
+  recent: "NEWEST",
+};
 
 const SORT_LABELS: Record<SortOption, { en: string; fr: string }> = {
   ranking: { en: "Ranking", fr: "Classement" },
@@ -311,14 +320,7 @@ export function VendorBrowserModal({
         search: deferredSearch || undefined,
         city: city !== "all" ? city : undefined,
         minRating,
-        sortBy:
-          sort === "priceAsc"
-            ? "price_asc"
-            : sort === "priceDesc"
-              ? "price_desc"
-              : sort === "recent"
-                ? "newest"
-                : sort,
+        sortBy: SORT_TO_ENUM[sort],
       },
       skip: !open,
       fetchPolicy: "cache-and-network",

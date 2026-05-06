@@ -283,13 +283,17 @@ export default function ProposalsPage() {
           : t("toasts.voteRecorded"),
       );
 
-      await safeRefetchProposals();
+      await Promise.all([safeRefetchProposals(), refetchMyCooperatives()]);
+      setTimeout(() => {
+        void safeRefetchProposals();
+        void refetchMyCooperatives();
+      }, 1200);
     } catch (error) {
       console.error("Vote error:", error);
       const errorMessage =
         error instanceof Error ? error.message : t("errors.voteFailed");
       toast.error(errorMessage);
-      await safeRefetchProposals();
+      await Promise.all([safeRefetchProposals(), refetchMyCooperatives()]);
     } finally {
       setVotingProposalId(null);
     }

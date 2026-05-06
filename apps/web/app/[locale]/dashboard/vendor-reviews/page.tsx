@@ -44,6 +44,7 @@ type VendorReview = {
   rating: number;
   comment?: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 type ReviewEligibility = {
@@ -191,29 +192,38 @@ export default function DashboardVendorReviewsPage() {
         comment: comment.trim() || undefined,
       });
 
+      const existingOwnReview = (reviewsByVendor[activeVendorId] || []).find(
+        (item) => item.reviewerId === session?.user?.id,
+      );
+
       setReviewsByVendor((current) => {
         const existing = current[activeVendorId] || [];
+        const nowIso = new Date().toISOString();
+        const nextReview: VendorReview = {
+          id: existingOwnReview?.id || `tmp-${Date.now()}`,
+          reviewerId: session?.user?.id || "self",
+          reviewerName:
+            session?.user?.name || t("vendorReviewCenter.selfLabel"),
+          rating,
+          comment: comment.trim() || null,
+          createdAt: existingOwnReview?.createdAt || nowIso,
+          updatedAt: nowIso,
+        };
+
+        const withoutOwn = existing.filter(
+          (item) => item.reviewerId !== session?.user?.id,
+        );
+
         return {
           ...current,
-          [activeVendorId]: [
-            {
-              id: `tmp-${Date.now()}`,
-              reviewerId: session?.user?.id || "self",
-              reviewerName:
-                session?.user?.name || t("vendorReviewCenter.selfLabel"),
-              rating,
-              comment: comment.trim() || null,
-              createdAt: new Date().toISOString(),
-            },
-            ...existing,
-          ],
+          [activeVendorId]: [nextReview, ...withoutOwn],
         };
       });
 
       setEligibilityByVendor((current) => ({
         ...current,
         [activeVendorId]: {
-          eligible: false,
+          eligible: true,
           reason: t("vendorReviewCenter.feedback.reviewSubmitted"),
         },
       }));
@@ -320,6 +330,21 @@ export default function DashboardVendorReviewsPage() {
                         {ownReview.comment}
                       </p>
                     ) : null}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {locale === "fr" ? "Cree le" : "Created"}:{" "}
+                      {new Date(ownReview.createdAt).toLocaleString(
+                        locale === "fr" ? "fr-CM" : "en-CM",
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {locale === "fr"
+                        ? "Derniere modification"
+                        : "Last edited"}
+                      :{" "}
+                      {new Date(ownReview.updatedAt).toLocaleString(
+                        locale === "fr" ? "fr-CM" : "en-CM",
+                      )}
+                    </p>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
@@ -335,19 +360,35 @@ export default function DashboardVendorReviewsPage() {
                   </Link>
                   <Button
                     onClick={() => {
+                      if (ownReview) {
+                        setRating(
+                          Math.max(
+                            1,
+                            Math.min(5, Math.round(ownReview.rating)),
+                          ),
+                        );
+                        setComment(ownReview.comment || "");
+                      } else {
+                        setRating(5);
+                        setComment("");
+                      }
                       setActiveVendorId(vendor.vendorId);
                       setReviewOpen(true);
                     }}
                     disabled={!eligibility?.eligible}
                   >
-                    {t("vendorReviewCenter.leaveReview")}
+                    {ownReview
+                      ? locale === "fr"
+                        ? "Modifier mon avis"
+                        : "Edit my review"
+                      : t("vendorReviewCenter.leaveReview")}
                   </Button>
                 </div>
 
                 {!eligibility?.eligible && eligibility?.reason ? (
                   <Badge
                     variant="outline"
-                    className="text-xs text-muted-foreground"
+                    className="max-w-full text-xs text-muted-foreground whitespace-normal wrap-break-word"
                   >
                     {eligibility.reason}
                   </Badge>

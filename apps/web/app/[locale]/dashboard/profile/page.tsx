@@ -37,6 +37,16 @@ import { Locale, useTranslations } from "@/lib/translations";
 
 type WithdrawalMethod = "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER";
 
+type MeResponse = {
+  id: string;
+  email: string;
+  name: string;
+  withdrawalOperator?: WithdrawalMethod | null;
+  withdrawalPhone?: string | null;
+  withdrawalBankName?: string | null;
+  withdrawalBankAccount?: string | null;
+};
+
 export default function ProfilePage() {
   const params = useParams();
   const locale = (params.locale as string) || "en";
@@ -55,6 +65,13 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
+  const [initialProfile, setInitialProfile] = useState<{
+    name: string;
+    withdrawalMethod: WithdrawalMethod;
+    phone: string;
+    bankName: string;
+    bankAccount: string;
+  } | null>(null);
   const detectedMobileMoney = useMemo(
     () => detectCameroonMobileMoney(phone),
     [phone],
@@ -65,6 +82,66 @@ export default function ProfilePage() {
       setName(session.user.name || "");
       setEmail(session.user.email || "");
     }
+  }, [session]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    if (!session?.user) {
+      return;
+    }
+
+    void restClient
+      .get<MeResponse>("/users/me")
+      .then((me) => {
+        if (!mounted) {
+          return;
+        }
+
+        const resolvedMethod =
+          me.withdrawalOperator === "BANK_TRANSFER" ||
+          me.withdrawalOperator === "MTN_MOMO" ||
+          me.withdrawalOperator === "ORANGE_MONEY"
+            ? me.withdrawalOperator
+            : "MTN_MOMO";
+
+        const resolvedName = me.name || "";
+        const resolvedPhone = me.withdrawalPhone || "";
+        const resolvedBankName = me.withdrawalBankName || "";
+        const resolvedBankAccount = me.withdrawalBankAccount || "";
+
+        setName(resolvedName);
+        setEmail(me.email || session.user.email || "");
+        setWithdrawalMethod(resolvedMethod);
+        setPhone(resolvedPhone);
+        setBankName(resolvedBankName);
+        setBankAccount(resolvedBankAccount);
+        setInitialProfile({
+          name: resolvedName,
+          withdrawalMethod: resolvedMethod,
+          phone: resolvedPhone,
+          bankName: resolvedBankName,
+          bankAccount: resolvedBankAccount,
+        });
+      })
+      .catch(() => {
+        if (!mounted) {
+          return;
+        }
+
+        const fallbackName = session.user.name || "";
+        setInitialProfile({
+          name: fallbackName,
+          withdrawalMethod,
+          phone: "",
+          bankName: "",
+          bankAccount: "",
+        });
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [session]);
 
   useEffect(() => {
@@ -80,45 +157,88 @@ export default function ProfilePage() {
   }, [detectedMobileMoney, withdrawalMethod]);
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error(t("errors.nameRequired"));
+    const baseline =
+      initialProfile ??
+      ({
+        name: session?.user?.name || "",
+        withdrawalMethod: "MTN_MOMO",
+        phone: "",
+        bankName: "",
+        bankAccount: "",
+      } as const);
+
+    const nameChanged = name.trim() !== baseline.name;
+    const withdrawalChanged =
+      withdrawalMethod !== baseline.withdrawalMethod ||
+      phone.trim() !== baseline.phone ||
+      bankName.trim() !== baseline.bankName ||
+      bankAccount.trim() !== baseline.bankAccount;
+
+    if (!nameChanged && !withdrawalChanged) {
+      toast.success(t("feedback.profileUpdated"));
       return;
     }
 
-    if (
-      (withdrawalMethod === "MTN_MOMO" ||
-        withdrawalMethod === "ORANGE_MONEY") &&
-      !detectedMobileMoney
-    ) {
-      toast.error(t("errors.phoneRequired"));
-      return;
-    }
+    if (withdrawalChanged) {
+      if (
+        (withdrawalMethod === "MTN_MOMO" ||
+          withdrawalMethod === "ORANGE_MONEY") &&
+        !detectedMobileMoney
+      ) {
+        toast.error(t("errors.phoneRequired"));
+        return;
+      }
 
-    if (
-      withdrawalMethod === "BANK_TRANSFER" &&
-      (!bankName.trim() || !bankAccount.trim())
-    ) {
-      toast.error(t("errors.bankDetailsRequired"));
-      return;
+      if (
+        withdrawalMethod === "BANK_TRANSFER" &&
+        (!bankName.trim() || !bankAccount.trim())
+      ) {
+        toast.error(t("errors.bankDetailsRequired"));
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
-      await restClient.patch("/users/me", {
-        name: name.trim(),
-        preferredWithdrawalMethod:
-          withdrawalMethod === "BANK_TRANSFER"
-            ? withdrawalMethod
-            : detectedMobileMoney?.destinationType,
-        withdrawalPhone:
+      const payload: Record<string, string | undefined> = {};
+
+      if (nameChanged && name.trim()) {
+        payload.name = name.trim();
+      }
+
+      if (withdrawalChanged) {
+        payload.preferredWithdrawalMethod = withdrawalMethod;
+        payload.withdrawalPhone =
           withdrawalMethod === "BANK_TRANSFER"
             ? undefined
-            : detectedMobileMoney?.normalizedPhone,
-        withdrawalBankName: bankName || undefined,
-        withdrawalBankAccount: bankAccount || undefined,
+            : detectedMobileMoney?.normalizedPhone;
+        payload.withdrawalBankName =
+          withdrawalMethod === "BANK_TRANSFER"
+            ? bankName || undefined
+            : undefined;
+        payload.withdrawalBankAccount =
+          withdrawalMethod === "BANK_TRANSFER"
+            ? bankAccount || undefined
+            : undefined;
+      }
+
+      await restClient.patch("/users/me", {
+        ...payload,
       });
 
       toast.success(t("feedback.profileUpdated"));
+
+      setInitialProfile({
+        name: name.trim(),
+        withdrawalMethod,
+        phone:
+          withdrawalMethod === "BANK_TRANSFER"
+            ? ""
+            : detectedMobileMoney?.normalizedPhone || phone.trim(),
+        bankName: withdrawalMethod === "BANK_TRANSFER" ? bankName.trim() : "",
+        bankAccount:
+          withdrawalMethod === "BANK_TRANSFER" ? bankAccount.trim() : "",
+      });
     } catch (error) {
       toast.error(
         error instanceof Error
