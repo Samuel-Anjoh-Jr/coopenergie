@@ -40,6 +40,7 @@ import {
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
 import { restClient } from "@/lib/rest-client";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type Contribution = {
   id: string;
@@ -90,10 +91,12 @@ export default function ContributionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
+  const {
+    selectedCoop,
+    activeCoopId: cooperativeId,
+    refetchMyCooperatives,
+    isResolvingSelection,
+  } = useSelectedCooperative({ fetchPolicy: "cache-and-network" });
 
   const {
     data: contributionsData,
@@ -105,7 +108,8 @@ export default function ContributionsPage() {
   });
 
   const isInitialContributionsLoading =
-    contributionsLoading && !contributionsData?.contributions;
+    isResolvingSelection ||
+    (contributionsLoading && !contributionsData?.contributions);
 
   const throttledContributionsRefetch = useMemo(
     () =>
@@ -132,28 +136,21 @@ export default function ContributionsPage() {
     }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [
-    cooperativeId,
-    refetchMyCooperatives,
-    throttledContributionsRefetch,
-  ]);
+  }, [cooperativeId, refetchMyCooperatives, throttledContributionsRefetch]);
 
   useSubscription(SUBSCRIPTION_ON_CONTRIBUTION, {
     variables: { cooperativeId },
     skip: !cooperativeId,
     onData: () => {
       throttledContributionsRefetch.trigger();
+      void refetchMyCooperatives();
     },
   });
 
   const contributions: Contribution[] = contributionsData?.contributions ?? [];
 
-  const totalCollected = useMemo(
-    () => contributions.reduce((sum, item) => sum + item.amountXAF, 0),
-    [contributions],
-  );
-
-  const targetAmount = 5000000;
+  const targetAmount = selectedCoop?.targetAmountXAF ?? 0;
+  const totalCollected = selectedCoop?.confirmedBalanceXAF ?? 0;
   const progressPercent =
     targetAmount > 0 ? Math.min((totalCollected / targetAmount) * 100, 100) : 0;
 

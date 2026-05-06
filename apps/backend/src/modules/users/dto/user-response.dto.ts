@@ -31,4 +31,7 @@ export class UserResponseDto {
 
   @Expose()
   withdrawalBankAccount?: string | null;
+
+  @Expose()
+  preferredLocale?: string;
 }

@@ -7,14 +7,17 @@ import { CooperativesModule } from "../modules/cooperatives/cooperatives.module"
 import { MembershipsModule } from "../modules/memberships/memberships.module";
 import { PlatformSettingsModule } from "../modules/platform-settings/platform-settings.module";
 import { ProposalsModule } from "../modules/proposals/proposals.module";
+import { VendorsModule } from "../modules/vendors/vendors.module";
 import { LedgerModule } from "../modules/ledger/ledger.module";
 import { WithdrawalsModule } from "../modules/withdrawals/withdrawals.module";
 import { ContributionResolver } from "./resolvers/contribution.resolver";
 import { CooperativeResolver } from "./resolvers/cooperative.resolver";
 import { LedgerResolver } from "./resolvers/ledger.resolver";
+import { MonetisationResolver } from "./resolvers/monetisation.resolver";
 import { ProposalResolver } from "./resolvers/proposal.resolver";
 import { ReportResolver } from "./resolvers/report.resolver";
 import { SubscriptionResolver } from "./resolvers/subscription.resolver";
+import { VendorResolver } from "./resolvers/vendor.resolver";
 import { WithdrawalResolver } from "./resolvers/withdrawal.resolver";
 import { GraphqlResolver } from "./graphql.resolver";
 import { PUBSUB } from "./graphql.tokens";
@@ -31,6 +34,7 @@ import { PUBSUB } from "./graphql.tokens";
     ProposalsModule,
     WithdrawalsModule,
     PlatformSettingsModule,
+    VendorsModule,
   ],
   providers: [
     {
@@ -42,9 +46,11 @@ import { PUBSUB } from "./graphql.tokens";
     ContributionResolver,
     ProposalResolver,
     LedgerResolver,
+    MonetisationResolver,
     ReportResolver,
     WithdrawalResolver,
     SubscriptionResolver,
+    VendorResolver,
   ],
   exports: [PUBSUB],
 })

@@ -178,12 +178,13 @@ export class DisbursementService {
         },
       );
       await Promise.all(
-        adminEmails.map((adminEmail) =>
+        adminEmails.map((admin) =>
           this.mailService.sendWithdrawalApprovalNotification(
-            adminEmail,
+            admin.email,
             disbursedWithdrawal.cooperative.name,
             disbursedWithdrawal.amountXAF,
             releaseTxHash ?? disbursedWithdrawal.proposal.txHash ?? "",
+            admin.preferredLocale,
           ),
         ),
       );
@@ -233,12 +234,13 @@ export class DisbursementService {
         },
       );
       await Promise.all(
-        adminEmails.map((adminEmail) =>
+        adminEmails.map((admin) =>
           this.mailService.sendWithdrawalFailureNotification(
-            adminEmail,
+            admin.email,
             withdrawalRequest.cooperative.name,
             withdrawalRequest.amountXAF,
             message,
+            admin.preferredLocale,
           ),
         ),
       );
@@ -385,12 +387,13 @@ export class DisbursementService {
           },
         );
         await Promise.all(
-          adminEmails.map((adminEmail) =>
+          adminEmails.map((admin) =>
             this.mailService.sendWithdrawalApprovalNotification(
-              adminEmail,
+              admin.email,
               updated.cooperative.name,
               updated.amountXAF,
               releaseTxHash ?? updated.proposal.txHash ?? "",
+              admin.preferredLocale,
             ),
           ),
         );
@@ -445,12 +448,13 @@ export class DisbursementService {
       },
     );
     await Promise.all(
-      adminEmails.map((adminEmail) =>
+      adminEmails.map((admin) =>
         this.mailService.sendWithdrawalFailureNotification(
-          adminEmail,
+          admin.email,
           withdrawalRequest.cooperative.name,
           withdrawalRequest.amountXAF,
           failureReason,
+          admin.preferredLocale,
         ),
       ),
     );
@@ -802,7 +806,9 @@ export class DisbursementService {
     return undefined;
   }
 
-  private async getCooperativeAdminEmails(cooperativeId: string) {
+  private async getCooperativeAdminEmails(
+    cooperativeId: string,
+  ): Promise<Array<{ email: string; preferredLocale: string }>> {
     const admins = await this.prisma.membership.findMany({
       where: {
         cooperativeId,
@@ -812,15 +818,21 @@ export class DisbursementService {
         user: {
           select: {
             email: true,
-            name: true,
+            preferredLocale: true,
           },
         },
       },
     });
 
     const recipients = admins
-      .map((membership) => membership.user.email)
-      .filter(Boolean);
+      .map((membership) => ({
+        email: membership.user.email,
+        preferredLocale: membership.user.preferredLocale ?? "fr",
+      }))
+      .filter(
+        (recipient): recipient is { email: string; preferredLocale: string } =>
+          Boolean(recipient.email),
+      );
 
     if (recipients.length === 0) {
       this.logger.warn(

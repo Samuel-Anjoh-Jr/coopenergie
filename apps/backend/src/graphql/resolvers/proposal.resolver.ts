@@ -17,7 +17,7 @@ import { GqlJwtAuthGuard } from "../../auth/gql-jwt.guard";
 import { CurrentUser } from "../../modules/auth/decorators/current-user.decorator";
 import { ProposalsService } from "../../modules/proposals/proposals.service";
 import { PrismaService } from "../../prisma/prisma.service";
-import { ProposalType } from "../types/proposal.type";
+import { ProposalType, ProposalVendorLinkType } from "../types/proposal.type";
 import { WithdrawalRequestType } from "../types/withdrawal.type";
 
 @UseGuards(GqlJwtAuthGuard)
@@ -110,6 +110,59 @@ export class ProposalResolver {
     });
 
     return !!existingVote;
+  }
+
+  @ResolveField("vendorLink", () => ProposalVendorLinkType, {
+    nullable: true,
+  })
+  async vendorLink(
+    @Parent() proposal: {
+      id: string;
+      vendorLink?: {
+        id: string;
+        note: string | null;
+        vendor: {
+          id: string;
+          businessName: string;
+          logoUrl: string | null;
+        };
+        product: {
+          id: string;
+          title: string;
+          description: string;
+          priceXAF: number;
+          unit: string | null;
+        } | null;
+      } | null;
+    },
+  ) {
+    if (proposal.vendorLink) {
+      return proposal.vendorLink;
+    }
+
+    return this.prisma.proposalVendorLink.findUnique({
+      where: {
+        proposalId: proposal.id,
+      },
+      include: {
+        vendor: {
+          select: {
+            id: true,
+            businessName: true,
+            logoUrl: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            priceXAF: true,
+            unit: true,
+          },
+        },
+      },
+    });
   }
 
   private async assertMembership(userId: string, cooperativeId: string) {

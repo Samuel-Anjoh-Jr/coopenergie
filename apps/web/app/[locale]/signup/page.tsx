@@ -311,6 +311,16 @@ export default function SignupPage() {
                 {t("common.login")}
               </Link>
             </p>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {t("common.pannelVendor")}{" "}
+              <Link
+                href={`/${locale}/vendor-signup`}
+                className="text-primary hover:text-primary/80 font-semibold transition-colors"
+              >
+                {t("common.signUPHere")}
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>

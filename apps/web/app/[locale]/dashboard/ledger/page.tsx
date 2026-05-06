@@ -38,7 +38,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CELOSCAN_BASE, celoScanTx, withCeloScanLogsTab } from "@/lib/config";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_LEDGER } from "@/lib/graphql/queries/ledger";
 import {
   SUBSCRIPTION_ON_CONTRIBUTION,
@@ -51,6 +50,7 @@ import {
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { Locale, useTranslations } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type LedgerEvent = {
   id: string;
@@ -159,12 +159,13 @@ export default function LedgerPage() {
     string | null
   >(null);
 
-  const { data: myCooperativesData, refetch: refetchMyCooperatives } = useQuery(
-    GET_MY_COOPERATIVES,
-  );
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
-  const vaultAddress =
-    myCooperativesData?.myCooperatives?.[0]?.vaultAddress || "";
+  const {
+    activeCoopId: cooperativeId,
+    selectedCoop,
+    refetchMyCooperatives,
+    isResolvingSelection,
+  } = useSelectedCooperative();
+  const vaultAddress = selectedCoop?.vaultAddress || "";
 
   const filterType =
     activeFilter === "all" ? undefined : (activeFilter as string);
@@ -184,7 +185,8 @@ export default function LedgerPage() {
   });
 
   const events: LedgerEvent[] = ledgerData?.ledger ?? [];
-  const isInitialLedgerLoading = loadingLedger && !ledgerData?.ledger;
+  const isInitialLedgerLoading =
+    isResolvingSelection || (loadingLedger && !ledgerData?.ledger);
 
   const throttledLedgerRefetch = useMemo(
     () =>

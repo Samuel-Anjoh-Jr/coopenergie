@@ -12,6 +12,7 @@ import {
 } from "./notification-sounds";
 import { ExpoPushService } from "./expo-push.service";
 import { FirebaseAdminService } from "./firebase-admin.service";
+import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 type NotificationData = Record<string, string>;
@@ -24,6 +25,7 @@ export class NotificationsService {
     private readonly firebaseAdminService: FirebaseAdminService,
     private readonly expoPushService: ExpoPushService,
     private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
   ) {}
 
   async notifyContributionConfirmed(
@@ -256,6 +258,111 @@ export class NotificationsService {
         newMemberName,
       },
       "MEMBER_JOINED",
+    );
+  }
+
+  async notifyVendorProposalApproved(
+    cooperativeId: string,
+    vendorName: string,
+    proposalTitle: string,
+  ) {
+    const memberIds = await this.getCooperativeMembers(cooperativeId);
+
+    await this.dispatch(
+      memberIds,
+      "Proposition fournisseur approuvee",
+      `${vendorName} - ${proposalTitle}`,
+      {
+        type: "VENDOR_PROPOSAL_APPROVED",
+        cooperativeId,
+        vendorName,
+        proposalTitle,
+      },
+      "PROPOSAL",
+    );
+  }
+
+  async notifyVendorOfApproval(
+    vendorId: string,
+    cooperativeId: string,
+    cooperativeName: string,
+    proposalTitle: string,
+  ) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: {
+        id: vendorId,
+      },
+      select: {
+        userId: true,
+        businessName: true,
+        email: true,
+        user: {
+          select: {
+            email: true,
+            preferredLocale: true,
+          },
+        },
+      },
+    });
+
+    if (!vendor) {
+      this.logger.warn(`Cannot notify unknown vendor ${vendorId}.`);
+      return;
+    }
+
+    const adminMembership = await this.prisma.membership.findFirst({
+      where: {
+        cooperativeId,
+        role: Role.COOP_ADMIN,
+      },
+      orderBy: {
+        joinedAt: "asc",
+      },
+      select: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            withdrawalPhone: true,
+          },
+        },
+      },
+    });
+
+    const locale = vendor.user.preferredLocale ?? "fr";
+
+    await this.dispatch(
+      [vendor.userId],
+      "Proposition approuvee",
+      `${cooperativeName} a approuve ${proposalTitle}`,
+      {
+        type: "VENDOR_APPROVED",
+        cooperativeId,
+        proposalTitle,
+      },
+      "PROPOSAL",
+    );
+
+    const vendorEmail = vendor.email ?? vendor.user.email;
+
+    if (!vendorEmail) {
+      this.logger.warn(
+        `Vendor ${vendorId} has no email. Skipping approval email delivery.`,
+      );
+      return;
+    }
+
+    await this.mailService.sendVendorProposalApprovedNotification(
+      vendorEmail,
+      vendor.businessName,
+      cooperativeName,
+      proposalTitle,
+      locale,
+      {
+        name: adminMembership?.user.name,
+        email: adminMembership?.user.email,
+        phone: adminMembership?.user.withdrawalPhone,
+      },
     );
   }
 

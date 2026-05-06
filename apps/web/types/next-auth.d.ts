@@ -9,6 +9,12 @@ declare module "next-auth" {
       name: string;
       token: string;
       isPlatformAdmin: boolean;
+      role: string;
+      vendor?: {
+        id?: string;
+        status?: string;
+        paymentModel?: "ONE_TIME" | "SUBSCRIPTION";
+      };
     };
   }
 }
@@ -18,5 +24,8 @@ declare module "next-auth/jwt" {
     id?: string;
     accessToken?: string;
     isPlatformAdmin?: boolean;
+    role?: string;
+    vendorId?: string;
+    vendorStatus?: string;
   }
 }

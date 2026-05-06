@@ -13,12 +13,13 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { UserResponseDto } from "./dto/user-response.dto";
 
 type ProfileUpdateInput = {
-  name: string;
+  name?: string;
   celoAddress?: string;
   preferredWithdrawalMethod?: string;
   withdrawalPhone?: string;
   withdrawalBankName?: string;
   withdrawalBankAccount?: string;
+  preferredLocale?: "fr" | "en";
 };
 
 @Injectable()
@@ -95,12 +96,13 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id },
       data: {
-        name: data.name,
+        ...(data.name ? { name: data.name } : {}),
         celoAddress: data.celoAddress,
         withdrawalOperator: data.preferredWithdrawalMethod,
         withdrawalPhone: normalizedWithdrawalPhone,
         withdrawalBankName: data.withdrawalBankName,
         withdrawalBankAccount: data.withdrawalBankAccount,
+        ...(data.preferredLocale ? { preferredLocale: data.preferredLocale } : {}),
       },
       select: {
         id: true,
@@ -113,6 +115,7 @@ export class UsersService {
         withdrawalOperator: true,
         withdrawalBankName: true,
         withdrawalBankAccount: true,
+        preferredLocale: true,
       },
     });
     return plainToInstance(UserResponseDto, user, {

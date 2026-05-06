@@ -3,17 +3,16 @@ import { setContext } from "@apollo/client/link/context";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { createClient } from "graphql-ws";
-import { getSession } from "next-auth/react";
 
 import { GRAPHQL_URL, GRAPHQL_WS_URL } from "@/lib/config";
+import { getCachedClientToken } from "@/lib/auth/client-session";
 
 async function getAuthToken() {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const session = await getSession();
-  return session?.user?.token ?? null;
+  return getCachedClientToken();
 }
 
 const httpLink = new HttpLink({

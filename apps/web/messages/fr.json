@@ -1,0 +1,34 @@
+{
+  "vendorLanding": {
+    "hero": {
+      "badge": "Pour les vendeurs solaires",
+      "title": "Vendez a des cooperatives fiables dans tout le Cameroun",
+      "subtitle": "Publiez vos offres solaires, captez une demande qualifiee et transformez les votes cooperatifs en commandes confirmees.",
+      "ctaSignup": "Creer un compte vendeur",
+      "ctaLogin": "Connexion",
+      "ctaDashboard": "Ouvrir le tableau de bord"
+    },
+    "howItWorks": {
+      "title": "Comment ca marche"
+    },
+    "pricing": {
+      "title": "Tarification simple",
+      "subtitle": "Choisissez le modele qui correspond a votre rythme de croissance."
+    },
+    "whyUs": {
+      "title": "Pourquoi vendre avec CoopEnergie"
+    },
+    "faq": {
+      "title": "Questions frequentes"
+    }
+  },
+  "vendorDashboard": {
+    "navigationTitle": "Tableau vendeur",
+    "overview": "Apercu",
+    "profile": "Profil",
+    "contact": "Contact",
+    "products": "Produits",
+    "subscription": "Abonnement",
+    "reviews": "Avis"
+  }
+}

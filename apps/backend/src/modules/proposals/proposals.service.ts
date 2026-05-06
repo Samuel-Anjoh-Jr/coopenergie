@@ -11,9 +11,12 @@ import {
 } from "@nestjs/common";
 import {
   LedgerEventType,
+  Prisma,
   Proposal,
   ProposalStatus,
+  ProposalType,
   Role,
+  VendorAccountStatus,
 } from "@prisma/client";
 
 import { RelayerService } from "../../blockchain/relayer.service";
@@ -35,7 +38,76 @@ type ProposalWithVotes = Proposal & {
     name: string;
     celoAddress: string | null;
   };
+  vendorLink?: {
+    id: string;
+    note: string | null;
+    vendor: {
+      id: string;
+      businessName: string;
+      logoUrl: string | null;
+    };
+    product: {
+      id: string;
+      title: string;
+      description: string;
+      priceXAF: number;
+      unit: string | null;
+      images: Array<{
+        id: string;
+        url: string;
+        altText: string | null;
+        sortOrder: number;
+      }>;
+    } | null;
+  } | null;
 };
+
+const proposalInclude = {
+  creator: {
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      celoAddress: true,
+    },
+  },
+  votes: {
+    select: {
+      choice: true,
+    },
+  },
+  vendorLink: {
+    include: {
+      vendor: {
+        select: {
+          id: true,
+          businessName: true,
+          logoUrl: true,
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          priceXAF: true,
+          unit: true,
+          images: {
+            select: {
+              id: true,
+              url: true,
+              altText: true,
+              sortOrder: true,
+            },
+            orderBy: {
+              sortOrder: "asc",
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProposalInclude;
 
 @Injectable()
 export class ProposalsService {
@@ -53,7 +125,7 @@ export class ProposalsService {
   async create(
     userId: string,
     cooperativeId: string,
-    { title, description }: CreateProposalDto,
+    { title, description, vendorId, productId, vendorNote }: CreateProposalDto,
   ) {
     const membership = await this.prisma.membership.findUnique({
       where: {
@@ -115,6 +187,62 @@ export class ProposalsService {
 
     const normalizedTitle = title.trim();
     const normalizedDescription = description.trim();
+    const normalizedVendorNote = vendorNote?.trim() || null;
+
+    let resolvedVendorId: string | null = null;
+    let resolvedProductId: string | null = null;
+
+    if (productId && !vendorId) {
+      throw new BadRequestException(
+        "vendorId is required when productId is provided.",
+      );
+    }
+
+    if (vendorId) {
+      const vendor = await this.prisma.vendor.findUnique({
+        where: {
+          id: vendorId,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException("Vendor not found.");
+      }
+
+      if (vendor.status !== VendorAccountStatus.ACTIVE) {
+        throw new BadRequestException("Vendor must be active.");
+      }
+
+      resolvedVendorId = vendor.id;
+
+      if (productId) {
+        const product = await this.prisma.vendorProduct.findFirst({
+          where: {
+            id: productId,
+            vendorId: vendor.id,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (!product) {
+          throw new BadRequestException(
+            "Product does not belong to the selected vendor.",
+          );
+        }
+
+        resolvedProductId = product.id;
+      }
+    }
+
+    const proposalType = resolvedVendorId
+      ? ProposalType.VENDOR_PURCHASE
+      : ProposalType.STANDARD;
 
     let proposal = await this.prisma.proposal.create({
       data: {
@@ -122,24 +250,29 @@ export class ProposalsService {
         creatorId: userId,
         title: normalizedTitle,
         description: normalizedDescription,
+        type: proposalType,
         status: ProposalStatus.PENDING,
       },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            celoAddress: true,
-          },
-        },
-        votes: {
-          select: {
-            choice: true,
-          },
-        },
-      },
+      include: proposalInclude,
     });
+
+    if (resolvedVendorId) {
+      proposal = await this.prisma.proposal.update({
+        where: {
+          id: proposal.id,
+        },
+        data: {
+          vendorLink: {
+            create: {
+              vendorId: resolvedVendorId,
+              productId: resolvedProductId,
+              note: normalizedVendorNote,
+            },
+          },
+        },
+        include: proposalInclude,
+      });
+    }
 
     const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === "true";
     const vaultReady = !!cooperative.vaultAddress;
@@ -173,21 +306,7 @@ export class ProposalsService {
               blockNumber: onChainProposalId,
               status: ProposalStatus.PENDING,
             },
-            include: {
-              creator: {
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  celoAddress: true,
-                },
-              },
-              votes: {
-                select: {
-                  choice: true,
-                },
-              },
-            },
+            include: proposalInclude,
           }),
         );
 
@@ -274,21 +393,7 @@ export class ProposalsService {
             normalizedDescription,
           ),
         },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              celoAddress: true,
-            },
-          },
-          votes: {
-            select: {
-              choice: true,
-            },
-          },
-        },
+        include: proposalInclude,
       }),
     );
 
@@ -357,19 +462,7 @@ export class ProposalsService {
         cooperativeId,
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            celoAddress: true,
-          },
-        },
-        votes: {
-          select: {
-            choice: true,
-          },
-        },
+        ...proposalInclude,
       },
       orderBy: {
         createdAt: "desc",
@@ -393,19 +486,7 @@ export class ProposalsService {
         id,
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            celoAddress: true,
-          },
-        },
-        votes: {
-          select: {
-            choice: true,
-          },
-        },
+        ...proposalInclude,
       },
     });
 
@@ -435,43 +516,102 @@ export class ProposalsService {
     return mappedProposal;
   }
 
-  async computeStatus(proposal: { votes: Array<{ choice: boolean }> }) {
-    const yesVotes = proposal.votes.filter((vote) => vote.choice).length;
-    const noVotes = proposal.votes.length - yesVotes;
-    const totalVotes = proposal.votes.length;
-    const quorum = await this.getProposalQuorum();
+  async getVendorProposalsForCooperative(cooperativeId: string) {
+    const cooperative = await this.prisma.cooperative.findUnique({
+      where: {
+        id: cooperativeId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (totalVotes < quorum) {
-      return ProposalStatus.PENDING;
+    if (!cooperative) {
+      throw new NotFoundException("Cooperative not found.");
     }
 
-    return yesVotes > noVotes
-      ? ProposalStatus.APPROVED
-      : ProposalStatus.REJECTED;
+    return this.prisma.proposal.findMany({
+      where: {
+        cooperativeId,
+        type: ProposalType.VENDOR_PURCHASE,
+        status: ProposalStatus.APPROVED,
+      },
+      include: {
+        ...proposalInclude,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+  }
+
+  async computeStatus(proposal: {
+    cooperativeId: string;
+    votes: Array<{ choice: boolean }>;
+  }) {
+    const { threshold, totalMembers } = await this.getCoopVoteSettings(
+      proposal.cooperativeId,
+    );
+    const yesVotes = proposal.votes.filter((v) => v.choice).length;
+
+    if (totalMembers === 0) return ProposalStatus.PENDING;
+
+    const yesPercent = (yesVotes / totalMembers) * 100;
+    if (yesPercent >= threshold) return ProposalStatus.APPROVED;
+
+    const remainingVoters = totalMembers - proposal.votes.length;
+    const maxPossibleYesPercent =
+      ((yesVotes + remainingVoters) / totalMembers) * 100;
+    if (maxPossibleYesPercent < threshold) return ProposalStatus.REJECTED;
+
+    return ProposalStatus.PENDING;
   }
 
   private async attachComputedStatuses(proposals: ProposalWithVotes[]) {
-    const quorum = await this.getProposalQuorum();
+    // Batch: collect unique cooperativeIds then fetch settings once per coop
+    const coopIds = [...new Set(proposals.map((p) => p.cooperativeId))];
+    const settingsMap = new Map<
+      string,
+      { threshold: number; totalMembers: number }
+    >();
+    await Promise.all(
+      coopIds.map(async (id) => {
+        settingsMap.set(id, await this.getCoopVoteSettings(id));
+      }),
+    );
 
     return proposals.map((proposal) => {
-      const yesVotes = proposal.votes.filter((vote) => vote.choice).length;
-      const noVotes = proposal.votes.length - yesVotes;
-      const totalVotes = proposal.votes.length;
-      const computedStatus =
-        totalVotes < quorum
-          ? ProposalStatus.PENDING
-          : yesVotes > noVotes
-            ? ProposalStatus.APPROVED
-            : ProposalStatus.REJECTED;
+      const { threshold, totalMembers } = settingsMap.get(
+        proposal.cooperativeId,
+      ) ?? { threshold: 60, totalMembers: 0 };
+      const yesVotes = proposal.votes.filter((v) => v.choice).length;
 
-      return this.mapProposalWithCounts(proposal, computedStatus, quorum);
+      let computedStatus: ProposalStatus;
+      if (totalMembers === 0) {
+        computedStatus = ProposalStatus.PENDING;
+      } else {
+        const yesPercent = (yesVotes / totalMembers) * 100;
+        if (yesPercent >= threshold) {
+          computedStatus = ProposalStatus.APPROVED;
+        } else {
+          const remainingVoters = totalMembers - proposal.votes.length;
+          const maxPossible =
+            ((yesVotes + remainingVoters) / totalMembers) * 100;
+          computedStatus =
+            maxPossible < threshold
+              ? ProposalStatus.REJECTED
+              : ProposalStatus.PENDING;
+        }
+      }
+
+      return this.mapProposalWithCounts(proposal, computedStatus, threshold);
     });
   }
 
   private mapProposalWithCounts(
     proposal: ProposalWithVotes,
     computedStatus?: ProposalStatus,
-    quorum?: number,
+    threshold?: number,
   ) {
     const yesVotes = proposal.votes.filter((vote) => vote.choice).length;
     const noVotes = proposal.votes.length - yesVotes;
@@ -484,21 +624,34 @@ export class ProposalsService {
       yesVotes,
       noVotes,
       totalVotes,
-      quorumRequired: quorum,
+      thresholdRequired: threshold,
     };
   }
 
-  private async getProposalQuorum() {
-    const settings = await this.prisma.platformSettings.findUnique({
-      where: {
-        id: "singleton",
-      },
-      select: {
-        withdrawalQuorumMinVotes: true,
-      },
-    });
+  private async getCoopVoteSettings(
+    cooperativeId: string,
+  ): Promise<{ threshold: number; totalMembers: number }> {
+    const [coopSettings, platformSettings, memberCount] = await Promise.all([
+      this.prisma.cooperativeSettings.findUnique({
+        where: { cooperativeId },
+        select: { withdrawalThreshold: true },
+      }),
+      this.prisma.platformSettings.findUnique({
+        where: { id: "singleton" },
+        select: { withdrawalThresholdDefault: true },
+      }),
+      this.prisma.membership.count({
+        where: { cooperativeId },
+      }),
+    ]);
 
-    return settings?.withdrawalQuorumMinVotes ?? 1;
+    return {
+      threshold:
+        coopSettings?.withdrawalThreshold ??
+        platformSettings?.withdrawalThresholdDefault ??
+        60,
+      totalMembers: memberCount,
+    };
   }
 
   private generateFakeTxHash(
@@ -515,7 +668,9 @@ export class ProposalsService {
       .slice(0, 64)}`;
   }
 
-  private async getCooperativeMemberEmails(cooperativeId: string) {
+  private async getCooperativeMemberEmails(
+    cooperativeId: string,
+  ): Promise<{ email: string; locale: string }[]> {
     const memberships = await this.prisma.membership.findMany({
       where: {
         cooperativeId,
@@ -524,11 +679,25 @@ export class ProposalsService {
         user: {
           select: {
             email: true,
+            preferredLocale: true,
           },
         },
       },
     });
 
-    return [...new Set(memberships.map((membership) => membership.user.email))];
+    const recipients = memberships
+      .map((membership) => ({
+        email: membership.user.email,
+        locale: membership.user.preferredLocale ?? "fr",
+      }))
+      .filter((recipient): recipient is { email: string; locale: string } =>
+        Boolean(recipient.email),
+      );
+
+    return [
+      ...new Map<string, { email: string; locale: string }>(
+        recipients.map((recipient) => [recipient.email, recipient]),
+      ).values(),
+    ];
   }
 }

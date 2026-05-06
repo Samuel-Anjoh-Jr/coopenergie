@@ -259,6 +259,94 @@
   animation: progress-grow 1s ease-out forwards;
 }
 
+/* Base reveal states */
+.reveal-hidden {
+  opacity: 0;
+  filter: blur(8px);
+  will-change: opacity, transform, filter;
+}
+
+.reveal-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: none !important;
+}
+
+/* Directional start positions — transition kept here so it persists after reveal-hidden is removed */
+.reveal-from-up {
+  transform: translate3d(0, -32px, 0) scale(0.985);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.7s ease;
+}
+
+.reveal-from-down {
+  transform: translate3d(0, 32px, 0) scale(0.985);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.7s ease;
+}
+
+.reveal-from-left {
+  transform: translate3d(-36px, 0, 0) scale(0.985);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.7s ease;
+}
+
+.reveal-from-right {
+  transform: translate3d(36px, 0, 0) scale(0.985);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.7s ease;
+}
+
+/* Subtle dashboard variant */
+.reveal-subtle.reveal-from-up {
+  transform: translate3d(0, -14px, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+}
+
+.reveal-subtle.reveal-from-down {
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+}
+
+.reveal-subtle.reveal-from-left {
+  transform: translate3d(-16px, 0, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+}
+
+.reveal-subtle.reveal-from-right {
+  transform: translate3d(16px, 0, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-hidden {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 .animate-slide-in-top {
   animation: slide-in-top 0.4s ease-out;
 }

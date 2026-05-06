@@ -21,7 +21,6 @@ export const GET_PLATFORM_SETTINGS = gql`
       withdrawalThresholdDefault
       withdrawalThresholdMin
       withdrawalThresholdMax
-      withdrawalQuorumMinVotes
       maintenanceMode
     }
   }

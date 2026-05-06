@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery, useSubscription } from "@apollo/client";
-import { Activity, Building2, ExternalLink, TrendingUp, Users, Wallet } from "lucide-react";
+import {
+  Activity,
+  Building2,
+  ExternalLink,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -13,14 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { CELOSCAN_BASE } from "@/lib/config";
 import {
   GET_COOPERATIVE_DETAIL,
   GET_COOPERATIVE_REPORT,
-  GET_MY_COOPERATIVES,
 } from "@/lib/graphql/queries/cooperative";
+import { GET_MONETISATION_SETTINGS } from "@/lib/graphql/queries/marketing";
 import {
   SUBSCRIPTION_ON_CONTRIBUTION,
   SUBSCRIPTION_ON_PROPOSAL,
@@ -29,10 +35,13 @@ import {
 import {
   createTrailingThrottle,
   DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS,
+  DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   DASHBOARD_REALTIME_REFETCH_THROTTLE_MS,
 } from "@/lib/realtime";
 import { restClient } from "@/lib/rest-client";
+import { useScrollRevealGroup } from "@/lib/hooks/use-scroll-reveal-group";
 import { useTranslations, type Locale } from "@/lib/translations";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type ActivityItem = {
   id: string;
@@ -78,13 +87,11 @@ function parsePayload(
 export default function DashboardPage({ params }: DashboardPageProps) {
   const router = useRouter();
   const [locale, setLocale] = useState<Locale>("en");
-  const [activeCooperativeId, setActiveCooperativeId] = useState<string | null>(
-    null,
-  );
   const [recentSubscriptionTick, setRecentSubscriptionTick] = useState(0);
   const [coopName, setCoopName] = useState("");
   const [coopTarget, setCoopTarget] = useState("");
   const [isCreatingCoop, setIsCreatingCoop] = useState(false);
+  const metricCardsRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -93,20 +100,16 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const t = useTranslations(locale);
 
-  const {
-    data: myCooperativesData,
-    loading: loadingMyCooperatives,
-    refetch: refetchMyCooperatives,
-  } = useQuery(GET_MY_COOPERATIVES);
+  useScrollRevealGroup(metricCardsRef, ".reveal-item");
 
-  useEffect(() => {
-    if (
-      !activeCooperativeId &&
-      myCooperativesData?.myCooperatives?.length > 0
-    ) {
-      setActiveCooperativeId(myCooperativesData.myCooperatives[0].id);
-    }
-  }, [activeCooperativeId, myCooperativesData]);
+  const {
+    allCoops,
+    activeCoopId: activeCooperativeId,
+    isResolvingSelection,
+    loadingCoops: loadingMyCooperatives,
+    refetchMyCooperatives,
+  } = useSelectedCooperative();
+  const { data: monetisationData } = useQuery(GET_MONETISATION_SETTINGS);
 
   const {
     data: cooperativeDetailData,
@@ -115,6 +118,8 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   } = useQuery(GET_COOPERATIVE_DETAIL, {
     variables: { id: activeCooperativeId },
     skip: !activeCooperativeId,
+    fetchPolicy: "cache-and-network",
+    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
   });
 
   const { data: reportData, refetch: refetchReport } = useQuery(
@@ -152,11 +157,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     }, DASHBOARD_LIGHTWEIGHT_FALLBACK_POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [
-    activeCooperativeId,
-    refetchMyCooperatives,
-    throttledRealtimeRefresh,
-  ]);
+  }, [activeCooperativeId, refetchMyCooperatives, throttledRealtimeRefresh]);
 
   const onRealtimeEvent = () => {
     throttledRealtimeRefresh.trigger();
@@ -182,12 +183,40 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   const cooperative = cooperativeDetailData?.cooperative;
   const report = reportData?.report;
+  const withdrawalFeePercent =
+    Number(monetisationData?.monetisationSettings?.withdrawalFeePercent ?? 0) ||
+    0;
 
   const targetAmount = cooperative?.targetAmountXAF ?? 0;
+  const baseTargetAmount = cooperative?.baseTargetXAF ?? targetAmount;
   const totalCollected = cooperative?.totalCollected ?? 0;
   const remainingAmount = Math.max(targetAmount - totalCollected, 0);
   const progress = cooperative?.progress ?? 0;
   const memberCount = cooperative?.memberCount ?? 0;
+
+  const targetXAFInput = Number.parseInt(coopTarget, 10) || 0;
+  const targetWithFeeXAF =
+    targetXAFInput + Math.round((targetXAFInput * withdrawalFeePercent) / 100);
+
+  const safeTargetAmount = Math.max(targetAmount, 0);
+  const safeBaseTargetAmount = Math.max(
+    0,
+    baseTargetAmount || safeTargetAmount,
+  );
+  const feeAmount = Math.max(0, safeTargetAmount - safeBaseTargetAmount);
+  const feeRatio =
+    safeTargetAmount > 0 ? Math.min(1, feeAmount / safeTargetAmount) : 0;
+  const collectedWithinTarget =
+    safeTargetAmount > 0
+      ? Math.min(Math.max(totalCollected, 0), safeTargetAmount)
+      : 0;
+  const collectedRatio =
+    safeTargetAmount > 0 ? collectedWithinTarget / safeTargetAmount : 0;
+  const coopFillPercent = collectedRatio * (1 - feeRatio) * 100;
+  const feeFillPercent = collectedRatio * feeRatio * 100;
+  const surplusAmount = Math.max(0, totalCollected - safeTargetAmount);
+  const surplusPercent =
+    safeTargetAmount > 0 ? (surplusAmount / safeTargetAmount) * 100 : 0;
 
   const formatActivity = (event: {
     id: string;
@@ -268,10 +297,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     cooperative?.celoScanUrl ??
     (vaultAddress ? `${CELOSCAN_BASE}/address/${vaultAddress}` : "");
 
-  const loadingOverview = loadingMyCooperatives || loadingDetail;
+  const loadingOverview =
+    isResolvingSelection || loadingMyCooperatives || loadingDetail;
 
-  const hasNoCooperative =
-    !loadingMyCooperatives && myCooperativesData?.myCooperatives?.length === 0;
+  const hasNoCooperative = !loadingMyCooperatives && allCoops.length === 0;
 
   const handleCreateCooperative = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -356,6 +385,31 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                   disabled={isCreatingCoop}
                   required
                 />
+                {withdrawalFeePercent <= 0 ? (
+                  <p className="text-xs text-emerald-700">
+                    {t("createCooperative.noFeeHelper")}
+                  </p>
+                ) : (
+                  <>
+                    <div className="space-y-1.5 pt-1">
+                      <Label htmlFor="coop-target-with-fee">
+                        {t("createCooperative.targetWithFeeLabel")}
+                      </Label>
+                      <Input
+                        id="coop-target-with-fee"
+                        value={`${targetWithFeeXAF.toLocaleString()} FCFA`}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {t("createCooperative.feeExplanation")
+                        .replace("{percent}", withdrawalFeePercent.toString())
+                        .replace("{entered}", targetXAFInput.toLocaleString())
+                        .replace("{total}", targetWithFeeXAF.toLocaleString())}
+                    </p>
+                  </>
+                )}
               </div>
               <Button
                 type="submit"
@@ -377,66 +431,69 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
       {!hasNoCooperative && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift">
-              <CardContent className="p-4 md:p-6">
+          <div
+            ref={metricCardsRef}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6"
+          >
+            <Card className="reveal-item reveal-from-up reveal-subtle card-glow animate-in slide-in-from-bottom-4 duration-700 hover-lift min-w-0 overflow-hidden">
+              <CardContent className="min-w-0 overflow-hidden p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
                     <Wallet className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                   </div>
                 </div>
-                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                <div className="mb-1 min-w-0 text-xl font-black text-gradient-green wrap-anywhere md:text-3xl">
                   {loadingOverview ? "..." : formatXaf(totalCollected)}
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                <p className="text-xs md:text-sm text-muted-foreground font-medium wrap-anywhere">
                   {t("dashboard.totalContributions")}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-100 hover-lift">
-              <CardContent className="p-4 md:p-6">
+            <Card className="reveal-item reveal-from-up reveal-subtle card-glow animate-in slide-in-from-bottom-4 duration-700 delay-100 hover-lift min-w-0 overflow-hidden">
+              <CardContent className="min-w-0 overflow-hidden p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
                     <Activity className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
                   </div>
                 </div>
-                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                <div className="mb-1 min-w-0 text-xl font-black text-gradient-green wrap-anywhere md:text-3xl">
                   {activeProposals}
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                <p className="text-xs md:text-sm text-muted-foreground font-medium wrap-anywhere">
                   {t("dashboard.activeProposals")}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-200 hover-lift">
-              <CardContent className="p-4 md:p-6">
+            <Card className="reveal-item reveal-from-up reveal-subtle card-glow animate-in slide-in-from-bottom-4 duration-700 delay-200 hover-lift min-w-0 overflow-hidden">
+              <CardContent className="min-w-0 overflow-hidden p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-primary/20 to-primary/10">
                     <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                   </div>
                 </div>
-                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                <div className="mb-1 min-w-0 text-xl font-black text-gradient-green wrap-anywhere md:text-3xl">
                   {memberCount}
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                <p className="text-xs md:text-sm text-muted-foreground font-medium wrap-anywhere">
                   {t("dashboard.members")}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="card-glow animate-in slide-in-from-bottom-4 duration-700 delay-300 hover-lift">
-              <CardContent className="p-4 md:p-6">
+            <Card className="reveal-item reveal-from-up reveal-subtle card-glow animate-in slide-in-from-bottom-4 duration-700 delay-300 hover-lift min-w-0 overflow-hidden">
+              <CardContent className="min-w-0 overflow-hidden p-4 md:p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 md:p-3 rounded-xl bg-linear-to-r from-secondary/20 to-secondary/10">
                     <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-secondary" />
                   </div>
                 </div>
-                <div className="text-xl md:text-3xl font-black mb-1 text-gradient-green">
+                <div className="mb-1 min-w-0 text-xl font-black text-gradient-green wrap-anywhere md:text-3xl">
                   {progress.toFixed(1)}%
                 </div>
-                <p className="text-xs md:text-sm text-muted-foreground font-medium">
+                <p className="text-xs md:text-sm text-muted-foreground font-medium wrap-anywhere">
                   {t("dashboard.progress")}
                 </p>
               </CardContent>
@@ -494,7 +551,45 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     {progress.toFixed(1)}%
                   </span>
                 </div>
-                <Progress value={progress} className="h-3 md:h-4" />
+                <div className="relative overflow-visible">
+                  <div className="h-3 md:h-4 rounded-full bg-[#E6EFE6] overflow-hidden border border-[#DCE8DC]">
+                    <div className="flex h-full w-full">
+                      <div
+                        className="h-full bg-[#1B5E20]"
+                        style={{ width: `${coopFillPercent}%` }}
+                      />
+                      <div
+                        className="h-full bg-[#D97706]"
+                        style={{ width: `${feeFillPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                  {surplusAmount > 0 ? (
+                    <div
+                      className="absolute left-full top-0 h-3 md:h-4 bg-[#86EFAC] rounded-r-full"
+                      style={{ width: `${Math.min(surplusPercent, 120)}%` }}
+                    />
+                  ) : null}
+                </div>
+                {surplusAmount > 0 ? (
+                  <p className="text-xs text-emerald-700 font-medium">
+                    {t("dashboard.surplusLabel").replace(
+                      "{amount}",
+                      surplusAmount.toLocaleString(),
+                    )}
+                  </p>
+                ) : null}
+                {withdrawalFeePercent > 0 ? (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>{t("dashboard.legendCoop")}</p>
+                    <p>
+                      {t("dashboard.legendFee").replace(
+                        "{percent}",
+                        withdrawalFeePercent.toString(),
+                      )}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="pt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">

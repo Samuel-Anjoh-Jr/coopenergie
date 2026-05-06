@@ -13,6 +13,10 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="login" options={{ title: "Connexion" }} />
       <Stack.Screen name="register" options={{ title: "Inscription" }} />
+      <Stack.Screen
+        name="vendor-register"
+        options={{ title: "Inscription fournisseur" }}
+      />
       <Stack.Screen name="join" options={{ title: "Invitation" }} />
     </Stack>
   );

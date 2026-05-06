@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { login } from "@/lib/auth";
+import { getPostLoginPath } from "@/lib/auth";
 import { useMobileTranslations } from "@/lib/translations";
 import PressableScale from "@/components/pressable-scale";
 import { ScreenReveal } from "@/components/screen-reveal";
@@ -25,8 +26,8 @@ export default function LoginScreen() {
   async function onSubmit() {
     try {
       setIsSubmitting(true);
-      await login(email.trim(), password);
-      router.replace("/(dashboard)/dashboard");
+      const result = await login(email.trim(), password);
+      router.replace(getPostLoginPath(result.user));
     } catch (error) {
       Alert.alert(
         t("errors.loginFailed"),
@@ -93,6 +94,14 @@ export default function LoginScreen() {
           <PressableScale className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
               {t("auth.createAccount")}
+            </Text>
+          </PressableScale>
+        </Link>
+
+        <Link href="/(auth)/vendor-register" asChild>
+          <PressableScale className="mt-3 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
+            <Text className="text-[#1B5E20] font-medium">
+              Inscription fournisseur solaire
             </Text>
           </PressableScale>
         </Link>

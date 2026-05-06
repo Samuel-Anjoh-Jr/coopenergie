@@ -97,6 +97,7 @@ export class VotesService {
       },
       select: {
         id: true,
+        name: true,
         vaultAddress: true,
       },
     });
@@ -301,6 +302,43 @@ export class VotesService {
               error instanceof Error ? error.message : String(error)
             }`,
           );
+        }
+      }
+
+      if (
+        computedStatus === ProposalStatus.APPROVED &&
+        proposal.type === "VENDOR_PURCHASE"
+      ) {
+        const vendorId = updatedProposal.vendorLink?.vendor?.id;
+        const vendorName = updatedProposal.vendorLink?.vendor?.businessName;
+
+        if (vendorId && vendorName) {
+          this.eventEmitter.emit("proposal.vendor.approved", {
+            cooperativeId: proposal.cooperativeId,
+            vendorId,
+            proposalId,
+          });
+
+          await this.notificationsService.notifyVendorProposalApproved(
+            proposal.cooperativeId,
+            vendorName,
+            updatedProposal.title,
+          );
+
+          try {
+            await this.notificationsService.notifyVendorOfApproval(
+              vendorId,
+              proposal.cooperativeId,
+              cooperative.name,
+              updatedProposal.title,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Vendor approval notification failed for proposal ${proposalId}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          }
         }
       }
 

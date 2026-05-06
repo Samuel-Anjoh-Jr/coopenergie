@@ -12,6 +12,7 @@ enum Role {
   PLATFORM_ADMIN
   COOP_ADMIN
   MEMBER
+  VENDOR
 }
 
 enum InvitationType {
@@ -92,6 +93,26 @@ enum WithdrawalDestinationType {
 enum ProposalType {
   STANDARD
   WITHDRAWAL
+  VENDOR_PURCHASE
+}
+
+enum VendorPaymentModel {
+  ONE_TIME
+  SUBSCRIPTION
+}
+
+enum VendorSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+enum VendorAccountStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  SUSPENDED
+  SUBSCRIPTION_EXPIRED
 }
 
 model User {
@@ -99,6 +120,7 @@ model User {
   email                  String         @unique
   passwordHash           String
   name                   String
+  role                   Role           @default(MEMBER)
   suspended              Boolean        @default(false)
   isPlatformAdmin        Boolean        @default(false)
   celoAddress            String?        @unique
@@ -115,6 +137,8 @@ model User {
   withdrawalOperator     String?
   withdrawalBankName     String?
   withdrawalBankAccount  String?
+  preferredLocale        String         @default("fr")
+  vendor                 Vendor?
 }
 
 model Cooperative {
@@ -123,6 +147,7 @@ model Cooperative {
   slug                 String                @unique
   suspended            Boolean               @default(false)
   withdrawalsLocked    Boolean               @default(false)
+  baseTargetXAF        Int?
   targetAmountXAF      Int
   vaultAddress         String?
   celoScanUrl          String?
@@ -197,6 +222,7 @@ model Proposal {
   cooperative       Cooperative         @relation(fields: [cooperativeId], references: [id])
   type              ProposalType        @default(STANDARD)
   withdrawalRequest WithdrawalRequest?
+  vendorLink        ProposalVendorLink?
 }
 
 model Vote {
@@ -245,6 +271,7 @@ model WithdrawalRequest {
   cooperativeId        String
   proposalId           String                    @unique
   amountXAF            Int
+  platformFeeXAF       Int                       @default(0)
   destinationType      WithdrawalDestinationType
   recipientPhone       String?
   recipientOperator    String?
@@ -262,15 +289,20 @@ model WithdrawalRequest {
 }
 
 model PlatformSettings {
-  id                         String   @id @default("singleton")
-  withdrawalThresholdDefault Int      @default(60)
-  withdrawalThresholdMin     Int      @default(50)
-  withdrawalThresholdMax     Int      @default(90)
-  withdrawalQuorumMinVotes   Int      @default(3)
-  maintenanceMode            Boolean  @default(false)
-  platformName               String   @default("CoopEnergie")
-  updatedAt                  DateTime @updatedAt
+  id                         String             @id @default("singleton")
+  withdrawalThresholdDefault Int                @default(60)
+  withdrawalThresholdMin     Int                @default(50)
+  withdrawalThresholdMax     Int                @default(90)
+  withdrawalQuorumMinVotes   Int                @default(3)
+  maintenanceMode            Boolean            @default(false)
+  platformName               String             @default("CoopEnergie")
+  updatedAt                  DateTime           @updatedAt
   updatedById                String?
+  withdrawalFeePercent       Float              @default(0)
+  vendorPaymentModel         VendorPaymentModel @default(ONE_TIME)
+  vendorOneTimeFeeXAF        Int                @default(0)
+  vendorMonthlyFeeXAF        Int                @default(0)
+  vendorYearlyFeeXAF         Int                @default(0)
 }
 
 model CooperativeSettings {
@@ -320,4 +352,116 @@ model DeviceToken {
   platform  DevicePlatform
   createdAt DateTime       @default(now())
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Vendor {
+  id             String              @id @default(cuid())
+  userId         String              @unique
+  campayRegistrationRef String?      @unique
+  businessName   String
+  slug           String              @unique
+  description    String              @db.Text
+  logoUrl        String?
+  coverImageUrl  String?
+  city           String?
+  country        String              @default("CM")
+  email          String?
+  whatsappNumber String?
+  website        String?
+  facebookUrl    String?
+  instagramUrl   String?
+  twitterUrl     String?
+  linkedinUrl    String?
+  status         VendorAccountStatus @default(PENDING_PAYMENT)
+  paymentModel   VendorPaymentModel  @default(ONE_TIME)
+  rankScore      Float               @default(0)
+  totalReviews   Int                 @default(0)
+  avgRating      Float               @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products       VendorProduct[]
+  subscriptions  VendorSubscriptionRecord[]
+  reviews        VendorReview[]
+  proposalLinks  ProposalVendorLink[]
+}
+
+model VendorProduct {
+  id            String               @id @default(cuid())
+  vendorId      String
+  title         String
+  description   String               @db.Text
+  priceXAF      Int
+  unit          String?
+  inStock       Boolean              @default(true)
+  sortOrder     Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  vendor        Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  images        VendorProductImage[]
+  proposalLinks ProposalVendorLink[]
+}
+
+model VendorProductImage {
+  id        String        @id @default(cuid())
+  productId String
+  url       String
+  altText   String?
+  sortOrder Int           @default(0)
+  product   VendorProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProposalVendorLink {
+  id         String         @id @default(cuid())
+  proposalId String         @unique
+  vendorId   String
+  productId  String?
+  note       String?        @db.Text
+  proposal   Proposal       @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  vendor     Vendor         @relation(fields: [vendorId], references: [id])
+  product    VendorProduct? @relation(fields: [productId], references: [id])
+}
+
+model VendorReview {
+  id            String   @id @default(cuid())
+  vendorId      String
+  reviewerId    String
+  cooperativeId String
+  proposalId    String
+  rating        Int
+  comment       String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  vendor        Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@unique([reviewerId, proposalId])
+}
+
+model VendorSubscriptionRecord {
+  id              String                   @id @default(cuid())
+  vendorId        String
+  billingCycle    String
+  priceXAF        Int
+  status          VendorSubscriptionStatus @default(PENDING)
+  campayReference String?                  @unique
+  startedAt       DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime                 @default(now())
+  vendor          Vendor                   @relation(fields: [vendorId], references: [id])
+}
+
+enum FaqAudience {
+  CUSTOMER
+  VENDOR
+}
+
+model Faq {
+  id        String      @id @default(cuid())
+  question  String
+  answer    String      @db.Text
+  audience  FaqAudience
+  sortOrder Int         @default(0)
+  locale    String      @default("fr")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }

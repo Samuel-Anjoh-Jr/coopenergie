@@ -24,13 +24,6 @@ export class UpdatePlatformSettingsDto {
   withdrawalThresholdMax?: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(10000)
-  withdrawalQuorumMinVotes?: number;
-
-  @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
   maintenanceMode?: boolean;

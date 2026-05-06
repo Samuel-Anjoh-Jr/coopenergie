@@ -1,5 +1,30 @@
+import * as React from "react";
+
 const translations = {
   en: {
+    adminFaq: {
+      pageTitle: "FAQ Management",
+      pageSubtitle:
+        "Manage frequently asked questions shown on the landing pages.",
+      addButton: "Add FAQ",
+      editTitle: "Edit FAQ",
+      newTitle: "New FAQ",
+      audience: "Audience",
+      audienceCustomer: "Customer",
+      audienceVendor: "Vendor",
+      locale: "Language",
+      sortOrder: "Sort order",
+      question: "Question",
+      questionPlaceholder: "Enter question",
+      answer: "Answer",
+      answerPlaceholder: "Enter answer",
+      validationError: "Question and answer are required.",
+      created: "FAQ created",
+      updated: "FAQ updated",
+      deleted: "FAQ deleted",
+      confirmDelete: "Delete this FAQ?",
+      empty: "No FAQs yet. Add one above.",
+    },
     admin: {
       coopAdminHealth: {
         title: "Cooperative Admin Key Health",
@@ -12,6 +37,171 @@ const translations = {
         missingKey: "Missing Key",
         noVaultAdminAddress: "No Vault Admin Address",
         noLocalUser: "No Local User",
+      },
+    },
+    adminPayments: {
+      title: "Payments & Monetisation",
+      subtitle:
+        "Track platform revenue streams and update fee settings in real time.",
+      loadFailed: "Failed to load payments insights",
+      saveFailed: "Failed to save monetisation settings",
+      saved: "Monetisation settings saved",
+      save: "Save monetisation settings",
+      saving: "Saving...",
+      withdrawalFeeRange: "Withdrawal fee must be between 0 and 50%.",
+      vendorFeeRange: "Vendor fees must be positive values.",
+      overview: {
+        totalRevenue: "Total revenue",
+        withdrawalFees: "Withdrawal fees disbursed",
+        vendorPayments: "Vendor payments collected",
+        activeSubscriptions: "Active vendor subscriptions",
+      },
+      withdrawals: {
+        title: "Disbursed withdrawal fees",
+        cooperative: "Cooperative",
+        amount: "Withdrawal amount",
+        platformFee: "Platform fee",
+        destination: "Destination",
+        status: "Status",
+        created: "Created",
+        empty: "No withdrawal fee records yet.",
+      },
+      vendors: {
+        title: "Vendor payments",
+        vendor: "Vendor",
+        cycle: "Billing cycle",
+        amount: "Amount",
+        status: "Status",
+        expires: "Expires",
+        created: "Created",
+        empty: "No vendor payment records yet.",
+      },
+      editor: {
+        title: "Live monetisation editor",
+        withdrawalFeePercent: "Withdrawal fee percent",
+        vendorPaymentModel: "Vendor payment model",
+        vendorOneTimeFee: "Vendor one-time fee (XAF)",
+        vendorMonthlyFee: "Vendor monthly fee (XAF)",
+        vendorYearlyFee: "Vendor yearly fee (XAF)",
+      },
+      model: {
+        oneTime: "One-time",
+        subscription: "Subscription",
+      },
+      pagination: {
+        previous: "Previous",
+        next: "Next",
+        page: "Page",
+      },
+      status: {
+        disbursed: "Disbursed",
+        pending: "Pending",
+        failed: "Failed",
+        active: "Active",
+        cancelled: "Cancelled",
+        expired: "Expired",
+      },
+      cycle: {
+        monthly: "Monthly",
+        yearly: "Yearly",
+      },
+      destination: {
+        mtnMomo: "MTN MoMo",
+        orangeMoney: "Orange Money",
+        bankTransfer: "Bank transfer",
+      },
+    },
+    vendorSignup: {
+      title: "Solar vendor signup",
+      subtitle: "Create your vendor account and receive cooperative orders.",
+      activationFeeLabel: "Activation fee:",
+      loadingFee: "Loading...",
+      reloadFees: "Reload fees",
+      acceptTermsPrefix: "I accept the",
+      termsLink: "vendor terms of use",
+      submitting: "Signing up...",
+      submit: "Create vendor account",
+      fields: {
+        fullName: "Full name",
+        email: "Email",
+        password: "Password (8 characters minimum)",
+        businessName: "Business name",
+        city: "City",
+        whatsapp: "WhatsApp number",
+        description: "Describe your offers and services",
+      },
+      paymentModal: {
+        title: "Vendor activation payment",
+        amount: "Amount:",
+        phonePlaceholder: "Mobile Money number",
+        later: "Later",
+        initializing: "Initializing...",
+        payNow: "Pay now",
+      },
+      feedback: {
+        accountActive: "Vendor account active",
+        paymentPending: "Payment pending. Please retry in a few moments.",
+        acceptTermsRequired: "You must accept the terms of use.",
+        registrationFailed: "Vendor registration failed.",
+        accountCreatedLoginRequired:
+          "Account created. Please sign in to continue.",
+        preparePaymentFailed: "Unable to prepare vendor payment.",
+        completePaymentPrompt:
+          "Complete payment to activate your vendor account.",
+        networkError: "Network error during vendor registration.",
+        invalidSession: "Invalid session. Please sign in again.",
+        phoneRequired: "Phone number is required for payment.",
+        paymentNotInitialized: "Payment was not initialized.",
+        paymentStarted: "Payment started. Verification in progress...",
+        paymentInitError: "Error while initializing payment.",
+      },
+    },
+    vendorTerms: {
+      title: "Vendor terms of use",
+      paragraph1:
+        "By registering as a vendor, you agree to provide accurate information, honor delivery commitments, and maintain transparent pricing for cooperatives.",
+      paragraph2:
+        "Activation fees and subscriptions are non-refundable once services are active. For any questions, contact the CoopEnergie team.",
+      activeLocale: "Active locale",
+    },
+    adminDashboard: {
+      title: "Platform Overview",
+      subtitle:
+        "Monitor platform health, review cooperatives, and enforce global safeguards.",
+      loadFailed: "Failed to load admin data",
+      openPayments: "Open Payments & Monetisation",
+      metrics: {
+        cooperatives: "Cooperatives",
+        totalUsers: "Total users",
+        totalContributions: "Total contributions",
+        totalPayments: "Total payments",
+        activeSubscriptions: "Active subscriptions",
+      },
+      actions: {
+        title: "Admin Actions",
+        subtitle:
+          "Use these entry points to manage cooperatives and platform-wide governance.",
+        openCooperatives: "Open Cooperative Manager",
+        openSettings: "Open Global Settings",
+        openUsers: "Open Users and Audit",
+      },
+      settingsImpact: {
+        title: "What Settings Affect",
+        withdrawalThresholds: {
+          title: "Withdrawal Thresholds",
+          description:
+            "Controls pass conditions for withdrawal proposals across all cooperatives.",
+        },
+        quorum: {
+          title: "Quorum Minimum Votes",
+          description:
+            "Sets the minimum number of votes required before any withdrawal vote can pass.",
+        },
+        maintenance: {
+          title: "Maintenance Mode",
+          description:
+            "Globally blocks withdrawal processing platform-wide until switched off.",
+        },
       },
     },
     branding: {
@@ -63,10 +253,13 @@ const translations = {
       error: "Error",
       somethingWentWrong: "Something went wrong. Please try again.",
       oopsTitle: "Oops, an error occurred",
-      pageErrorDescription: "The page could not complete your request. Please retry.",
-      dashboardErrorDescription: "An unexpected error occurred while loading this page. Please try again or contact support if the problem persists.",
+      pageErrorDescription:
+        "The page could not complete your request. Please retry.",
+      dashboardErrorDescription:
+        "An unexpected error occurred while loading this page. Please try again or contact support if the problem persists.",
       criticalError: "Application error",
-      criticalErrorDescription: "A critical error occurred. Please reload the page.",
+      criticalErrorDescription:
+        "A critical error occurred. Please reload the page.",
       tryAgain: "Try again",
       retry: "Retry",
       errorDetails: "Error details",
@@ -161,6 +354,8 @@ const translations = {
       logout: "Logout",
       language: "Language",
       login: "Login",
+      pannelVendor: "Are you a solar panel vendor?",
+      signUPHere: "Sign up here",
       register: "Register",
       all: "All",
       permanentRecord: "Permanent record",
@@ -259,6 +454,11 @@ const translations = {
       namePlaceholder: "e.g. Douala Solar Community",
       targetLabel: "Fundraising target (XAF)",
       targetPlaceholder: "e.g. 500000",
+      noFeeHelper:
+        "✓ Aucun frais de retrait actuellement. Le montant entré est votre objectif total.",
+      targetWithFeeLabel: "Objectif avec frais de plateforme inclus",
+      feeExplanation:
+        "CoopEnergie prélève {percent}% de frais sur chaque retrait. Pour retirer {entered} FCFA nets, votre coopérative doit atteindre {total} FCFA. C'est le montant enregistré comme objectif.",
       submit: "Create cooperative",
       submitting: "Creating...",
     },
@@ -266,6 +466,8 @@ const translations = {
       logo: "CoopEnergie",
       home: "Home",
       dashboard: "Dashboard",
+      login: "Log in",
+      signup: "Sign up",
       en: "EN",
       fr: "FR",
       navVision: "Vision",
@@ -274,6 +476,299 @@ const translations = {
       navHowItWorks: "How It Works",
       navFeatures: "Features",
       navCommunity: "Community",
+    },
+    dualNav: {
+      menu: "Menu",
+      customerLabel: "For cooperatives",
+      vendorLabel: "For vendors",
+      dashboard: "Dashboard",
+      customerMissionVision: "Mission vision",
+      customerProblem: "Problem",
+      customerSolution: "Solution",
+      customerApproach: "Approach",
+      customerHowItWorks: "How it works",
+      customerPlatformVendors: "Platform vendors",
+      customerWhyChooseUs: "Why choose us",
+      customerTransparency: "Transparency",
+      customerImpact: "Impact",
+      customerFaq: "FAQ",
+      vendorHowItWorks: "How it works",
+      vendorPricing: "Pricing",
+      vendorWhyUs: "Why us",
+      vendorFaq: "FAQ",
+    },
+    vendorLanding: {
+      hero: {
+        badge: "Built for solar vendors",
+        title: "Sell to trusted cooperatives across Cameroon",
+        subtitle:
+          "Publish your solar offers, gain qualified demand, and turn cooperative decisions into confirmed orders.",
+        ctaSignup: "Create vendor account",
+        ctaLogin: "Login",
+        ctaDashboard: "Open dashboard",
+      },
+      howItWorks: {
+        title: "How it works",
+        step1: {
+          badge: "Step 1",
+          title: "Create your vendor profile",
+          description:
+            "Present your business, product categories, and service area.",
+        },
+        step2: {
+          badge: "Step 2",
+          title: "Publish your products",
+          description:
+            "Add solar kits and equipment with clear pricing and technical details.",
+        },
+        step3: {
+          badge: "Step 3",
+          title: "Receive cooperative proposals",
+          description:
+            "Track approved proposals and execute deliveries with full visibility.",
+        },
+      },
+      pricing: {
+        title: "Simple pricing",
+        subtitle: "Choose the model that fits your growth rhythm.",
+        oneTime: {
+          title: "One-time fee",
+          description: "Single payment to list and start selling.",
+        },
+        monthly: {
+          title: "Monthly",
+          description: "Predictable monthly access for continuous selling.",
+        },
+        yearly: {
+          title: "Yearly",
+          description: "Best value for active vendors with long-term plans.",
+        },
+        withdrawalFeePrefix: "Platform withdrawal fee",
+        withdrawalFeeSuffix: "on completed flows.",
+      },
+      whyUs: {
+        title: "Why sell with CoopEnergie",
+        item1: {
+          title: "Qualified cooperative demand",
+          description:
+            "Connect with real groups that already mobilize funds and vote collectively.",
+        },
+        item2: {
+          title: "Trust through transparency",
+          description:
+            "Every key proposal and approval is visible and auditable.",
+        },
+        item3: {
+          title: "Faster regional reach",
+          description:
+            "Scale your commercial footprint without multiplying local sales teams.",
+        },
+      },
+      faq: {
+        title: "Frequently asked questions",
+        item1: {
+          question: "How do I become an approved vendor",
+          answer:
+            "Create your account, complete your profile, and submit your catalog for review.",
+        },
+        item2: {
+          question: "How do proposals become real orders",
+          answer:
+            "Cooperative members vote. When approved, you receive a validated proposal to process.",
+        },
+        item3: {
+          question: "Can I update products later",
+          answer:
+            "Yes. You can update titles, descriptions, and pricing from your vendor dashboard.",
+        },
+        item4: {
+          question: "When do fees apply",
+          answer:
+            "Fees follow the monetisation settings and are visible before payment.",
+        },
+      },
+      customerSection: {
+        badge: "Verified suppliers",
+        title: "Platform vendors",
+        subtitle:
+          "Discover providers your cooperative can propose and vote on.",
+        exploreAll: "See all vendors",
+        empty: "Vendors are being onboarded. Check back soon.",
+        defaultDescription: "Trusted solar partner on CoopEnergie.",
+        noProduct: "Product coming soon",
+        proposeToCoop: "Propose to my cooperative",
+      },
+      customerFaq: {
+        title: "Frequently asked questions",
+        item1: {
+          question: "How do we choose a vendor",
+          answer:
+            "Members review proposals and vote transparently before any purchase decision.",
+        },
+        item2: {
+          question: "Can any member propose a vendor",
+          answer:
+            "Yes, logged-in members can submit a vendor proposal to their cooperative.",
+        },
+        item3: {
+          question: "What if we do not have GPS or precise street names",
+          answer:
+            "CoopEnergie supports human landmarks and contextual details for local coordination.",
+        },
+        item4: {
+          question: "Can we operate when connectivity is unstable",
+          answer:
+            "Yes, core cooperative workflows are designed for constrained field conditions.",
+        },
+      },
+      cta: {
+        loginRequired:
+          "You must log in to propose this vendor to a cooperative.",
+        dialogTitle: "Propose this vendor",
+        dialogDescription:
+          "Select the cooperative that should receive this proposal.",
+        selectPlaceholder: "Select cooperative",
+        noCooperative: "You are not a member of a cooperative yet.",
+        selectCooperative: "Please select a cooperative first.",
+        cancel: "Cancel",
+        confirm: "Submit proposal",
+        submitting: "Submitting...",
+        proposalCreated: "Proposal submitted to your cooperative.",
+        proposalFailed: "Unable to submit proposal.",
+      },
+      growthCta: {
+        title: "Grow your solar business with CoopEnergie",
+        subtitle:
+          "Turn cooperative demand into confirmed orders and repeat revenue from verified buyers.",
+        ctaSignup: "Start growing my sales",
+        ctaDashboard: "Open vendor dashboard",
+      },
+    },
+    vendorDashboard: {
+      loading: "Loading vendor dashboard...",
+      navigationTitle: "Vendor dashboard",
+      navigation: {
+        overview: "Overview",
+        profile: "Profile",
+        contact: "Contact",
+        products: "Products",
+        subscription: "Subscription",
+        reviews: "Reviews",
+      },
+      common: {
+        save: "Save",
+        saving: "Saving...",
+        edit: "Edit",
+        delete: "Delete",
+        reset: "Reset",
+      },
+      status: {
+        active: "Active",
+        pendingPayment: "Pending payment",
+        subscriptionExpired: "Subscription expired",
+        suspended: "Suspended",
+      },
+      overview: {
+        title: "Overview",
+        subtitle: "Welcome back, {name}",
+        previewProfile: "View public profile",
+        paymentRequiredTitle: "Payment required",
+        oneTimePaymentHint: "Your one-time registration fee is still pending.",
+        subscriptionPaymentHint:
+          "Your subscription must be renewed to stay visible.",
+        amountLabel: "Amount",
+        payNow: "Pay now",
+        totalProducts: "Total products",
+        totalProposalsReceived: "Proposals received",
+        totalAcceptedProposals: "Accepted proposals",
+        avgRating: "Average rating",
+        subscriptionExpiresAt: "Subscription expires",
+        recentReviews: "Recent reviews",
+        noReviews: "No reviews yet.",
+        emptyComment: "No comment",
+        paymentDialogTitle: "Initiate payment",
+        paymentDialogDescription:
+          "Enter the phone number to receive the Campay prompt.",
+        phonePlaceholder: "6XXXXXXXX",
+        processing: "Processing...",
+        confirmPayment: "Confirm payment",
+      },
+      profile: {
+        title: "Business profile",
+        logo: "Logo",
+        cover: "Cover image",
+        noLogo: "No logo uploaded",
+        noCover: "No cover uploaded",
+        uploading: "Uploading...",
+        dragHint: "Drag and drop supported by your browser file picker.",
+        businessName: "Business name",
+        city: "City",
+        country: "Country",
+        description: "Business description",
+      },
+      contact: {
+        title: "Contact details",
+        email: "Contact email",
+        whatsapp: "WhatsApp number",
+        website: "Website",
+        facebook: "Facebook URL",
+        instagram: "Instagram URL",
+        twitter: "X/Twitter URL",
+        linkedin: "LinkedIn URL",
+      },
+      products: {
+        title: "Product management",
+        listTitle: "Product list",
+        save: "Save product",
+        empty: "No products yet.",
+        dragHandle: "Drag",
+        inStock: "In stock",
+        outOfStock: "Out of stock",
+        deleteImage: "Delete image",
+        fields: {
+          title: "Product title",
+          description: "Product description",
+          priceXaf: "Price in XAF",
+          unit: "Unit",
+          inStock: "Availability",
+        },
+      },
+      subscription: {
+        title: "Billing and subscription",
+        oneTimeMode: "This account uses a one-time registration fee.",
+        subscriptionMode: "This account uses recurring subscription billing.",
+        monthly: "Monthly",
+        yearly: "Yearly",
+        amount: "Amount",
+        phonePlaceholder: "6XXXXXXXX",
+        payNow: "Pay",
+        processing: "Processing...",
+        history: "Payment history",
+        emptyHistory: "No subscription records yet.",
+        createdAt: "Created",
+        expiresAt: "Expires",
+      },
+      reviews: {
+        title: "Customer reviews",
+        average: "Average",
+        empty: "No reviews yet.",
+        emptyComment: "No comment",
+      },
+      feedback: {
+        loadFailed: "Unable to load vendor dashboard data.",
+        updateFailed: "Unable to save vendor data.",
+        paymentFailed: "Unable to start payment.",
+        paymentStarted: "Payment initiated successfully.",
+        phoneRequired: "Phone number is required.",
+        profileSaved: "Profile updated.",
+        contactSaved: "Contact details updated.",
+        mediaUpdated: "Media updated.",
+        productSaved: "Product saved.",
+        imageDeleted: "Image deleted.",
+        reorderSaved: "Order updated.",
+        deleted: "Deleted successfully.",
+        invalidProductForm: "Fill in title, description, and price.",
+      },
     },
     homepage: {
       hero: {
@@ -355,6 +850,7 @@ const translations = {
       contributions: "Contributions",
       invitations: "Invitations",
       proposals: "Proposals",
+      vendorReviews: "Vendor Reviews",
       ledger: "Ledger",
       report: "Report",
       settings: "Settings",
@@ -378,6 +874,7 @@ const translations = {
       proposalCreated: "Proposal Created",
       viewAll: "View All",
       currentCooperative: "Current Cooperative",
+      switchCooperative: "Switch cooperative",
       loggedInAs: "Logged in as",
       votedOn: "Voted on",
       walletAddress: "Vault Address",
@@ -385,6 +882,9 @@ const translations = {
       noRecentActivity: "No recent activity.",
       qrAlt: "QR code for wallet address",
       vaultAddress: "Vault Address",
+      surplusLabel: "+{amount} FCFA au-dessus de l'objectif",
+      legendCoop: "• Green: Fonds coopératifs",
+      legendFee: "• Orange: Frais plateforme ({percent}%)",
     },
     contributions: {
       title: "My Contributions",
@@ -481,6 +981,89 @@ const translations = {
       phonePlaceholder: "6XXXXXXXX",
       bankPlaceholder: "Bank name",
       recipientPlaceholder: "Recipient name",
+      vendorProposalToggleStandard: "Standard",
+      vendorProposalToggleVendor: "Linked to a vendor",
+      vendorProposalTypeLabel: "Proposal type",
+      vendorSelectorPlaceholder: "No vendor selected — click to browse",
+      vendorSelectorChange: "Change vendor",
+      vendorSelectorBrowse: "Browse vendors",
+      vendorNoteLabel: "Why this vendor (optional)",
+      vendorNotePlaceholder: "Add context for cooperative members...",
+      vendorDescriptionAuto: "Proposal description",
+      vendorDescriptionPlaceholder:
+        "Describe why this vendor and product are a good fit...",
+      vendorBadge: "VENDOR",
+      vendorApprovedCta: "Approved vendor — view profile",
+      vendorLinkProduct: "Product",
+      vendorLinkPrice: "Price",
+      autoTitleVendor: "Group purchase:",
+    },
+    vendorProfile: {
+      loading: "Loading vendor profile...",
+      notFound: "Vendor not found.",
+      proposeToCooperative: "Propose to my cooperative",
+      tabs: {
+        products: "Products and Services",
+        about: "About",
+        reviews: "Reviews",
+      },
+      noProducts: "No products available right now.",
+      contactTitle: "Contact details",
+      website: "Website",
+      contactLocked:
+        "Contact details are visible only after your cooperative has at least one approved proposal with this vendor.",
+      reviewCount: "reviews",
+      breakdownTitle: "Rating breakdown",
+      leaveReview: "Leave a review",
+      reviewNotAvailable: "You are not eligible to review this vendor yet.",
+      noReviews: "No reviews yet.",
+      proposalDialogTitle: "Propose a vendor purchase",
+      proposalDialogDescription:
+        "Select a product and submit it to your cooperative vote.",
+      selectProduct: "Product",
+      selectProductPlaceholder: "Select a product",
+      proposalNote: "Proposal note",
+      proposalNotePlaceholder: "Add context for members (optional)",
+      proposalAutoTitle: "Group purchase",
+      proposalAutoDescription:
+        "Proposed purchase from approved platform vendor.",
+      reviewDialogTitle: "Submit a review",
+      reviewDialogDescription:
+        "Your feedback helps other cooperative members make better decisions.",
+      rating: "Rating (1 to 5)",
+      comment: "Comment",
+      commentPlaceholder: "Share your experience with this vendor",
+      feedback: {
+        loadFailed: "Unable to load vendor profile.",
+        proposalIncomplete: "Select a product to continue.",
+        proposalCreated: "Vendor proposal submitted successfully.",
+        proposalFailed: "Unable to submit vendor proposal.",
+        reviewNotEligible: "You are not eligible to submit a review.",
+        reviewSubmitted: "Review submitted successfully.",
+        reviewFailed: "Unable to submit review.",
+      },
+    },
+    vendorReviewCenter: {
+      title: "Vendor review center",
+      description:
+        "Review vendors your cooperative already approved through vendor purchase proposals.",
+      loading: "Loading approved vendors...",
+      empty: "No approved vendor proposal found for your cooperative yet.",
+      selfLabel: "Member",
+      approvedProposals: "Approved proposals",
+      yourReview: "Your review",
+      noReviewYet: "You have not reviewed this vendor yet.",
+      openVendor: "Open vendor profile",
+      leaveReview: "Leave review",
+      dialogTitle: "Leave a vendor review",
+      rating: "Rating (1 to 5)",
+      comment: "Comment",
+      commentPlaceholder: "Share your feedback",
+      feedback: {
+        loadFailed: "Unable to load approved vendors.",
+        reviewSubmitted: "Review submitted successfully.",
+        reviewFailed: "Unable to submit review.",
+      },
     },
     ledger: {
       title: "Transparency Ledger",
@@ -532,6 +1115,29 @@ const translations = {
     },
   },
   fr: {
+    adminFaq: {
+      pageTitle: "Gestion des FAQ",
+      pageSubtitle:
+        "Gérez les questions fréquemment posées affichées sur les pages d'accueil.",
+      addButton: "Ajouter une FAQ",
+      editTitle: "Modifier la FAQ",
+      newTitle: "Nouvelle FAQ",
+      audience: "Audience",
+      audienceCustomer: "Client",
+      audienceVendor: "Fournisseur",
+      locale: "Langue",
+      sortOrder: "Ordre d'affichage",
+      question: "Question",
+      questionPlaceholder: "Saisir la question",
+      answer: "Réponse",
+      answerPlaceholder: "Saisir la réponse",
+      validationError: "La question et la réponse sont obligatoires.",
+      created: "FAQ créée",
+      updated: "FAQ mise à jour",
+      deleted: "FAQ supprimée",
+      confirmDelete: "Supprimer cette FAQ ?",
+      empty: "Aucune FAQ pour le moment. Ajoutez-en une ci-dessus.",
+    },
     admin: {
       coopAdminHealth: {
         title: "Santé de la clé admin de la coopérative",
@@ -544,6 +1150,174 @@ const translations = {
         missingKey: "Clé manquante",
         noVaultAdminAddress: "Pas d'adresse admin de coffre",
         noLocalUser: "Pas d'utilisateur local",
+      },
+    },
+    adminPayments: {
+      title: "Paiements et monetisation",
+      subtitle:
+        "Suivez les revenus de la plateforme et mettez a jour les frais en temps reel.",
+      loadFailed: "Chargement des paiements impossible",
+      saveFailed: "Enregistrement de la monetisation impossible",
+      saved: "Parametres de monetisation enregistres",
+      save: "Enregistrer la monetisation",
+      saving: "Enregistrement...",
+      withdrawalFeeRange: "Les frais de retrait doivent etre entre 0 et 50%.",
+      vendorFeeRange: "Les frais fournisseur doivent etre positifs.",
+      overview: {
+        totalRevenue: "Revenus totaux",
+        withdrawalFees: "Frais de retrait deverses",
+        vendorPayments: "Paiements fournisseurs encaisses",
+        activeSubscriptions: "Abonnements fournisseurs actifs",
+      },
+      withdrawals: {
+        title: "Frais de retrait deverses",
+        cooperative: "Cooperative",
+        amount: "Montant retire",
+        platformFee: "Frais plateforme",
+        destination: "Destination",
+        status: "Statut",
+        created: "Creation",
+        empty: "Aucun frais de retrait pour le moment.",
+      },
+      vendors: {
+        title: "Paiements fournisseurs",
+        vendor: "Fournisseur",
+        cycle: "Cycle",
+        amount: "Montant",
+        status: "Statut",
+        expires: "Expiration",
+        created: "Creation",
+        empty: "Aucun paiement fournisseur pour le moment.",
+      },
+      editor: {
+        title: "Editeur de monetisation",
+        withdrawalFeePercent: "Pourcentage de frais de retrait",
+        vendorPaymentModel: "Modele de paiement fournisseur",
+        vendorOneTimeFee: "Frais fournisseur unique (XAF)",
+        vendorMonthlyFee: "Frais fournisseur mensuel (XAF)",
+        vendorYearlyFee: "Frais fournisseur annuel (XAF)",
+      },
+      model: {
+        oneTime: "Unique",
+        subscription: "Abonnement",
+      },
+      pagination: {
+        previous: "Precedent",
+        next: "Suivant",
+        page: "Page",
+      },
+      status: {
+        disbursed: "Decaisse",
+        pending: "En attente",
+        failed: "Echoue",
+        active: "Actif",
+        cancelled: "Annule",
+        expired: "Expire",
+      },
+      cycle: {
+        monthly: "Mensuel",
+        yearly: "Annuel",
+      },
+      destination: {
+        mtnMomo: "MTN MoMo",
+        orangeMoney: "Orange Money",
+        bankTransfer: "Virement bancaire",
+      },
+    },
+    vendorSignup: {
+      title: "Inscription fournisseur solaire",
+      subtitle:
+        "Creez votre compte vendeur et recevez des commandes cooperatives.",
+      activationFeeLabel: "Frais d'activation:",
+      loadingFee: "Chargement...",
+      reloadFees: "Recharger les frais",
+      acceptTermsPrefix: "J'accepte les",
+      termsLink: "conditions d'utilisation fournisseur",
+      submitting: "Inscription en cours...",
+      submit: "Creer le compte vendeur",
+      fields: {
+        fullName: "Nom complet",
+        email: "Email",
+        password: "Mot de passe (8 caracteres minimum)",
+        businessName: "Nom de l'entreprise",
+        city: "Ville",
+        whatsapp: "Numero WhatsApp",
+        description: "Description de vos offres et services",
+      },
+      paymentModal: {
+        title: "Paiement des frais fournisseur",
+        amount: "Montant:",
+        phonePlaceholder: "Numero Mobile Money",
+        later: "Plus tard",
+        initializing: "Initialisation...",
+        payNow: "Payer maintenant",
+      },
+      feedback: {
+        accountActive: "Compte vendeur active",
+        paymentPending:
+          "Paiement en attente. Reessayez dans quelques instants.",
+        acceptTermsRequired:
+          "Vous devez accepter les conditions d'utilisation.",
+        registrationFailed: "Inscription vendeur impossible.",
+        accountCreatedLoginRequired:
+          "Compte cree. Connectez-vous pour continuer.",
+        preparePaymentFailed: "Impossible de preparer le paiement vendeur.",
+        completePaymentPrompt:
+          "Finalisez votre paiement pour activer le compte vendeur.",
+        networkError: "Erreur reseau lors de l'inscription vendeur.",
+        invalidSession: "Session invalide. Reconnectez-vous.",
+        phoneRequired: "Numero de telephone requis pour le paiement.",
+        paymentNotInitialized: "Paiement non initialise.",
+        paymentStarted: "Paiement initie. Verification en cours...",
+        paymentInitError: "Erreur lors de l'initialisation du paiement.",
+      },
+    },
+    vendorTerms: {
+      title: "Conditions d'utilisation vendeur",
+      paragraph1:
+        "En vous inscrivant comme vendeur, vous acceptez de fournir des informations exactes, de respecter les engagements de livraison et de maintenir des prix transparents pour les cooperatives.",
+      paragraph2:
+        "Les frais d'activation et les abonnements sont non remboursables une fois les services actives. Pour toute question, contactez l'equipe CoopEnergie.",
+      activeLocale: "Langue active",
+    },
+    adminDashboard: {
+      title: "Vue d'ensemble plateforme",
+      subtitle:
+        "Suivez la sante de la plateforme, examinez les cooperatives et appliquez la gouvernance globale.",
+      loadFailed: "Chargement des donnees admin impossible",
+      openPayments: "Ouvrir paiements et monetisation",
+      metrics: {
+        cooperatives: "Cooperatives",
+        totalUsers: "Utilisateurs totaux",
+        totalContributions: "Contributions totales",
+        totalPayments: "Paiements totaux",
+        activeSubscriptions: "Abonnements actifs",
+      },
+      actions: {
+        title: "Actions admin",
+        subtitle:
+          "Utilisez ces entrees pour gerer les cooperatives et la gouvernance globale.",
+        openCooperatives: "Ouvrir le gestionnaire de cooperatives",
+        openSettings: "Ouvrir les parametres globaux",
+        openUsers: "Ouvrir utilisateurs et audit",
+      },
+      settingsImpact: {
+        title: "Impact des parametres",
+        withdrawalThresholds: {
+          title: "Seuils de retrait",
+          description:
+            "Controle les conditions de validation des propositions de retrait pour toutes les cooperatives.",
+        },
+        quorum: {
+          title: "Votes minimum de quorum",
+          description:
+            "Definit le nombre minimum de votes requis avant qu'un vote de retrait puisse etre valide.",
+        },
+        maintenance: {
+          title: "Mode maintenance",
+          description:
+            "Bloque globalement le traitement des retraits sur toute la plateforme jusqu'a desactivation.",
+        },
       },
     },
     branding: {
@@ -595,10 +1369,13 @@ const translations = {
       error: "Erreur",
       somethingWentWrong: "Une erreur est survenue. Veuillez reessayer.",
       oopsTitle: "Oups, une erreur est survenue",
-      pageErrorDescription: "La page n'a pas pu traiter votre demande. Veuillez reessayer.",
-      dashboardErrorDescription: "Une erreur inattendue est survenue lors du chargement de cette page. Veuillez reessayer ou contacter le support si le probleme persiste.",
+      pageErrorDescription:
+        "La page n'a pas pu traiter votre demande. Veuillez reessayer.",
+      dashboardErrorDescription:
+        "Une erreur inattendue est survenue lors du chargement de cette page. Veuillez reessayer ou contacter le support si le probleme persiste.",
       criticalError: "Erreur d'application",
-      criticalErrorDescription: "Une erreur critique est survenue. Veuillez recharger la page.",
+      criticalErrorDescription:
+        "Une erreur critique est survenue. Veuillez recharger la page.",
       tryAgain: "Reessayer",
       retry: "Reessayer",
       errorDetails: "Details de l'erreur",
@@ -696,6 +1473,8 @@ const translations = {
       logout: "Deconnexion",
       language: "Langue",
       login: "Connexion",
+      pannelVendor: "Vous etes fournisseur de panneaux solaires?",
+      signUPHere: "Inscrivez-vous ici",
       register: "Inscription",
       all: "Tout",
       permanentRecord: "Enregistrement permanent",
@@ -805,6 +1584,11 @@ const translations = {
       namePlaceholder: "Ex. Communauté Solaire de Douala",
       targetLabel: "Objectif de collecte (XAF)",
       targetPlaceholder: "Ex. 500000",
+      noFeeHelper:
+        "✓ Aucun frais de retrait actuellement. Le montant entré est votre objectif total.",
+      targetWithFeeLabel: "Objectif avec frais de plateforme inclus",
+      feeExplanation:
+        "CoopEnergie prélève {percent}% de frais sur chaque retrait. Pour retirer {entered} FCFA nets, votre coopérative doit atteindre {total} FCFA. C'est le montant enregistré comme objectif.",
       submit: "Créer la coopérative",
       submitting: "Création en cours...",
     },
@@ -824,6 +1608,306 @@ const translations = {
       navHowItWorks: "Comment ça marche",
       navFeatures: "Fonctionnalités",
       navCommunity: "Communauté",
+      login: "Connexion",
+      signup: "Inscription",
+    },
+    dualNav: {
+      menu: "Menu",
+      customerLabel: "Pour cooperatives",
+      vendorLabel: "Pour vendeurs",
+      dashboard: "Tableau de bord",
+      customerMissionVision: "Vision mission",
+      customerProblem: "Probleme",
+      customerSolution: "Solution",
+      customerApproach: "Approche",
+      customerHowItWorks: "Comment ca marche",
+      customerPlatformVendors: "Vendeurs plateforme",
+      customerWhyChooseUs: "Pourquoi nous",
+      customerTransparency: "Transparence",
+      customerImpact: "Impact",
+      customerFaq: "FAQ",
+      vendorHowItWorks: "Comment ca marche",
+      vendorPricing: "Tarification",
+      vendorWhyUs: "Pourquoi nous",
+      vendorFaq: "FAQ",
+    },
+    vendorLanding: {
+      hero: {
+        badge: "Concu pour les vendeurs solaires",
+        title: "Vendez a des cooperatives fiables dans tout le Cameroun",
+        subtitle:
+          "Publiez vos offres solaires, captez une demande qualifiee et transformez les votes cooperatifs en commandes confirmees.",
+        ctaSignup: "Creer un compte vendeur",
+        ctaLogin: "Connexion",
+        ctaDashboard: "Ouvrir le tableau de bord",
+      },
+      howItWorks: {
+        title: "Comment ca marche",
+        step1: {
+          badge: "Etape 1",
+          title: "Creez votre profil vendeur",
+          description:
+            "Presentez votre entreprise, vos categories de produits et votre zone d'intervention.",
+        },
+        step2: {
+          badge: "Etape 2",
+          title: "Publiez vos produits",
+          description:
+            "Ajoutez vos kits et equipements solaires avec des prix clairs et des details techniques.",
+        },
+        step3: {
+          badge: "Etape 3",
+          title: "Recevez les propositions des cooperatives",
+          description:
+            "Suivez les propositions approuvees et executez les livraisons avec visibilite complete.",
+        },
+      },
+      pricing: {
+        title: "Tarification simple",
+        subtitle:
+          "Choisissez le modele qui correspond a votre rythme de croissance.",
+        oneTime: {
+          title: "Frais unique",
+          description: "Paiement unique pour publier et commencer a vendre.",
+        },
+        monthly: {
+          title: "Mensuel",
+          description: "Acces mensuel previsible pour vendre en continu.",
+        },
+        yearly: {
+          title: "Annuel",
+          description:
+            "Meilleure valeur pour les vendeurs actifs sur le long terme.",
+        },
+        withdrawalFeePrefix: "Frais de retrait plateforme",
+        withdrawalFeeSuffix: "sur les flux finalises.",
+      },
+      whyUs: {
+        title: "Pourquoi vendre avec CoopEnergie",
+        item1: {
+          title: "Demande cooperative qualifiee",
+          description:
+            "Connectez-vous a de vrais groupes qui mobilisent deja des fonds et votent collectivement.",
+        },
+        item2: {
+          title: "Confiance par la transparence",
+          description:
+            "Chaque proposition cle et chaque approbation est visible et verifiable.",
+        },
+        item3: {
+          title: "Expansion regionale plus rapide",
+          description:
+            "Elargissez votre portee commerciale sans multiplier les equipes de vente locales.",
+        },
+      },
+      faq: {
+        title: "Questions frequentes",
+        item1: {
+          question: "Comment devenir vendeur approuve",
+          answer:
+            "Creez votre compte, completez votre profil et soumettez votre catalogue pour validation.",
+        },
+        item2: {
+          question: "Comment les propositions deviennent des commandes",
+          answer:
+            "Les membres de la cooperative votent. Une fois approuvee, vous recevez une proposition validee a traiter.",
+        },
+        item3: {
+          question: "Puis-je mettre a jour mes produits plus tard",
+          answer:
+            "Oui. Vous pouvez modifier titres, descriptions et prix depuis votre tableau de bord vendeur.",
+        },
+        item4: {
+          question: "Quand les frais s'appliquent-ils",
+          answer:
+            "Les frais suivent les parametres de monetisation et restent visibles avant paiement.",
+        },
+      },
+      customerSection: {
+        badge: "Fournisseurs verifies",
+        title: "Vendeurs plateforme",
+        subtitle:
+          "Decouvrez les fournisseurs que votre cooperative peut proposer puis voter.",
+        exploreAll: "Voir tous les vendeurs",
+        empty: "Les vendeurs sont en cours d'integration. Revenez bientot.",
+        defaultDescription: "Partenaire solaire de confiance sur CoopEnergie.",
+        noProduct: "Produit bientot disponible",
+        proposeToCoop: "Proposer a ma cooperative",
+      },
+      customerFaq: {
+        title: "Questions frequentes",
+        item1: {
+          question: "Comment choisir un vendeur",
+          answer:
+            "Les membres evaluent les propositions et votent en transparence avant toute decision d'achat.",
+        },
+        item2: {
+          question: "Un membre peut-il proposer un vendeur",
+          answer:
+            "Oui, tout membre connecte peut soumettre une proposition vendeur a sa cooperative.",
+        },
+        item3: {
+          question: "Que faire sans GPS ou sans nom de rue precis",
+          answer:
+            "CoopEnergie prend en charge les reperes humains et les details contextuels pour la coordination locale.",
+        },
+        item4: {
+          question: "Le systeme fonctionne-t-il avec une connexion instable",
+          answer:
+            "Oui, les flux cooperatifs essentiels sont penses pour les conditions terrain contraintes.",
+        },
+      },
+      growthCta: {
+        title: "Developpez votre activite solaire avec CoopEnergie",
+        subtitle:
+          "Transformez la demande des cooperatives en commandes confirmees et en revenus recurrents aupres d'acheteurs verifies.",
+        ctaSignup: "Accelerer mes ventes",
+        ctaDashboard: "Ouvrir mon espace vendeur",
+      },
+      cta: {
+        loginRequired:
+          "Vous devez vous connecter pour proposer ce vendeur a une cooperative.",
+        dialogTitle: "Proposer ce vendeur",
+        dialogDescription:
+          "Selectionnez la cooperative qui doit recevoir cette proposition.",
+        selectPlaceholder: "Selectionner une cooperative",
+        noCooperative:
+          "Vous n'etes membre d'aucune cooperative pour le moment.",
+        selectCooperative: "Veuillez d'abord selectionner une cooperative.",
+        cancel: "Annuler",
+        confirm: "Soumettre la proposition",
+        submitting: "Soumission...",
+        proposalCreated: "Proposition soumise a votre cooperative.",
+        proposalFailed: "Impossible de soumettre la proposition.",
+      },
+    },
+    vendorDashboard: {
+      loading: "Chargement du tableau vendeur...",
+      navigationTitle: "Tableau vendeur",
+      navigation: {
+        overview: "Apercu",
+        profile: "Profil",
+        contact: "Contact",
+        products: "Produits",
+        subscription: "Abonnement",
+        reviews: "Avis",
+      },
+      common: {
+        save: "Enregistrer",
+        saving: "Enregistrement...",
+        edit: "Modifier",
+        delete: "Supprimer",
+        reset: "Reinitialiser",
+      },
+      status: {
+        active: "Actif",
+        pendingPayment: "Paiement en attente",
+        subscriptionExpired: "Abonnement expire",
+        suspended: "Suspendu",
+      },
+      overview: {
+        title: "Apercu",
+        subtitle: "Bon retour, {name}",
+        previewProfile: "Voir mon profil public",
+        paymentRequiredTitle: "Paiement requis",
+        oneTimePaymentHint:
+          "Vos frais uniques d'activation sont encore en attente.",
+        subscriptionPaymentHint:
+          "Votre abonnement doit etre renouvele pour rester visible.",
+        amountLabel: "Montant",
+        payNow: "Payer",
+        totalProducts: "Total produits",
+        totalProposalsReceived: "Propositions recues",
+        totalAcceptedProposals: "Propositions acceptees",
+        avgRating: "Note moyenne",
+        subscriptionExpiresAt: "Expiration abonnement",
+        recentReviews: "Avis recents",
+        noReviews: "Aucun avis pour le moment.",
+        emptyComment: "Sans commentaire",
+        paymentDialogTitle: "Lancer un paiement",
+        paymentDialogDescription:
+          "Entrez le numero de telephone pour recevoir la demande Campay.",
+        phonePlaceholder: "6XXXXXXXX",
+        processing: "Traitement...",
+        confirmPayment: "Confirmer le paiement",
+      },
+      profile: {
+        title: "Profil entreprise",
+        logo: "Logo",
+        cover: "Image de couverture",
+        noLogo: "Aucun logo",
+        noCover: "Aucune image de couverture",
+        uploading: "Televersement...",
+        dragHint:
+          "Le glisser-deposer est pris en charge par le selecteur de fichiers.",
+        businessName: "Nom commercial",
+        city: "Ville",
+        country: "Pays",
+        description: "Description de l'entreprise",
+      },
+      contact: {
+        title: "Coordonnees",
+        email: "Email de contact",
+        whatsapp: "Numero WhatsApp",
+        website: "Site web",
+        facebook: "URL Facebook",
+        instagram: "URL Instagram",
+        twitter: "URL X/Twitter",
+        linkedin: "URL LinkedIn",
+      },
+      products: {
+        title: "Gestion des produits",
+        listTitle: "Liste des produits",
+        save: "Enregistrer le produit",
+        empty: "Aucun produit pour le moment.",
+        dragHandle: "Glisser",
+        inStock: "En stock",
+        outOfStock: "Rupture",
+        deleteImage: "Supprimer l'image",
+        fields: {
+          title: "Titre du produit",
+          description: "Description du produit",
+          priceXaf: "Prix en XAF",
+          unit: "Unite",
+          inStock: "Disponibilite",
+        },
+      },
+      subscription: {
+        title: "Facturation et abonnement",
+        oneTimeMode: "Ce compte utilise des frais uniques d'activation.",
+        subscriptionMode: "Ce compte utilise une facturation par abonnement.",
+        monthly: "Mensuel",
+        yearly: "Annuel",
+        amount: "Montant",
+        phonePlaceholder: "6XXXXXXXX",
+        payNow: "Payer",
+        processing: "Traitement...",
+        history: "Historique des paiements",
+        emptyHistory: "Aucun enregistrement d'abonnement.",
+        createdAt: "Cree le",
+        expiresAt: "Expire le",
+      },
+      reviews: {
+        title: "Avis clients",
+        average: "Moyenne",
+        empty: "Aucun avis pour le moment.",
+        emptyComment: "Sans commentaire",
+      },
+      feedback: {
+        loadFailed: "Impossible de charger les donnees vendeur.",
+        updateFailed: "Impossible d'enregistrer les donnees vendeur.",
+        paymentFailed: "Impossible de lancer le paiement.",
+        paymentStarted: "Paiement lance avec succes.",
+        phoneRequired: "Le numero de telephone est requis.",
+        profileSaved: "Profil mis a jour.",
+        contactSaved: "Coordonnees mises a jour.",
+        mediaUpdated: "Media mis a jour.",
+        productSaved: "Produit enregistre.",
+        imageDeleted: "Image supprimee.",
+        reorderSaved: "Ordre des produits mis a jour.",
+        deleted: "Suppression reussie.",
+        invalidProductForm: "Renseignez le titre, la description et le prix.",
+      },
     },
     homepage: {
       hero: {
@@ -932,6 +2016,7 @@ const translations = {
       contributions: "Contributions",
       invitations: "Invitations",
       proposals: "Propositions",
+      vendorReviews: "Avis fournisseurs",
       ledger: "Grand livre",
       report: "Rapport",
       settings: "Parametres",
@@ -956,6 +2041,7 @@ const translations = {
       proposalCreated: "Proposition creee",
       viewAll: "Voir tout",
       currentCooperative: "Cooperative Actuelle",
+      switchCooperative: "Changer de cooperative",
       loggedInAs: "Connecte en tant que",
       votedOn: "A vote sur",
       walletAddress: "Adresse du coffre",
@@ -963,6 +2049,9 @@ const translations = {
       noRecentActivity: "Aucune activité récente.",
       qrAlt: "QR code pour l'adresse du wallet",
       vaultAddress: "Adresse du coffre",
+      surplusLabel: "+{amount} FCFA au-dessus de l'objectif",
+      legendCoop: "• Green: Fonds coopératifs",
+      legendFee: "• Orange: Frais plateforme ({percent}%)",
     },
     contributions: {
       title: "Mes contributions",
@@ -1062,6 +2151,94 @@ const translations = {
       phonePlaceholder: "6XXXXXXXX",
       bankPlaceholder: "Nom de la banque",
       recipientPlaceholder: "Nom du destinataire",
+      vendorProposalToggleStandard: "Standard",
+      vendorProposalToggleVendor: "Lié à un fournisseur",
+      vendorProposalTypeLabel: "Type de proposition",
+      vendorSelectorPlaceholder:
+        "Aucun fournisseur sélectionné — cliquer pour parcourir",
+      vendorSelectorChange: "Changer le fournisseur",
+      vendorSelectorBrowse: "Parcourir les fournisseurs",
+      vendorNoteLabel: "Pourquoi ce fournisseur (optionnel)",
+      vendorNotePlaceholder:
+        "Ajoutez du contexte pour les membres de la coopérative...",
+      vendorDescriptionAuto: "Description de la proposition",
+      vendorDescriptionPlaceholder:
+        "Décrivez pourquoi ce fournisseur et ce produit sont adaptés...",
+      vendorBadge: "FOURNISSEUR",
+      vendorApprovedCta: "Fournisseur approuvé — voir le profil",
+      vendorLinkProduct: "Produit",
+      vendorLinkPrice: "Prix",
+      autoTitleVendor: "Achat groupé :",
+    },
+    vendorProfile: {
+      loading: "Chargement du profil fournisseur...",
+      notFound: "Fournisseur introuvable.",
+      proposeToCooperative: "Proposer a ma cooperative",
+      tabs: {
+        products: "Produits et services",
+        about: "A propos",
+        reviews: "Avis",
+      },
+      noProducts: "Aucun produit disponible pour le moment.",
+      contactTitle: "Coordonnees",
+      website: "Site web",
+      contactLocked:
+        "Les coordonnees sont visibles uniquement apres au moins une proposition approuvee avec ce fournisseur dans votre cooperative.",
+      reviewCount: "avis",
+      breakdownTitle: "Repartition des notes",
+      leaveReview: "Laisser un avis",
+      reviewNotAvailable:
+        "Vous n'etes pas encore eligible pour laisser un avis.",
+      noReviews: "Aucun avis pour le moment.",
+      proposalDialogTitle: "Proposer un achat fournisseur",
+      proposalDialogDescription:
+        "Selectionnez un produit et soumettez la proposition au vote de votre cooperative.",
+      selectProduct: "Produit",
+      selectProductPlaceholder: "Selectionnez un produit",
+      proposalNote: "Note de proposition",
+      proposalNotePlaceholder:
+        "Ajoutez du contexte pour les membres (optionnel)",
+      proposalAutoTitle: "Achat groupe",
+      proposalAutoDescription:
+        "Achat propose aupres d'un fournisseur approuve de la plateforme.",
+      reviewDialogTitle: "Soumettre un avis",
+      reviewDialogDescription:
+        "Votre retour aide les autres membres a prendre de meilleures decisions.",
+      rating: "Note (1 a 5)",
+      comment: "Commentaire",
+      commentPlaceholder: "Partagez votre experience avec ce fournisseur",
+      feedback: {
+        loadFailed: "Impossible de charger le profil fournisseur.",
+        proposalIncomplete: "Selectionnez un produit pour continuer.",
+        proposalCreated: "Proposition fournisseur envoyee avec succes.",
+        proposalFailed: "Impossible d'envoyer la proposition fournisseur.",
+        reviewNotEligible: "Vous n'etes pas eligible pour soumettre un avis.",
+        reviewSubmitted: "Avis envoye avec succes.",
+        reviewFailed: "Impossible d'envoyer l'avis.",
+      },
+    },
+    vendorReviewCenter: {
+      title: "Centre d'avis fournisseurs",
+      description:
+        "Evaluez les fournisseurs deja approuves par votre cooperative via les propositions d'achat.",
+      loading: "Chargement des fournisseurs approuves...",
+      empty:
+        "Aucune proposition fournisseur approuvee trouvee pour votre cooperative.",
+      selfLabel: "Membre",
+      approvedProposals: "Propositions approuvees",
+      yourReview: "Votre avis",
+      noReviewYet: "Vous n'avez pas encore evalue ce fournisseur.",
+      openVendor: "Ouvrir le profil fournisseur",
+      leaveReview: "Laisser un avis",
+      dialogTitle: "Laisser un avis fournisseur",
+      rating: "Note (1 a 5)",
+      comment: "Commentaire",
+      commentPlaceholder: "Partagez votre retour",
+      feedback: {
+        loadFailed: "Impossible de charger les fournisseurs approuves.",
+        reviewSubmitted: "Avis envoye avec succes.",
+        reviewFailed: "Impossible d'envoyer l'avis.",
+      },
     },
     ledger: {
       title: "Grand livre de transparence",
@@ -1138,5 +2315,5 @@ export function t(locale: Locale | string, key: TranslationKey): string {
 }
 
 export function useTranslations(locale: Locale | string) {
-  return (key: TranslationKey) => t(locale, key);
+  return React.useCallback((key: TranslationKey) => t(locale, key), [locale]);
 }

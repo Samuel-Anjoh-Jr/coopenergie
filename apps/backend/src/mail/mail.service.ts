@@ -128,20 +128,37 @@ export class MailService implements OnModuleInit {
     cooperativeName: string,
     amount: number,
     txHash: string,
+    locale = "fr",
   ): Promise<MailResult> {
     const txUrl = txHash
       ? buildCeloScanTxUrl(txHash)
       : "Transaction hash unavailable";
+    const isEnglish = locale.toLowerCase().startsWith("en");
 
     return this.sendMail(
       {
         to: adminEmail,
-        subject: `Retrait decaisse - ${cooperativeName}`,
-        html: buildWithdrawalHtml(cooperativeName, amount, txHash),
-        text: [
-          `Le retrait de ${amount.toLocaleString()} FCFA pour ${cooperativeName} a ete decaisse.`,
-          `Transaction: ${txUrl}`,
-        ].join("\n"),
+        subject: isEnglish
+          ? `Withdrawal disbursed - ${cooperativeName}`
+          : `Retrait decaisse - ${cooperativeName}`,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Withdrawal" : "Retrait",
+          title: isEnglish ? "Withdrawal disbursed" : "Retrait decaisse",
+          intro: isEnglish
+            ? `The withdrawal of ${amount.toLocaleString()} XAF for ${escapeHtml(cooperativeName)} has been disbursed.`
+            : `Le retrait de ${amount.toLocaleString()} FCFA pour ${escapeHtml(cooperativeName)} a ete decaisse.`,
+          detailsHtml: `<strong>${isEnglish ? "Transaction" : "Transaction"}</strong><br/><a href="${escapeHtml(txUrl)}">${escapeHtml(txUrl)}</a>`,
+        }),
+        text: isEnglish
+          ? [
+              `The withdrawal of ${amount.toLocaleString()} XAF for ${cooperativeName} has been disbursed.`,
+              `Transaction: ${txUrl}`,
+            ].join("\n")
+          : [
+              `Le retrait de ${amount.toLocaleString()} FCFA pour ${cooperativeName} a ete decaisse.`,
+              `Transaction: ${txUrl}`,
+            ].join("\n"),
       },
       `withdrawal approval email to ${adminEmail}`,
     );
@@ -152,47 +169,283 @@ export class MailService implements OnModuleInit {
     cooperativeName: string,
     amount: number,
     reason: string,
+    locale = "fr",
   ): Promise<MailResult> {
+    const isEnglish = locale.toLowerCase().startsWith("en");
+
     return this.sendMail(
       {
         to: adminEmail,
-        subject: `Echec du retrait - ${cooperativeName}`,
-        html: this.buildFailureHtml(cooperativeName, amount, reason),
-        text: [
-          `Le retrait de ${amount.toLocaleString()} FCFA pour ${cooperativeName} a echoue.`,
-          `Motif: ${reason}`,
-        ].join("\n"),
+        subject: isEnglish
+          ? `Withdrawal failed - ${cooperativeName}`
+          : `Echec du retrait - ${cooperativeName}`,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Failure" : "Echec",
+          title: isEnglish ? "Withdrawal failed" : "Retrait echoue",
+          intro: isEnglish
+            ? `The withdrawal of ${amount.toLocaleString()} XAF for ${escapeHtml(cooperativeName)} has failed.`
+            : `Le retrait de ${amount.toLocaleString()} FCFA pour ${escapeHtml(cooperativeName)} a echoue.`,
+          detailsHtml: `<strong>${isEnglish ? "Reason" : "Motif"}</strong><br/>${escapeHtml(reason)}`,
+        }),
+        text: isEnglish
+          ? [
+              `The withdrawal of ${amount.toLocaleString()} XAF for ${cooperativeName} has failed.`,
+              `Reason: ${reason}`,
+            ].join("\n")
+          : [
+              `Le retrait de ${amount.toLocaleString()} FCFA pour ${cooperativeName} a echoue.`,
+              `Motif: ${reason}`,
+            ].join("\n"),
       },
       `withdrawal failure email to ${adminEmail}`,
     );
   }
 
   async sendVoteNotification(
-    memberEmails: string[],
+    members: { email: string; locale: string }[],
     cooperativeName: string,
     proposalTitle: string,
   ): Promise<MailResult> {
-    const recipients = [...new Set(memberEmails.filter(Boolean))];
+    const uniqueMembers = [
+      ...new Map(
+        members.filter((m) => Boolean(m.email)).map((m) => [m.email, m]),
+      ).values(),
+    ];
 
-    if (recipients.length === 0) {
+    if (uniqueMembers.length === 0) {
       this.logger.warn(
         `Skipping vote notification email for ${cooperativeName}: no recipients.`,
       );
       return null;
     }
 
+    const enRecipients = uniqueMembers
+      .filter((m) => m.locale.toLowerCase().startsWith("en"))
+      .map((m) => m.email);
+    const frRecipients = uniqueMembers
+      .filter((m) => !m.locale.toLowerCase().startsWith("en"))
+      .map((m) => m.email);
+
+    const sendGroup = async (recipients: string[], isEnglish: boolean) => {
+      if (recipients.length === 0) return null;
+      return this.sendMail(
+        {
+          to: this.getFromAddress(),
+          bcc: recipients.join(", "),
+          subject: isEnglish
+            ? `New proposal to vote on - ${cooperativeName}`
+            : `Nouvelle proposition a voter - ${cooperativeName}`,
+          html: buildBrandedEmailHtml({
+            lang: isEnglish ? "en" : "fr",
+            badge: isEnglish ? "Vote" : "Vote",
+            title: isEnglish
+              ? "New proposal open for vote"
+              : "Nouvelle proposition ouverte au vote",
+            intro: isEnglish
+              ? `A new proposal is open for vote in ${escapeHtml(cooperativeName)}.`
+              : `Une nouvelle proposition est ouverte au vote dans ${escapeHtml(cooperativeName)}.`,
+            detailsHtml: `<strong>${isEnglish ? "Proposal" : "Proposition"}</strong><br/>${escapeHtml(proposalTitle)}`,
+          }),
+          text: isEnglish
+            ? [
+                `A new proposal is open for vote in ${cooperativeName}.`,
+                `Proposal: ${proposalTitle}`,
+              ].join("\n")
+            : [
+                `Une nouvelle proposition est ouverte au vote dans ${cooperativeName}.`,
+                `Proposition: ${proposalTitle}`,
+              ].join("\n"),
+        },
+        `vote notification email for ${cooperativeName}`,
+      );
+    };
+
+    const [enResult, frResult] = await Promise.all([
+      sendGroup(enRecipients, true),
+      sendGroup(frRecipients, false),
+    ]);
+
+    return enResult ?? frResult;
+  }
+
+  async sendVendorRegistrationActivatedNotification(
+    to: string,
+    businessName: string,
+    locale = "fr",
+  ): Promise<MailResult> {
+    const isEnglish = locale.toLowerCase().startsWith("en");
+
     return this.sendMail(
       {
-        to: this.getFromAddress(),
-        bcc: recipients.join(", "),
-        subject: `Nouvelle proposition a voter - ${cooperativeName}`,
-        html: this.buildVoteHtml(cooperativeName, proposalTitle),
+        to,
+        subject: isEnglish
+          ? `Vendor account activated - ${businessName}`
+          : `Compte vendeur active - ${businessName}`,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Activation" : "Activation",
+          title: isEnglish
+            ? "Your vendor account is active"
+            : "Votre compte vendeur est actif",
+          intro: isEnglish
+            ? "Your registration payment has been validated and your store is now active on CoopEnergie."
+            : "Votre paiement d'inscription a ete valide et votre boutique est maintenant active sur CoopEnergie.",
+          detailsHtml: `<strong>${isEnglish ? "Store" : "Boutique"}</strong><br/>${escapeHtml(businessName)}`,
+        }),
+        text: isEnglish
+          ? [
+              `Your vendor account ${businessName} is now active on CoopEnergie.`,
+            ].join("\n")
+          : [
+              `Votre compte vendeur ${businessName} est maintenant actif sur CoopEnergie.`,
+            ].join("\n"),
+      },
+      `vendor registration activation email to ${to}`,
+    );
+  }
+
+  async sendVendorSubscriptionActivatedNotification(
+    to: string,
+    businessName: string,
+    billingCycle: "MONTHLY" | "YEARLY",
+    expiresAt: Date,
+    locale = "fr",
+  ): Promise<MailResult> {
+    const isEnglish = locale.toLowerCase().startsWith("en");
+    const readableCycle =
+      billingCycle === "YEARLY"
+        ? isEnglish
+          ? "annual"
+          : "annuel"
+        : isEnglish
+          ? "monthly"
+          : "mensuel";
+
+    return this.sendMail(
+      {
+        to,
+        subject: isEnglish
+          ? `Vendor subscription active - ${businessName}`
+          : `Abonnement vendeur actif - ${businessName}`,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Subscription" : "Abonnement",
+          title: isEnglish ? "Subscription activated" : "Abonnement active",
+          intro: isEnglish
+            ? "Your subscription payment has been confirmed. Your store remains visible and active."
+            : "Votre paiement d'abonnement a ete confirme. Votre boutique reste visible et active.",
+          detailsHtml: [
+            `<strong>${isEnglish ? "Cycle" : "Cycle"}</strong><br/>${escapeHtml(readableCycle)}`,
+            `<strong>${isEnglish ? "Expiry" : "Expiration"}</strong><br/>${escapeHtml(expiresAt.toISOString())}`,
+          ].join("<br/><br/>"),
+        }),
+        text: isEnglish
+          ? [
+              `Your vendor subscription (${readableCycle}) for ${businessName} is active.`,
+              `Expiry: ${expiresAt.toISOString()}`,
+            ].join("\n")
+          : [
+              `Votre abonnement vendeur (${readableCycle}) pour ${businessName} est actif.`,
+              `Expiration: ${expiresAt.toISOString()}`,
+            ].join("\n"),
+      },
+      `vendor subscription activation email to ${to}`,
+    );
+  }
+
+  async sendSubscriptionExpiredNotification(
+    to: string,
+    businessName: string,
+    locale = "fr",
+  ): Promise<MailResult> {
+    const isEnglish = locale.toLowerCase().startsWith("en");
+
+    return this.sendMail(
+      {
+        to,
+        subject: isEnglish
+          ? `Vendor subscription expired - ${businessName}`
+          : `Abonnement vendeur expire - ${businessName}`,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Expiry" : "Expiration",
+          title: isEnglish ? "Subscription expired" : "Abonnement expire",
+          intro: isEnglish
+            ? "Your vendor subscription has expired. Renew your subscription to reactivate your storefront."
+            : "Votre abonnement vendeur a expire. Renouvelez votre abonnement pour reactiver votre vitrine.",
+          detailsHtml: `<strong>${isEnglish ? "Store" : "Boutique"}</strong><br/>${escapeHtml(businessName)}`,
+        }),
+        text: isEnglish
+          ? [
+              `Your vendor subscription for ${businessName} has expired.`,
+              "Log in to start a new subscription payment.",
+            ].join("\n")
+          : [
+              `Votre abonnement vendeur pour ${businessName} a expire.`,
+              "Connectez-vous pour lancer un nouveau paiement d'abonnement.",
+            ].join("\n"),
+      },
+      `vendor subscription expiry email to ${to}`,
+    );
+  }
+
+  async sendVendorProposalApprovedNotification(
+    to: string,
+    businessName: string,
+    cooperativeName: string,
+    proposalTitle: string,
+    locale = "fr",
+    cooperativeAdminContact?: {
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    },
+  ): Promise<MailResult> {
+    const isEnglish = locale.toLowerCase().startsWith("en");
+    const subjectFr = `Proposition approuvee - ${cooperativeName}`;
+    const subjectEn = `Proposal approved - ${cooperativeName}`;
+    const adminName =
+      cooperativeAdminContact?.name ||
+      (isEnglish ? "Not provided" : "Non renseigne");
+    const adminEmail =
+      cooperativeAdminContact?.email ||
+      (isEnglish ? "Not provided" : "Non renseigne");
+    const adminPhone =
+      cooperativeAdminContact?.phone ||
+      (isEnglish ? "Not provided" : "Non renseigne");
+
+    return this.sendMail(
+      {
+        to,
+        subject: isEnglish ? subjectEn : subjectFr,
+        html: buildBrandedEmailHtml({
+          lang: isEnglish ? "en" : "fr",
+          badge: isEnglish ? "Approval" : "Approbation",
+          title: isEnglish
+            ? "Your vendor proposal has been approved"
+            : "Votre proposition vendeur a ete approuvee",
+          intro: isEnglish
+            ? "A cooperative approved your purchase proposal. You can now prepare fulfillment details from your vendor space."
+            : "Une cooperative a approuve votre proposition d'achat. Vous pouvez maintenant preparer l'execution depuis votre espace vendeur.",
+          detailsHtml: [
+            `<strong>${isEnglish ? "Vendor" : "Vendeur"}</strong><br/>${escapeHtml(businessName)}`,
+            `<strong>${isEnglish ? "Cooperative" : "Cooperative"}</strong><br/>${escapeHtml(cooperativeName)}`,
+            `<strong>${isEnglish ? "Proposal" : "Proposition"}</strong><br/>${escapeHtml(proposalTitle)}`,
+            `<strong>${isEnglish ? "Cooperative admin contact" : "Contact admin cooperative"}</strong><br/>${escapeHtml(adminName)}<br/>${escapeHtml(adminEmail)}<br/>${escapeHtml(adminPhone)}`,
+            "<hr/>",
+            `<strong>FR</strong><br/>Votre proposition vendeur a ete approuvee par ${escapeHtml(cooperativeName)}.`,
+            `<strong>EN</strong><br/>Your vendor proposal was approved by ${escapeHtml(cooperativeName)}.`,
+          ].join("<br/><br/>"),
+        }),
         text: [
-          `Une nouvelle proposition est ouverte au vote dans ${cooperativeName}.`,
-          `Proposition: ${proposalTitle}`,
+          `FR: Votre proposition vendeur \"${proposalTitle}\" a ete approuvee par ${cooperativeName}.`,
+          `EN: Your vendor proposal \"${proposalTitle}\" was approved by ${cooperativeName}.`,
+          `${isEnglish ? "Vendor" : "Vendeur"}: ${businessName}`,
+          `${isEnglish ? "Cooperative admin" : "Admin cooperative"}: ${adminName} | ${adminEmail} | ${adminPhone}`,
         ].join("\n"),
       },
-      `vote notification email for ${cooperativeName}`,
+      `vendor proposal approved email to ${to}`,
     );
   }
 

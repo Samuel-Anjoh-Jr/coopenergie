@@ -9,9 +9,11 @@ import {
   LogOut,
   BarChart3,
   Building2,
+  Wallet,
   Settings,
   Menu,
   ShieldCheck,
+  MessageCircleQuestion,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,9 +25,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { getDashboardRouteForUser } from "@/lib/dashboard-routing";
 
 const navItems = [
   { key: "Metrics", icon: BarChart3, href: "/admin" },
+  { key: "Paiements", icon: Wallet, href: "/admin/payments" },
   { key: "Cooperatives", icon: Building2, href: "/admin/cooperatives" },
   {
     key: "Admin Key Health",
@@ -34,6 +38,7 @@ const navItems = [
   },
   { key: "Users & Audit", icon: ShieldCheck, href: "/admin/users" },
   { key: "Settings", icon: Settings, href: "/admin/settings" },
+  { key: "FAQ", icon: MessageCircleQuestion, href: "/admin/faq" },
 ];
 
 export default function AdminLayout({
@@ -50,11 +55,12 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push(`/${locale}/login`);
+      router.replace(`/${locale}/login`);
       return;
     }
+
     if (status === "authenticated" && !session?.user?.isPlatformAdmin) {
-      router.push(`/${locale}/dashboard`);
+      router.replace(getDashboardRouteForUser(session?.user, locale));
     }
   }, [status, session, locale, router]);
 
@@ -123,7 +129,9 @@ export default function AdminLayout({
                 size="sm"
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
                 onClick={() =>
-                  void signOut({ callbackUrl: `/${locale}/login` })
+                  void signOut({ redirect: false }).then(() => {
+                    window.location.href = `/${locale}/login`;
+                  })
                 }
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -136,14 +144,6 @@ export default function AdminLayout({
 
       <aside className="hidden w-64 flex-col border-r border-border/50 bg-card/98 lg:flex">
         <div className="p-6 border-b border-border/50 space-y-3">
-          <Image
-            src="/logo/coopenergie-logo-full.png"
-            alt="CoopEnergie"
-            width={728}
-            height={179}
-            className="h-8 w-auto drop-shadow-[0_1px_0_rgba(15,23,42,0.08)] dark:drop-shadow-[0_1px_0_rgba(248,250,252,0.12)]"
-            priority
-          />
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Platform Admin
           </p>
@@ -183,7 +183,11 @@ export default function AdminLayout({
             variant="ghost"
             size="sm"
             className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => void signOut({ callbackUrl: `/${locale}/login` })}
+            onClick={() =>
+              void signOut({ redirect: false }).then(() => {
+                window.location.href = `/${locale}/login`;
+              })
+            }
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout

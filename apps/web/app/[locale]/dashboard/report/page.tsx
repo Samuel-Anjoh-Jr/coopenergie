@@ -19,10 +19,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CELOSCAN_BASE } from "@/lib/config";
-import { GET_MY_COOPERATIVES } from "@/lib/graphql/queries/cooperative";
 import { GET_REPORT } from "@/lib/graphql/queries/report";
 import { API_URL } from "@/lib/config";
 import { DASHBOARD_REALTIME_POLL_INTERVAL_MS } from "@/lib/realtime";
+import { useSelectedCooperative } from "@/lib/use-selected-cooperative";
 
 type ReportData = {
   cooperativeName: string;
@@ -45,10 +45,10 @@ export default function ReportPage() {
   const { data: session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { data: myCooperativesData } = useQuery(GET_MY_COOPERATIVES, {
-    pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
-  });
-  const cooperativeId = myCooperativesData?.myCooperatives?.[0]?.id;
+  const { activeCoopId: cooperativeId, isResolvingSelection } =
+    useSelectedCooperative({
+      pollInterval: DASHBOARD_REALTIME_POLL_INTERVAL_MS,
+    });
 
   const {
     data: reportData,
@@ -63,7 +63,8 @@ export default function ReportPage() {
   });
 
   const report: ReportData | undefined = reportData?.report;
-  const isInitialReportLoading = loadingReport && !reportData?.report;
+  const isInitialReportLoading =
+    isResolvingSelection || (loadingReport && !reportData?.report);
 
   const handleDownloadReport = async () => {
     if (!cooperativeId) {

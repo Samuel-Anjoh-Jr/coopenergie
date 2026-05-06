@@ -13,6 +13,7 @@ import { BlockscoutVerificationService } from "../../blockchain/blockscout-verif
 import { EventListenerService } from "../../blockchain/event-listener.service";
 import { FactoryService } from "../../blockchain/factory.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PlatformSettingsService } from "../platform-settings/platform-settings.service";
 import { CreateCooperativeDto } from "./dto/create-cooperative.dto";
 
 @Injectable()
@@ -25,12 +26,17 @@ export class CooperativesService {
     private readonly eventListenerService: EventListenerService,
     private readonly blockscoutVerification: BlockscoutVerificationService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly platformSettingsService: PlatformSettingsService,
   ) {}
 
   async create(
     userId: string,
     { name, targetAmountXAF }: CreateCooperativeDto,
   ) {
+    const baseTargetXAF = targetAmountXAF;
+    const targetWithFeeXAF =
+      await this.platformSettingsService.calculateTargetWithFee(baseTargetXAF);
+
     const user = await this.prisma.user.findUnique({
       where: {
         id: userId,
@@ -66,7 +72,8 @@ export class CooperativesService {
           data: {
             name: normalizedName,
             slug,
-            targetAmountXAF,
+            baseTargetXAF,
+            targetAmountXAF: targetWithFeeXAF,
           },
         });
 
@@ -83,7 +90,7 @@ export class CooperativesService {
 
       const deployment = await this.factoryService.deployCooperative(
         normalizedName,
-        targetAmountXAF,
+        targetWithFeeXAF,
         user.celoAddress,
       );
 
@@ -112,7 +119,7 @@ export class CooperativesService {
         .verifyCooperativeVault({
           vaultAddress: deployment.vaultAddress,
           name: normalizedName,
-          targetAmountXAF,
+          targetAmountXAF: targetWithFeeXAF,
           adminAddress: user.celoAddress,
           relayerAddress,
         })
