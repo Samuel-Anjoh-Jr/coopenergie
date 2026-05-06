@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from "react";
-import { Animated, StyleProp, ViewStyle } from "react-native";
+import { Animated, Platform, StyleProp, ViewStyle } from "react-native";
 
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -35,6 +35,7 @@ export function SectionReveal({
   style,
 }: SectionRevealProps) {
   const reducedMotionEnabled = useReducedMotion();
+  const canUseNativeDriver = Platform.OS !== "web";
   const { translateX: initialX, translateY: initialY } = getInitialTransform(
     direction,
     distance,
@@ -61,19 +62,19 @@ export function SectionReveal({
         toValue: 1,
         duration: 280,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: canUseNativeDriver,
       }),
       Animated.timing(translateX, {
         toValue: 0,
         duration: 320,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: canUseNativeDriver,
       }),
       Animated.timing(translateY, {
         toValue: 0,
         duration: 320,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: canUseNativeDriver,
       }),
     ]).start();
   }, [

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
@@ -9,6 +10,7 @@ import { SectionReveal } from "@/components/section-reveal";
 
 export default function VendorOverviewScreen() {
   const { t } = useMobileTranslations();
+  const isFocused = useIsFocused();
   const user = getUser();
   const paymentModel = user?.vendor?.paymentModel;
 
@@ -36,6 +38,21 @@ export default function VendorOverviewScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+
+    void load();
+    const refreshInterval = setInterval(() => {
+      void load();
+    }, 20000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [isFocused, load]);
 
   const initiatePayment = async () => {
     if (!phoneNumber.trim()) {

@@ -6,15 +6,24 @@ import { storage, tokenStorage } from "@/lib/storage";
 const translations = {
   en: {
     auth: {
+      loginTitle: "Login",
       loginSubtitle: "Sign in to your cooperative.",
       registerTitle: "Register",
+      vendorRegisterTitle: "Vendor registration",
+      invitationTitle: "Invitation",
       registerSubtitle: "Create your CoopEnergie account.",
       processingInvitation: "Processing your invitation...",
+      checkingBackend: "Checking backend connectivity...",
+      backendUnreachableTitle: "Backend unreachable",
+      backendUnreachableMessage:
+        "Cannot reach the backend right now. Check that your API is running and your EXPO_PUBLIC_API_URL is reachable from this device.",
       emailPlaceholder: "name@example.com",
       passwordPlaceholder: "Enter your password",
       namePlaceholder: "Your name",
       createAccount: "Create an account",
       backToLogin: "Back to login",
+      vendorSignupCta: "Register as a solar vendor",
+      vendorSignupPrompt: "Are you a solar panel vendor? Register here",
     },
     common: {
       email: "Email",
@@ -26,7 +35,10 @@ const translations = {
       copy: "Copy",
       close: "Close",
       cancel: "Cancel",
+      retry: "Retry",
+      refresh: "Refresh",
       submit: "Submit",
+      language: "Language",
       cooperative: "Cooperative",
       members: "Members",
       recentActivity: "Recent Activity",
@@ -213,18 +225,65 @@ const translations = {
         bankTransfer: "Bank transfer",
       },
     },
+    vendorSignup: {
+      title: "Vendor registration",
+      subtitle: "Create your solar vendor account.",
+      fullName: "Full name",
+      email: "Email",
+      password: "Password",
+      businessName: "Business name",
+      city: "City",
+      whatsapp: "WhatsApp number",
+      description: "Business description",
+      acceptTerms: "I accept the vendor terms and conditions",
+      submit: "Create vendor account",
+      switchToCoopSignup: "Register as cooperative member instead",
+      termsTitle: "Terms required",
+      termsRequiredMessage: "You must accept terms before continuing.",
+      accountCreatedTitle: "Account created",
+      completePaymentMessage:
+        "Complete your vendor payment to activate your account.",
+      registrationFailedTitle: "Registration failed",
+      unknownError: "An unexpected error occurred.",
+      sessionTitle: "Session expired",
+      reconnectMessage: "Please sign in again before making payment.",
+      paymentTitle: "Payment required",
+      paymentPhoneRequired: "Enter a payment phone number.",
+      paymentFailedTitle: "Payment failed",
+      paymentStartedTitle: "Payment started",
+      paymentStartedMessage:
+        "Payment request sent. We are checking your activation status.",
+      paymentPendingTitle: "Activation pending",
+      paymentPendingMessage:
+        "Your payment is still processing. Please try again in a moment.",
+      paymentRequired: "Vendor payment required",
+      amount: "Amount:",
+      paymentPhone: "Payment phone number",
+      later: "Later",
+      pay: "Pay now",
+    },
   },
   fr: {
     auth: {
+      loginTitle: "Connexion",
       loginSubtitle: "Connectez-vous a votre cooperative.",
       registerTitle: "Inscription",
+      vendorRegisterTitle: "Inscription fournisseur",
+      invitationTitle: "Invitation",
       registerSubtitle: "Creez votre compte CoopEnergie.",
       processingInvitation: "Traitement de votre invitation...",
+      checkingBackend: "Verification de la connectivite du backend...",
+      backendUnreachableTitle: "Backend inaccessible",
+      backendUnreachableMessage:
+        "Impossible de joindre le backend. Verifiez que l'API tourne et que EXPO_PUBLIC_API_URL est accessible depuis cet appareil.",
       emailPlaceholder: "vous@exemple.com",
       passwordPlaceholder: "********",
       namePlaceholder: "Votre nom",
       createAccount: "Creer un compte",
       backToLogin: "Retour a la connexion",
+      vendorSignupCta: "Inscription fournisseur solaire",
+      vendorSignupPrompt:
+        "Vous etes fournisseur de panneaux solaires ? Inscrivez-vous ici",
     },
     common: {
       email: "Email",
@@ -236,7 +295,10 @@ const translations = {
       copy: "Copier",
       close: "Fermer",
       cancel: "Annuler",
+      retry: "Reessayer",
+      refresh: "Actualiser",
       submit: "Valider",
+      language: "Langue",
       cooperative: "Cooperative",
       members: "Membres",
       recentActivity: "Activite recente",
@@ -427,6 +489,43 @@ const translations = {
         bankTransfer: "Virement bancaire",
       },
     },
+    vendorSignup: {
+      title: "Inscription fournisseur",
+      subtitle: "Creez votre compte fournisseur solaire.",
+      fullName: "Nom complet",
+      email: "Email",
+      password: "Mot de passe",
+      businessName: "Nom de l'entreprise",
+      city: "Ville",
+      whatsapp: "Numero WhatsApp",
+      description: "Description de l'activite",
+      acceptTerms: "J'accepte les conditions fournisseur",
+      submit: "Creer le compte fournisseur",
+      switchToCoopSignup: "S'inscrire comme membre de cooperative",
+      termsTitle: "Conditions requises",
+      termsRequiredMessage: "Vous devez accepter les conditions pour continuer.",
+      accountCreatedTitle: "Compte cree",
+      completePaymentMessage:
+        "Finalisez le paiement fournisseur pour activer votre compte.",
+      registrationFailedTitle: "Inscription impossible",
+      unknownError: "Une erreur inattendue est survenue.",
+      sessionTitle: "Session expiree",
+      reconnectMessage: "Reconnectez-vous avant d'effectuer le paiement.",
+      paymentTitle: "Paiement requis",
+      paymentPhoneRequired: "Renseignez un numero de paiement.",
+      paymentFailedTitle: "Paiement echoue",
+      paymentStartedTitle: "Paiement demarre",
+      paymentStartedMessage:
+        "La demande de paiement a ete envoyee. Verification de l'activation en cours.",
+      paymentPendingTitle: "Activation en attente",
+      paymentPendingMessage:
+        "Le paiement est toujours en cours. Reessayez dans un instant.",
+      paymentRequired: "Paiement fournisseur requis",
+      amount: "Montant :",
+      paymentPhone: "Numero de paiement",
+      later: "Plus tard",
+      pay: "Payer",
+    },
   },
 } as const;
 
@@ -434,6 +533,9 @@ export type MobileLocale = keyof typeof translations;
 export type TranslationKey = string;
 
 const MOBILE_LOCALE_STORAGE_KEY = "mobile_locale";
+let profileLocaleSyncPromise: Promise<MobileLocale | null> | null = null;
+const localeListeners = new Set<(locale: MobileLocale) => void>();
+let globalLocale: MobileLocale | null = null;
 
 function normalizeLocale(value?: string | null): MobileLocale {
   return value?.toLowerCase().startsWith("en") ? "en" : "fr";
@@ -454,6 +556,46 @@ function resolveStoredLocale(): MobileLocale | null {
   return normalizeLocale(stored);
 }
 
+function resolveGlobalLocale() {
+  if (globalLocale) {
+    return globalLocale;
+  }
+
+  globalLocale = resolveStoredLocale() ?? resolveLocale();
+  return globalLocale;
+}
+
+function broadcastLocale(nextLocale: MobileLocale) {
+  globalLocale = nextLocale;
+  for (const listener of localeListeners) {
+    listener(nextLocale);
+  }
+}
+
+function syncProfileLocaleOnce(): Promise<MobileLocale | null> {
+  if (profileLocaleSyncPromise) {
+    return profileLocaleSyncPromise;
+  }
+
+  profileLocaleSyncPromise = api
+    .get<{ preferredLocale?: string }>("/users/me")
+    .then((profile) => {
+      if (!profile.preferredLocale) {
+        return null;
+      }
+
+      const nextLocale = normalizeLocale(profile.preferredLocale);
+      storage.set(MOBILE_LOCALE_STORAGE_KEY, nextLocale);
+      return nextLocale;
+    })
+    .catch(() => null)
+    .finally(() => {
+      profileLocaleSyncPromise = null;
+    });
+
+  return profileLocaleSyncPromise;
+}
+
 export function translate(locale: MobileLocale, key: TranslationKey): string {
   const keys = key.split(".");
   let value: unknown = translations[locale];
@@ -462,20 +604,47 @@ export function translate(locale: MobileLocale, key: TranslationKey): string {
     value = (value as Record<string, unknown> | undefined)?.[segment];
   }
 
-  return typeof value === "string" ? value : key;
+  if (typeof value === "string") {
+    return value;
+  }
+
+  let fallbackValue: unknown = translations.en;
+  for (const segment of keys) {
+    fallbackValue = (fallbackValue as Record<string, unknown> | undefined)?.[segment];
+  }
+
+  if (typeof fallbackValue === "string") {
+    return fallbackValue;
+  }
+
+  const lastSegment = keys[keys.length - 1] || key;
+  return lastSegment
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]/g, " ")
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 export function useMobileTranslations(localeOverride?: MobileLocale) {
   const [locale, setLocaleState] = useState<MobileLocale>(
-    () => localeOverride ?? resolveStoredLocale() ?? resolveLocale(),
+    () => localeOverride ?? resolveGlobalLocale(),
   );
 
   useEffect(() => {
     if (!localeOverride) {
-      return;
+      const listener = (nextLocale: MobileLocale) => {
+        setLocaleState(nextLocale);
+      };
+
+      localeListeners.add(listener);
+      setLocaleState(resolveGlobalLocale());
+
+      return () => {
+        localeListeners.delete(listener);
+      };
     }
 
     setLocaleState(localeOverride);
+    return;
   }, [localeOverride]);
 
   useEffect(() => {
@@ -489,20 +658,13 @@ export function useMobileTranslations(localeOverride?: MobileLocale) {
 
     let active = true;
 
-    void api
-      .get<{ preferredLocale?: string }>("/users/me")
-      .then((profile) => {
-        if (!active || !profile.preferredLocale) {
+    void syncProfileLocaleOnce().then((nextLocale) => {
+      if (!active || !nextLocale) {
           return;
-        }
+      }
 
-        const nextLocale = normalizeLocale(profile.preferredLocale);
-        setLocaleState(nextLocale);
-        storage.set(MOBILE_LOCALE_STORAGE_KEY, nextLocale);
-      })
-      .catch(() => {
-        // Keep local locale when profile sync fails.
-      });
+      broadcastLocale(nextLocale);
+    });
 
     return () => {
       active = false;
@@ -510,9 +672,10 @@ export function useMobileTranslations(localeOverride?: MobileLocale) {
   }, [localeOverride]);
 
   const setLocale = async (nextLocale: MobileLocale) => {
-    setLocaleState(nextLocale);
-
-    if (!localeOverride) {
+    if (localeOverride) {
+      setLocaleState(nextLocale);
+    } else {
+      broadcastLocale(nextLocale);
       storage.set(MOBILE_LOCALE_STORAGE_KEY, nextLocale);
     }
 

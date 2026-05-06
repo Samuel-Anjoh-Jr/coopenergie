@@ -142,11 +142,14 @@ export default function DashboardScreen() {
       },
       skip: !activeCooperativeId,
       fetchPolicy: "cache-and-network",
+      pollInterval: isOnline ? 20000 : 0,
     },
   );
   const { data: monetisationData } = useQuery<{
     monetisationSettings?: { withdrawalFeePercent?: number | null };
-  }>(MONETISATION_QUERY);
+  }>(MONETISATION_QUERY, {
+    pollInterval: isOnline ? 30000 : 0,
+  });
 
   const { data: contributionEvent } = useSubscription(
     CONTRIBUTION_SUBSCRIPTION,

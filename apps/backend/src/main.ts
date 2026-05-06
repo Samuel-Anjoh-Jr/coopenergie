@@ -194,18 +194,38 @@ function normalizeBaseUrl(value: string): string {
 }
 
 function resolvePublicBaseUrl(port: string | number): string {
-  const configuredUrl =
-    process.env.APP_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL;
-
-  if (configuredUrl) {
-    return normalizeBaseUrl(configuredUrl);
+  if (process.env.API_PUBLIC_URL) {
+    return normalizeBaseUrl(process.env.API_PUBLIC_URL);
   }
 
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
     return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
   }
 
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    const value = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+    return value.replace(/\/api\/v\d+$/i, "");
+  }
+
   return `http://localhost:${port}`;
+}
+
+function resolveListenBaseUrl(host: string, port: string | number): string {
+  const normalizedHost =
+    host === "0.0.0.0" || host === "::" || host === "::0" ? "localhost" : host;
+  return `http://${normalizedHost}:${port}`;
+}
+
+function isTrustedDevelopmentOrigin(origin: string): boolean {
+  const trimmedOrigin = origin.trim();
+
+  if (/^exp:\/\//i.test(trimmedOrigin)) {
+    return true;
+  }
+
+  return /^(https?:\/\/)(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(
+    trimmedOrigin,
+  );
 }
 
 function resolveRuntimeEnvironment(): string {
@@ -239,18 +259,30 @@ async function bootstrap() {
     }),
   );
   app.use(helmet());
+  const nodeEnv = resolveRuntimeEnvironment();
+
   const allowedOrigins = [
     process.env.AUTH_URL,
     process.env.NEXTAUTH_URL,
     process.env.CORS_ORIGIN,
+    process.env.APP_URL,
     "https://coopenergie-backend.vercel.app",
     "http://localhost:3000",
+    "http://localhost:4000",
+    "http://localhost:8094",
+    "http://localhost:8081",
+    "http://localhost:8082",
   ].filter(Boolean) as string[];
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        const allowDevOrigin =
+          nodeEnv !== "production" &&
+          typeof origin === "string" &&
+          isTrustedDevelopmentOrigin(origin);
+
+        if (!origin || allowedOrigins.includes(origin) || allowDevOrigin) {
           callback(null, true);
         } else {
           callback(new Error(`CORS: origin '${origin}' not allowed`));
@@ -324,18 +356,23 @@ async function bootstrap() {
     next();
   });
 
-  const port = process.env.PORT || process.env.API_PORT || 4000;
-  const nodeEnv = resolveRuntimeEnvironment();
+  const port = process.env.API_PORT || process.env.PORT || 4000;
+  const listenHost = process.env.API_HOST?.trim() || "0.0.0.0";
+  const listenBaseUrl = resolveListenBaseUrl(listenHost, port);
   const publicBaseUrl = resolvePublicBaseUrl(port);
   const graphqlUrl = `${publicBaseUrl}/graphql`;
+  const usesCustomPublicUrl = publicBaseUrl !== listenBaseUrl;
 
-  await app.listen(port, () => {
+  await app.listen(port, listenHost, () => {
     console.log("\n");
     console.log("╔════════════════════════════════════════════════════════╗");
     console.log("║       🚀 CoopEnergie Backend Server Started 🚀         ║");
     console.log("╚════════════════════════════════════════════════════════╝");
     console.log(`\n  ✓ Environment:     ${nodeEnv}`);
-    console.log(`  ✓ Server running on: ${publicBaseUrl}`);
+    console.log(`  ✓ Server listening on: ${listenBaseUrl}`);
+    if (usesCustomPublicUrl) {
+      console.log(`  ✓ Public API base:   ${publicBaseUrl}`);
+    }
     console.log(`  ✓ GraphQL endpoint:  ${graphqlUrl}`);
     console.log(`  ✓ API prefix:        /api/v1`);
     console.log(

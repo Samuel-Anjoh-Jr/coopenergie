@@ -218,6 +218,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    externalNativeBuild {
+        cmake {
+            if (System.properties["os.name"].toLowerCase().contains("windows")) {
+                buildStagingDirectory "C:/.cxx/app"
+            }
+        }
+    }
+
     namespace 'com.coopenergie.app'
     defaultConfig {
         applicationId 'com.coopenergie.app'
@@ -327,12 +335,13 @@ if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.tas
             // Replace the long bun cache prefix with B:/ (subst drive)
             // Pattern: any drive letter path ending in /node_modules/.bun/
             def bunPrefix = ~/[A-Za-z]:\/[^\n\"]*\/node_modules\/\.bun\//
-            def fixed = text.replaceAll(bunPrefix, "B:/")
-            // Also keep nitro on its dedicated short build directory.
-            fixed = fixed.replaceAll(
-                /(?m)[A-Za-z]:\/[^\n\"]*react-native-nitro-modules[^\n\"]*\/android\/build\/generated\/source\/codegen\/jni\//,
-                "C:/.b/nitro/generated/source/codegen/jni/"
-            )
+            def fixed = text
+            def substRoot = System.getenv("SUBST_REPO_ROOT")
+            def longRoot = rootDir.parentFile.parentFile.parentFile.absolutePath.replace(File.separatorChar, '/' as char)
+
+            if (substRoot && longRoot) {
+                fixed = fixed.replace(longRoot, substRoot)
+            }
             if (fixed != text) {
                 autolinkingCmake.text = fixed
                 println("[WIN_PATH_FIX] Rewrote autolinking cmake: " + autolinkingCmake.absolutePath)

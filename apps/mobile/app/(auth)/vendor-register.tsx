@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import PressableScale from "@/components/pressable-scale";
+import BackendPreflightBanner from "@/components/backend-preflight-banner";
 import { ScreenReveal } from "@/components/screen-reveal";
 import { api } from "@/lib/api";
 import { getPostLoginPath, login } from "@/lib/auth";
@@ -153,6 +154,8 @@ export default function VendorRegisterScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
+        <BackendPreflightBanner />
+
         <View className="mb-3 flex-row items-center gap-3">
           <Image
             source={require("../../assets/logo-full.png")}

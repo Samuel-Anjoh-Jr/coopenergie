@@ -48,6 +48,10 @@ function isPrivateIpv4(address) {
 }
 
 function getPreferredLanAddress() {
+  if (process.env.MOBILE_LAN_IP && process.env.MOBILE_LAN_IP.trim()) {
+    return process.env.MOBILE_LAN_IP.trim();
+  }
+
   const interfaces = os.networkInterfaces();
   const candidates = [];
 
@@ -61,15 +65,19 @@ function getPreferredLanAddress() {
       let score = 0;
 
       if (lowered.includes("wi-fi") || lowered.includes("wireless") || lowered.includes("wlan")) {
-        score += 4;
+        score += 50;
       }
 
       if (lowered === "ethernet" || lowered.includes("ethernet")) {
-        score += 3;
+        score += 30;
       }
 
-      if (lowered.includes("vmware") || lowered.includes("virtual") || lowered.includes("vethernet") || lowered.includes("wsl")) {
-        score -= 5;
+      if (/^192\.168\.\d+\.\d+$/.test(address.address)) {
+        score += 5;
+      }
+
+      if (lowered.includes("vmware") || lowered.includes("virtual") || lowered.includes("vethernet") || lowered.includes("wsl") || lowered.includes("hyper-v")) {
+        score -= 100;
       }
 
       candidates.push({ address: address.address, score });
@@ -78,6 +86,14 @@ function getPreferredLanAddress() {
 
   candidates.sort((left, right) => right.score - left.score);
   return candidates[0]?.address;
+}
+
+function rewriteLoopbackUrl(value, host) {
+  if (!value || !host) {
+    return value;
+  }
+
+  return value.replace(/(https?|wss?):\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/i, `$1://${host}`);
 }
 
 async function pickExpoPort(startPort = 8081, maxAttempts = 20) {
@@ -97,9 +113,22 @@ function run(extraArgs, expoPort) {
     const env = { ...process.env };
     const preferredHost = process.env.REACT_NATIVE_PACKAGER_HOSTNAME || getPreferredLanAddress();
 
+    if (!env.EXPO_NO_METRO_WORKSPACE_ROOT) {
+      env.EXPO_NO_METRO_WORKSPACE_ROOT = "1";
+    }
+
     if (preferredHost) {
       env.REACT_NATIVE_PACKAGER_HOSTNAME = preferredHost;
       env.EXPO_PACKAGER_PROXY_URL = `http://${preferredHost}:${expoPort}`;
+      env.EXPO_PUBLIC_API_URL = rewriteLoopbackUrl(env.EXPO_PUBLIC_API_URL, preferredHost);
+      env.EXPO_PUBLIC_GRAPHQL_URL = rewriteLoopbackUrl(
+        env.EXPO_PUBLIC_GRAPHQL_URL,
+        preferredHost,
+      );
+      env.EXPO_PUBLIC_GRAPHQL_WS_URL = rewriteLoopbackUrl(
+        env.EXPO_PUBLIC_GRAPHQL_WS_URL,
+        preferredHost,
+      );
     }
 
     const child = spawn(

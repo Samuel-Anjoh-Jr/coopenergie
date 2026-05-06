@@ -15,6 +15,7 @@ import { getPostLoginPath, login } from "@/lib/auth";
 import { invitationTokenStorage } from "@/lib/storage";
 import { useMobileTranslations } from "@/lib/translations";
 import PressableScale from "@/components/pressable-scale";
+import BackendPreflightBanner from "@/components/backend-preflight-banner";
 import { ScreenReveal } from "@/components/screen-reveal";
 
 export default function RegisterScreen() {
@@ -59,6 +60,8 @@ export default function RegisterScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
+        <BackendPreflightBanner />
+
         <View className="mb-3 flex-row items-center gap-3">
           <Image
             source={require("../../assets/logo-full.png")}
@@ -133,7 +136,7 @@ export default function RegisterScreen() {
         <Link href="/(auth)/vendor-register" asChild>
           <PressableScale className="mt-3 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
-              Vous etes fournisseur de panneaux solaires ? Inscrivez-vous ici
+              {t("auth.vendorSignupPrompt")}
             </Text>
           </PressableScale>
         </Link>

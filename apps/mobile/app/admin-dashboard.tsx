@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -69,9 +70,14 @@ function formatDate(value: string) {
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { t } = useMobileTranslations();
-  const user = getUser();
+  const isFocused = useIsFocused();
+  const user = useMemo(() => getUser(), []);
+  const isPlatformAdmin = Boolean(
+    user && (user.isPlatformAdmin || user.role === "PLATFORM_ADMIN"),
+  );
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [insights, setInsights] = useState<PaymentsInsights | null>(null);
   const [settings, setSettings] = useState<MonetisationSettings | null>(null);
@@ -138,8 +144,13 @@ export default function AdminDashboardScreen() {
     [t],
   );
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (reason: "initial" | "manual" | "save" | "auto") => {
+    if (reason === "initial") {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+
     try {
       const [insightsData, monetisationData] = await Promise.all([
         api.get<PaymentsInsights>("/admin/payments-insights"),
@@ -154,22 +165,41 @@ export default function AdminDashboardScreen() {
       setVendorYearlyFeeXAF(String(monetisationData.vendorYearlyFeeXAF ?? 0));
     } catch (error) {
       Alert.alert(
-        t("errors.error"),
-        error instanceof Error ? error.message : t("adminPayments.loadFailed"),
+        "Error",
+        error instanceof Error ? error.message : "Failed to load payments data.",
       );
     } finally {
-      setLoading(false);
+      if (reason === "initial") {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
-    if (!user || (!user.isPlatformAdmin && user.role !== "PLATFORM_ADMIN")) {
+    if (!isPlatformAdmin) {
       router.replace("/(dashboard)/dashboard");
       return;
     }
 
-    void loadData();
-  }, [loadData, router, user]);
+    void loadData("initial");
+  }, [isPlatformAdmin, loadData, router]);
+
+  useEffect(() => {
+    if (!isPlatformAdmin || !isFocused) {
+      return;
+    }
+
+    void loadData("auto");
+    const refreshInterval = setInterval(() => {
+      void loadData("auto");
+    }, 20000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [isFocused, isPlatformAdmin, loadData]);
 
   const hasChanges = useMemo(() => {
     if (!settings) {
@@ -219,7 +249,7 @@ export default function AdminDashboardScreen() {
       setSaving(true);
       await api.patch("/admin/monetisation", payload);
       Alert.alert(t("common.submit"), t("adminPayments.saved"));
-      await loadData();
+      await loadData("save");
     } catch (error) {
       Alert.alert(
         t("errors.error"),
@@ -230,7 +260,7 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  if (!user || (!user.isPlatformAdmin && user.role !== "PLATFORM_ADMIN")) {
+  if (!isPlatformAdmin) {
     return null;
   }
 
@@ -247,6 +277,17 @@ export default function AdminDashboardScreen() {
       <View className="rounded-2xl border border-[#DDEBDD] bg-white p-5">
         <Text className="text-2xl font-bold text-[#1B5E20]">{t("adminPayments.title")}</Text>
         <Text className="mt-2 text-slate-600">{t("adminPayments.subtitle")}</Text>
+        <PressableScale
+          onPress={() => {
+            void loadData("manual");
+          }}
+          disabled={refreshing || saving}
+          className="mt-4 self-start rounded-xl border border-[#1B5E20] px-4 py-2"
+        >
+          <Text className="font-medium text-[#1B5E20]">
+            {refreshing ? `${t("common.refresh")}...` : t("common.refresh")}
+          </Text>
+        </PressableScale>
       </View>
 
       <View className="flex-row flex-wrap gap-3">

@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, Text } from "react-native";
+import { Animated, Platform, Pressable, Text } from "react-native";
 
 import { usePushNotifications } from "@/lib/notifications/use-push-notifications";
 import { useMobileTranslations } from "@/lib/translations";
@@ -19,7 +19,7 @@ function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
   useEffect(() => {
     Animated.spring(scale, {
       toValue: focused ? 1.12 : 1,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
       speed: 18,
       bounciness: 7,
     }).start();

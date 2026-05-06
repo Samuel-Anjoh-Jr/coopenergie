@@ -22,6 +22,20 @@ type LoginResponse = {
 
 const AUTH_USER_KEY = "auth_user";
 
+const VENDOR_LOGIN_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) => {
+      const timeoutError = new Error(
+        `Vendor lookup timeout after ${timeoutMs}ms`,
+      );
+      setTimeout(() => reject(timeoutError), timeoutMs);
+    }),
+  ]);
+}
+
 export async function login(email: string, password: string) {
   const data = await api.post<LoginResponse>("/auth/login", {
     email,
@@ -37,16 +51,19 @@ export async function login(email: string, password: string) {
     | undefined;
 
   try {
-    const vendorLogin = await api.post<{
-      vendor?: {
-        id: string;
-        status: string;
-        paymentModel: "ONE_TIME" | "SUBSCRIPTION";
-      };
-    }>("/vendors/login", {
-      email,
-      password,
-    });
+    const vendorLogin = await withTimeout(
+      api.post<{
+        vendor?: {
+          id: string;
+          status: string;
+          paymentModel: "ONE_TIME" | "SUBSCRIPTION";
+        };
+      }>("/vendors/login", {
+        email,
+        password,
+      }),
+      VENDOR_LOGIN_TIMEOUT_MS,
+    );
 
     vendorInfo = {
       id: vendorLogin.vendor?.id,
@@ -61,7 +78,9 @@ export async function login(email: string, password: string) {
     ...data.user,
     role: vendorInfo?.id
       ? "VENDOR"
-      : data.isPlatformAdmin
+      : data.user.role
+        ? data.user.role
+        : data.isPlatformAdmin
         ? "PLATFORM_ADMIN"
         : "MEMBER",
     isPlatformAdmin: Boolean(data.isPlatformAdmin),

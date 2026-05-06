@@ -14,6 +14,7 @@ import { login } from "@/lib/auth";
 import { getPostLoginPath } from "@/lib/auth";
 import { useMobileTranslations } from "@/lib/translations";
 import PressableScale from "@/components/pressable-scale";
+import BackendPreflightBanner from "@/components/backend-preflight-banner";
 import { ScreenReveal } from "@/components/screen-reveal";
 
 export default function LoginScreen() {
@@ -22,16 +23,21 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function onSubmit() {
     try {
+      setSubmitError(null);
       setIsSubmitting(true);
       const result = await login(email.trim(), password);
       router.replace(getPostLoginPath(result.user));
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("errors.unknownError");
+      setSubmitError(message);
       Alert.alert(
         t("errors.loginFailed"),
-        error instanceof Error ? error.message : t("errors.unknownError"),
+        message,
       );
     } finally {
       setIsSubmitting(false);
@@ -41,6 +47,8 @@ export default function LoginScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
+        <BackendPreflightBanner />
+
         <View className="mb-3 flex-row items-center gap-3">
           <Image
             source={require("../../assets/logo-full.png")}
@@ -90,6 +98,10 @@ export default function LoginScreen() {
           )}
         </PressableScale>
 
+        {submitError ? (
+          <Text className="mt-3 text-sm text-[#B42318]">{submitError}</Text>
+        ) : null}
+
         <Link href="/(auth)/register" asChild>
           <PressableScale className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
@@ -101,7 +113,7 @@ export default function LoginScreen() {
         <Link href="/(auth)/vendor-register" asChild>
           <PressableScale className="mt-3 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
             <Text className="text-[#1B5E20] font-medium">
-              Inscription fournisseur solaire
+              {t("auth.vendorSignupCta")}
             </Text>
           </PressableScale>
         </Link>

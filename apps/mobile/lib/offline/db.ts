@@ -1,9 +1,22 @@
 import * as SQLite from "expo-sqlite";
+import { Platform } from "react-native";
 
 const DATABASE_NAME = "coopenergie.db";
+const IS_WEB = Platform.OS === "web";
 
 type CacheRow = {
   data: string;
+};
+
+type WebCacheEntry = {
+  data: string;
+  cachedAt: number;
+};
+
+const webCache: Record<"contributions" | "proposals" | "ledger_events", Map<string, Map<string, WebCacheEntry>>> = {
+  contributions: new Map(),
+  proposals: new Map(),
+  ledger_events: new Map(),
 };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -19,6 +32,11 @@ async function getDb() {
 
 export async function createTables() {
   if (initialized) {
+    return;
+  }
+
+  if (IS_WEB) {
+    initialized = true;
     return;
   }
 
@@ -56,8 +74,24 @@ async function saveItems(
   items: Array<{ id: string } & Record<string, unknown>>,
 ) {
   await createTables();
-  const db = await getDb();
   const now = Date.now();
+
+  if (IS_WEB) {
+    const tableCache = webCache[tableName];
+    const cooperativeCache = tableCache.get(cooperativeId) ?? new Map<string, WebCacheEntry>();
+
+    for (const item of items) {
+      cooperativeCache.set(item.id, {
+        data: JSON.stringify(item),
+        cachedAt: now,
+      });
+    }
+
+    tableCache.set(cooperativeId, cooperativeCache);
+    return;
+  }
+
+  const db = await getDb();
 
   for (const item of items) {
     await db.runAsync(
@@ -75,6 +109,23 @@ async function getItems<T>(
   cooperativeId: string,
 ): Promise<T[]> {
   await createTables();
+
+  if (IS_WEB) {
+    const entries = Array.from(
+      (webCache[tableName].get(cooperativeId) ?? new Map<string, WebCacheEntry>()).values(),
+    ).sort((left, right) => right.cachedAt - left.cachedAt);
+
+    return entries
+      .map((entry) => {
+        try {
+          return JSON.parse(entry.data) as T;
+        } catch {
+          return null;
+        }
+      })
+      .filter((row): row is T => row !== null);
+  }
+
   const db = await getDb();
 
   const rows = await db.getAllAsync<CacheRow>(

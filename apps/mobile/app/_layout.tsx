@@ -4,7 +4,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ApolloProvider } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, ImageSourcePropType, View } from "react-native";
+import {
+  Animated,
+  Easing,
+  ImageSourcePropType,
+  Platform,
+  View,
+} from "react-native";
 
 import { apolloClient } from "@/lib/apollo";
 import { useNetworkStatus } from "@/lib/offline/network-monitor";
@@ -45,6 +51,8 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    const canUseNativeDriver = Platform.OS !== "web";
+
     const logoAnimation = Animated.loop(
       Animated.sequence([
         Animated.parallel([
@@ -52,13 +60,13 @@ export default function RootLayout() {
             toValue: 1,
             duration: 700,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: canUseNativeDriver,
           }),
           Animated.timing(logoOpacity, {
             toValue: 1,
             duration: 700,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: canUseNativeDriver,
           }),
         ]),
         Animated.parallel([
@@ -66,13 +74,13 @@ export default function RootLayout() {
             toValue: 0.96,
             duration: 700,
             easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: canUseNativeDriver,
           }),
           Animated.timing(logoOpacity, {
             toValue: 0.84,
             duration: 700,
             easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: canUseNativeDriver,
           }),
         ]),
       ]),
