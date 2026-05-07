@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Eye } from "lucide-react";
 
 import { API_URL } from "@/lib/config";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export default function VendorSignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPasswordPreview, setShowPasswordPreview] = useState(false);
   const [businessName, setBusinessName] = useState("");
   const [description, setDescription] = useState("");
   const [city, setCity] = useState("");
@@ -119,23 +121,26 @@ export default function VendorSignupPage() {
     setIsSubmitting(true);
 
     try {
-      const registrationResponse = await fetch(`${API_URL}/api/v1/vendors/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const registrationResponse = await fetch(
+        `${API_URL}/api/v1/vendors/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim(),
+            password,
+            businessName: businessName.trim(),
+            description: description.trim(),
+            city: city.trim(),
+            country: "CM",
+            whatsappNumber: whatsappNumber.trim() || undefined,
+            contactEmail: email.trim(),
+          }),
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-          businessName: businessName.trim(),
-          description: description.trim(),
-          city: city.trim(),
-          country: "CM",
-          whatsappNumber: whatsappNumber.trim() || undefined,
-          contactEmail: email.trim(),
-        }),
-      });
+      );
 
       const registrationData = (await registrationResponse.json()) as
         | VendorRegisterResponse
@@ -193,6 +198,7 @@ export default function VendorSignupPage() {
       }
 
       setFeeXaf(feeFromSettings);
+      setPaymentPhone((current) => current || whatsappNumber.trim());
       setShowPaymentModal(true);
       toast.info(t("vendorSignup.feedback.completePaymentPrompt"));
     } catch {
@@ -216,23 +222,29 @@ export default function VendorSignupPage() {
     try {
       setIsPaying(true);
 
-      const paymentResponse = await fetch(`${API_URL}/api/v1/vendors/payment/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+      const paymentResponse = await fetch(
+        `${API_URL}/api/v1/vendors/payment/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            phoneNumber: paymentPhone.trim(),
+          }),
         },
-        body: JSON.stringify({
-          phoneNumber: paymentPhone.trim(),
-        }),
-      });
+      );
 
       const paymentData = (await paymentResponse.json()) as {
         message?: string;
       };
 
       if (!paymentResponse.ok) {
-        toast.error(paymentData.message || t("vendorSignup.feedback.paymentNotInitialized"));
+        toast.error(
+          paymentData.message ||
+            t("vendorSignup.feedback.paymentNotInitialized"),
+        );
         return;
       }
 
@@ -256,7 +268,8 @@ export default function VendorSignupPage() {
               {t("vendorSignup.subtitle")}
             </p>
             <p className="text-sm text-muted-foreground">
-              {t("vendorSignup.activationFeeLabel")} {loadingFee ? t("vendorSignup.loadingFee") : formatXaf(feeXaf)}
+              {t("vendorSignup.activationFeeLabel")}{" "}
+              {loadingFee ? t("vendorSignup.loadingFee") : formatXaf(feeXaf)}
             </p>
             <Button
               type="button"
@@ -282,13 +295,41 @@ export default function VendorSignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              <Input
-                placeholder={t("vendorSignup.fields.password")}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  placeholder={t("vendorSignup.fields.password")}
+                  type={showPasswordPreview ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label="Hold to preview password"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onMouseDown={() => setShowPasswordPreview(true)}
+                  onMouseUp={() => setShowPasswordPreview(false)}
+                  onMouseLeave={() => setShowPasswordPreview(false)}
+                  onTouchStart={() => setShowPasswordPreview(true)}
+                  onTouchEnd={() => setShowPasswordPreview(false)}
+                  onTouchCancel={() => setShowPasswordPreview(false)}
+                  onKeyDown={(event) => {
+                    if (event.key === " " || event.key === "Enter") {
+                      event.preventDefault();
+                      setShowPasswordPreview(true);
+                    }
+                  }}
+                  onKeyUp={(event) => {
+                    if (event.key === " " || event.key === "Enter") {
+                      setShowPasswordPreview(false);
+                    }
+                  }}
+                  onBlur={() => setShowPasswordPreview(false)}
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+              </div>
               <Input
                 placeholder={t("vendorSignup.fields.businessName")}
                 value={businessName}
@@ -323,7 +364,10 @@ export default function VendorSignupPage() {
                 />
                 <span>
                   {t("vendorSignup.acceptTermsPrefix")}{" "}
-                  <Link href={`/${locale}/vendor-terms`} className="text-primary underline">
+                  <Link
+                    href={`/${locale}/vendor-terms`}
+                    className="text-primary underline"
+                  >
                     {t("vendorSignup.termsLink")}
                   </Link>
                   .
@@ -331,7 +375,9 @@ export default function VendorSignupPage() {
               </label>
 
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? t("vendorSignup.submitting") : t("vendorSignup.submit")}
+                {isSubmitting
+                  ? t("vendorSignup.submitting")
+                  : t("vendorSignup.submit")}
               </Button>
             </form>
           </CardContent>
@@ -372,7 +418,9 @@ export default function VendorSignupPage() {
                   onClick={() => void handlePayment()}
                   disabled={isPaying}
                 >
-                  {isPaying ? t("vendorSignup.paymentModal.initializing") : t("vendorSignup.paymentModal.payNow")}
+                  {isPaying
+                    ? t("vendorSignup.paymentModal.initializing")
+                    : t("vendorSignup.paymentModal.payNow")}
                 </Button>
               </div>
             </CardContent>

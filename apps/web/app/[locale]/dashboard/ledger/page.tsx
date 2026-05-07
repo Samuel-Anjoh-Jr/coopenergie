@@ -117,6 +117,47 @@ function getEventColor(type: string) {
   return "text-muted-foreground bg-muted";
 }
 
+function getActorAddress(
+  type: string,
+  payload: Record<string, unknown>,
+): string | null {
+  const lowered = type.toUpperCase();
+
+  if (lowered === "CONTRIBUTION") {
+    return (payload.member as string) || null;
+  }
+
+  if (lowered === "VOTE") {
+    return (payload.voter as string) || null;
+  }
+
+  if (lowered === "PROPOSAL") {
+    return (payload.creator as string) || null;
+  }
+
+  if (lowered === "PAYMENT") {
+    return (payload.recipient as string) || null;
+  }
+
+  return null;
+}
+
+function getActorLabel(
+  type: string,
+  payload: Record<string, unknown>,
+): string | null {
+  const performerName =
+    typeof payload.performerName === "string" && payload.performerName.trim()
+      ? payload.performerName.trim()
+      : null;
+
+  if (performerName) {
+    return performerName;
+  }
+
+  return getActorAddress(type, payload);
+}
+
 function getPayloadSummary(
   type: string,
   payload: Record<string, unknown>,
@@ -124,22 +165,20 @@ function getPayloadSummary(
   if (!payload) return "-";
 
   const lowered = type.toUpperCase();
-  const performerName = payload.performerName as string | null | undefined;
-  const byLine = performerName ? ` · by ${performerName}` : "";
 
   if (lowered === "CONTRIBUTION") {
     const amount = payload.amountXAF ?? 0;
-    return `${(amount as number).toLocaleString()} FCFA${byLine}`;
+    return `${(amount as number).toLocaleString()} FCFA`;
   }
 
   if (lowered === "VOTE") {
     const choice = payload.choice === true ? "YES" : "NO";
-    return `Vote: ${choice}${byLine}`;
+    return `Vote: ${choice}`;
   }
 
   if (lowered === "PROPOSAL") {
     const title = payload.title ?? "Proposal";
-    return `${String(title).substring(0, 50)}${byLine}`;
+    return String(title).substring(0, 50);
   }
 
   return JSON.stringify(payload).substring(0, 50);
@@ -666,6 +705,14 @@ export default function LedgerPage() {
                       const txUrl = event.celoScanUrl
                         ? withCeloScanLogsTab(event.celoScanUrl)
                         : celoScanTx(event.txHash);
+                      const actorLabel = getActorLabel(
+                        event.type,
+                        event.payload,
+                      );
+                      const actorAddress = getActorAddress(
+                        event.type,
+                        event.payload,
+                      );
                       const summary = getPayloadSummary(
                         event.type,
                         event.payload,
@@ -724,6 +771,21 @@ export default function LedgerPage() {
                                     </TooltipContent>
                                   </Tooltip>
                                 </div>
+
+                                {actorLabel ? (
+                                  <div className="text-sm text-foreground font-medium">
+                                    {normalizedLocale === "fr"
+                                      ? "Acteur"
+                                      : "Actor"}
+                                    : {actorLabel}
+                                    {actorAddress &&
+                                    actorAddress !== actorLabel ? (
+                                      <span className="ml-2 font-mono text-xs text-muted-foreground">
+                                        {truncateHash(actorAddress)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
 
                                 <p className="text-sm md:text-base text-muted-foreground">
                                   {summary}

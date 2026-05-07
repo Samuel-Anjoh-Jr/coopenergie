@@ -58,6 +58,10 @@ type InitiatePaymentResponse = {
   message: string;
 };
 
+type MeResponse = {
+  withdrawalPhone?: string | null;
+};
+
 const MIN_CONTRIBUTION_XAF = 25;
 
 function formatXaf(amount: number): string {
@@ -117,6 +121,8 @@ export default function ContributionsPage() {
   } = useQuery(GET_CONTRIBUTIONS, {
     variables: { cooperativeId },
     skip: !cooperativeId,
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
   const isInitialContributionsLoading =
@@ -136,6 +142,30 @@ export default function ContributionsPage() {
       throttledContributionsRefetch.cancel();
     };
   }, [throttledContributionsRefetch]);
+
+  useEffect(() => {
+    let active = true;
+
+    void restClient
+      .get<MeResponse>("/users/me")
+      .then((me) => {
+        if (!active) {
+          return;
+        }
+
+        const storedPhone = me.withdrawalPhone || "";
+        if (storedPhone) {
+          setPhoneNumber((current) => current || storedPhone);
+        }
+      })
+      .catch(() => {
+        // Ignore profile prefill failures to keep contributions UX uninterrupted.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!cooperativeId) {
@@ -217,7 +247,6 @@ export default function ContributionsPage() {
       );
 
       setAmount("");
-      setPhoneNumber("");
       setIsOpen(false);
 
       const query = new URLSearchParams({

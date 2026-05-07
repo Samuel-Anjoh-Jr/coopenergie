@@ -334,6 +334,7 @@ export class ProposalsService {
                 creator:
                   createdProposal.creator?.celoAddress ??
                   createdProposal.creatorId,
+                performerName: createdProposal.creator?.name ?? null,
                 proposalId: createdProposal.id,
               },
               blockNumber: createdProposal.blockNumber ?? 0,
@@ -346,6 +347,7 @@ export class ProposalsService {
                 creator:
                   createdProposal.creator?.celoAddress ??
                   createdProposal.creatorId,
+                performerName: createdProposal.creator?.name ?? null,
                 proposalId: createdProposal.id,
               },
               txHash: createdProposal.txHash,
@@ -420,6 +422,7 @@ export class ProposalsService {
             title: createdProposal.title,
             creator:
               createdProposal.creator?.celoAddress ?? createdProposal.creatorId,
+            performerName: createdProposal.creator?.name ?? null,
             proposalId: createdProposal.id,
           },
           blockNumber: createdProposal.blockNumber ?? 0,
@@ -431,6 +434,7 @@ export class ProposalsService {
             title: createdProposal.title,
             creator:
               createdProposal.creator?.celoAddress ?? createdProposal.creatorId,
+            performerName: createdProposal.creator?.name ?? null,
             proposalId: createdProposal.id,
           },
           txHash: createdProposal.txHash,

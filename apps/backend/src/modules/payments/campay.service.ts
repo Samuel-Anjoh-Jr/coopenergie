@@ -15,11 +15,31 @@ type CampayCollectResponse = {
   [key: string]: unknown;
 };
 
+type SandboxFinalStatus = "SUCCESSFUL" | "FAILED";
+
+type SandboxPaymentState = {
+  finalStatus: SandboxFinalStatus;
+  statusChecks: number;
+};
+
 const CAMPAY_REQUEST_TIMEOUT_MS = 12000;
 const CAMPAY_MAX_ATTEMPTS = 3;
+const CAMPAY_CAMEROON_PREFIX = "237";
+
+const CAMPAY_SANDBOX_TEST_NUMBERS: Record<string, SandboxFinalStatus> = {
+  "237677777777": "SUCCESSFUL",
+  "237677777770": "FAILED",
+  "237699999999": "SUCCESSFUL",
+  "237699999990": "FAILED",
+};
 
 @Injectable()
 export class CampayService {
+  private readonly sandboxPaymentStates = new Map<
+    string,
+    SandboxPaymentState
+  >();
+
   async getHealthStatus() {
     const apiKey = this.getApiKey();
     const baseUrl = this.getBaseUrl();
@@ -105,6 +125,14 @@ export class CampayService {
       external_reference: externalRef,
     };
 
+    const sandboxCollectResponse = this.tryHandleSandboxCollect(
+      from,
+      externalRef,
+    );
+    if (sandboxCollectResponse) {
+      return sandboxCollectResponse;
+    }
+
     return this.request<CampayCollectResponse>("/collect/", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -112,9 +140,94 @@ export class CampayService {
   }
 
   async checkStatus(reference: string) {
+    const sandboxStatusResponse = this.tryHandleSandboxStatus(reference);
+    if (sandboxStatusResponse) {
+      return sandboxStatusResponse;
+    }
+
     return this.request<Record<string, unknown>>(`/transaction/${reference}/`, {
       method: "GET",
     });
+  }
+
+  private tryHandleSandboxCollect(from: string, externalRef: string) {
+    if (!this.shouldUseSandboxSimulation(externalRef)) {
+      return null;
+    }
+
+    const normalizedPhone = this.normalizeCameroonPhone(from);
+    if (!normalizedPhone) {
+      return null;
+    }
+
+    const finalStatus = CAMPAY_SANDBOX_TEST_NUMBERS[normalizedPhone];
+    if (!finalStatus) {
+      return null;
+    }
+
+    this.sandboxPaymentStates.set(externalRef, {
+      finalStatus,
+      statusChecks: 0,
+    });
+
+    return {
+      status: "PENDING",
+      reference: externalRef,
+      external_reference: externalRef,
+      message: "Sandbox test payment accepted.",
+    } satisfies CampayCollectResponse;
+  }
+
+  private tryHandleSandboxStatus(reference: string) {
+    if (!this.isSandboxMode()) {
+      return null;
+    }
+
+    const state = this.sandboxPaymentStates.get(reference);
+    if (!state) {
+      return null;
+    }
+
+    if (state.statusChecks === 0) {
+      state.statusChecks += 1;
+      return {
+        reference,
+        external_reference: reference,
+        status: "PENDING",
+      };
+    }
+
+    this.sandboxPaymentStates.delete(reference);
+    return {
+      reference,
+      external_reference: reference,
+      status: state.finalStatus,
+    };
+  }
+
+  private shouldUseSandboxSimulation(externalRef: string) {
+    return this.isSandboxMode() && externalRef.startsWith("COOP-");
+  }
+
+  private isSandboxMode() {
+    return this.resolveMode(this.getBaseUrl()) === "sandbox";
+  }
+
+  private normalizeCameroonPhone(value: string) {
+    const digits = value.replace(/\D+/g, "");
+    if (!digits) {
+      return null;
+    }
+
+    if (digits.startsWith(CAMPAY_CAMEROON_PREFIX) && digits.length === 12) {
+      return digits;
+    }
+
+    if (digits.length === 9) {
+      return `${CAMPAY_CAMEROON_PREFIX}${digits}`;
+    }
+
+    return null;
   }
 
   verifyWebhookSignature(payload: string, signature: string) {

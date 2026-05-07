@@ -1,13 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
-import {
-  Prisma,
-  VendorAccountStatus,
-} from "@prisma/client";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma, VendorAccountStatus } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
+import { S3Service } from "../../common/services/s3.service";
 import { GetActiveVendorsQueryDto } from "./dto/get-active-vendors-query.dto";
 import { UpdateVendorContactDto } from "./dto/update-vendor-contact.dto";
 import { UpdateVendorProfileDto } from "./dto/update-vendor-profile.dto";
@@ -16,7 +11,7 @@ type VendorListItem = Prisma.VendorGetPayload<{
   include: {
     products: {
       include: {
-        images: true,
+        images: true;
       };
     };
   };
@@ -24,7 +19,10 @@ type VendorListItem = Prisma.VendorGetPayload<{
 
 @Injectable()
 export class VendorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3Service: S3Service,
+  ) {}
 
   async getPublicProfile(vendorIdOrSlug: string) {
     const vendor = await this.prisma.vendor.findFirst({
@@ -48,7 +46,7 @@ export class VendorsService {
       throw new NotFoundException("Vendor not found.");
     }
 
-    return vendor;
+    return this.resolveVendorMediaUrls(vendor);
   }
 
   async getActiveVendors(filters: GetActiveVendorsQueryDto = {}) {
@@ -75,7 +73,10 @@ export class VendorsService {
       where.city = { contains: filters.city, mode: "insensitive" };
     }
 
-    if (typeof filters.minRating === "number" && !Number.isNaN(filters.minRating)) {
+    if (
+      typeof filters.minRating === "number" &&
+      !Number.isNaN(filters.minRating)
+    ) {
       where.avgRating = { gte: filters.minRating };
     }
 
@@ -112,7 +113,10 @@ export class VendorsService {
       orderBy: this.getOrderBy(filters.sortBy),
     });
 
-    return this.sortVendors(vendors, filters.sortBy);
+    const sorted = this.sortVendors(vendors, filters.sortBy);
+    return Promise.all(
+      sorted.map((vendor) => this.resolveVendorMediaUrls(vendor)),
+    );
   }
 
   async updateProfile(vendorId: string, dto: UpdateVendorProfileDto) {
@@ -158,10 +162,12 @@ export class VendorsService {
       throw new NotFoundException("Vendor not found.");
     }
 
-    return this.prisma.vendor.update({
+    const updated = await this.prisma.vendor.update({
       where: { id: vendorId },
       data: { logoUrl },
     });
+
+    return this.resolveVendorMediaUrls(updated);
   }
 
   async updateCover(vendorId: string, coverImageUrl: string) {
@@ -174,10 +180,12 @@ export class VendorsService {
       throw new NotFoundException("Vendor not found.");
     }
 
-    return this.prisma.vendor.update({
+    const updated = await this.prisma.vendor.update({
       where: { id: vendorId },
       data: { coverImageUrl },
     });
+
+    return this.resolveVendorMediaUrls(updated);
   }
 
   async getVendorMediaUrls(vendorId: string) {
@@ -190,7 +198,49 @@ export class VendorsService {
       throw new NotFoundException("Vendor not found.");
     }
 
-    return vendor;
+    return this.resolveVendorMediaUrls(vendor);
+  }
+
+  private async resolveVendorMediaUrls<
+    T extends {
+      logoUrl?: string | null;
+      coverImageUrl?: string | null;
+      products?: Array<{
+        images?: Array<{
+          url: string;
+        }>;
+      }>;
+    },
+  >(vendor: T) {
+    const logoUrl = vendor.logoUrl
+      ? await this.s3Service.getAccessibleUrl(vendor.logoUrl)
+      : vendor.logoUrl;
+    const coverImageUrl = vendor.coverImageUrl
+      ? await this.s3Service.getAccessibleUrl(vendor.coverImageUrl)
+      : vendor.coverImageUrl;
+
+    const products = vendor.products
+      ? await Promise.all(
+          vendor.products.map(async (product) => ({
+            ...product,
+            images: product.images
+              ? await Promise.all(
+                  product.images.map(async (image) => ({
+                    ...image,
+                    url: await this.s3Service.getAccessibleUrl(image.url),
+                  })),
+                )
+              : product.images,
+          })),
+        )
+      : vendor.products;
+
+    return {
+      ...vendor,
+      logoUrl,
+      coverImageUrl,
+      products,
+    };
   }
 
   async getDashboardStats(vendorId: string) {
@@ -259,7 +309,9 @@ export class VendorsService {
     }
   }
 
-  private getOrderBy(sortBy?: GetActiveVendorsQueryDto["sortBy"]):
+  private getOrderBy(
+    sortBy?: GetActiveVendorsQueryDto["sortBy"],
+  ):
     | Prisma.VendorOrderByWithRelationInput
     | Prisma.VendorOrderByWithRelationInput[] {
     switch (sortBy) {
@@ -305,8 +357,6 @@ export class VendorsService {
       return sortBy === "price_asc" ? Number.MAX_SAFE_INTEGER : 0;
     }
 
-    return sortBy === "price_asc"
-      ? Math.min(...prices)
-      : Math.max(...prices);
+    return sortBy === "price_asc" ? Math.min(...prices) : Math.max(...prices);
   }
 }

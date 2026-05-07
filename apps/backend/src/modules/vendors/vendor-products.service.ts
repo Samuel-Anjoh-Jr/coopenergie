@@ -46,7 +46,7 @@ export class VendorProductsService {
       });
     }
 
-    return this.prisma.vendorProduct.findUnique({
+    const createdProduct = await this.prisma.vendorProduct.findUnique({
       where: { id: product.id },
       include: {
         images: {
@@ -54,6 +54,8 @@ export class VendorProductsService {
         },
       },
     });
+
+    return this.resolveProductImageUrls(createdProduct);
   }
 
   async updateProduct(
@@ -110,7 +112,7 @@ export class VendorProductsService {
       });
     }
 
-    return this.prisma.vendorProduct.findUnique({
+    const updatedProduct = await this.prisma.vendorProduct.findUnique({
       where: { id: productId },
       include: {
         images: {
@@ -118,6 +120,8 @@ export class VendorProductsService {
         },
       },
     });
+
+    return this.resolveProductImageUrls(updatedProduct);
   }
 
   async deleteProduct(vendorId: string, productId: string) {
@@ -134,9 +138,15 @@ export class VendorProductsService {
     return { success: true };
   }
 
-  async deleteProductImage(vendorId: string, productId: string, imageId: string) {
+  async deleteProductImage(
+    vendorId: string,
+    productId: string,
+    imageId: string,
+  ) {
     const product = await this.ensureProductOwnership(vendorId, productId);
-    const image = product.images.find((productImage) => productImage.id === imageId);
+    const image = product.images.find(
+      (productImage) => productImage.id === imageId,
+    );
 
     if (!image) {
       throw new NotFoundException("Product image not found.");
@@ -162,7 +172,9 @@ export class VendorProductsService {
     });
 
     if (products.length !== orderedIds.length) {
-      throw new ForbiddenException("One or more products do not belong to this vendor.");
+      throw new ForbiddenException(
+        "One or more products do not belong to this vendor.",
+      );
     }
 
     await this.prisma.$transaction(
@@ -180,7 +192,7 @@ export class VendorProductsService {
   async getProductsByVendor(vendorId: string, publicOnly = false) {
     await this.ensureVendorOwnership(vendorId);
 
-    return this.prisma.vendorProduct.findMany({
+    const products = await this.prisma.vendorProduct.findMany({
       where: {
         vendorId,
         ...(publicOnly ? { inStock: true } : {}),
@@ -192,6 +204,30 @@ export class VendorProductsService {
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
+
+    return Promise.all(
+      products.map((product) => this.resolveProductImageUrls(product)),
+    );
+  }
+
+  private async resolveProductImageUrls<
+    T extends { images: Array<{ url: string }> },
+  >(product: T | null) {
+    if (!product) {
+      return product;
+    }
+
+    const resolvedImages = await Promise.all(
+      product.images.map(async (image) => ({
+        ...image,
+        url: await this.s3Service.getAccessibleUrl(image.url),
+      })),
+    );
+
+    return {
+      ...product,
+      images: resolvedImages,
+    };
   }
 
   private async ensureVendorOwnership(vendorId: string) {

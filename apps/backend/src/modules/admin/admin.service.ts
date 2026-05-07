@@ -547,73 +547,76 @@ export class AdminService {
   }
 
   async getPaymentsInsights() {
-    const [withdrawalFeesAggregate, withdrawalItems, vendorItems, activeVendorSubscriptions] =
-      await Promise.all([
-        this.prisma.withdrawalRequest.aggregate({
-          where: {
-            status: WithdrawalStatus.DISBURSED,
+    const [
+      withdrawalFeesAggregate,
+      withdrawalItems,
+      vendorItems,
+      activeVendorSubscriptions,
+    ] = await Promise.all([
+      this.prisma.withdrawalRequest.aggregate({
+        where: {
+          status: WithdrawalStatus.DISBURSED,
+        },
+        _sum: {
+          platformFeeXAF: true,
+        },
+      }),
+      this.prisma.withdrawalRequest.findMany({
+        where: {
+          platformFeeXAF: {
+            gt: 0,
           },
-          _sum: {
-            platformFeeXAF: true,
-          },
-        }),
-        this.prisma.withdrawalRequest.findMany({
-          where: {
-            platformFeeXAF: {
-              gt: 0,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 25,
+        select: {
+          id: true,
+          amountXAF: true,
+          platformFeeXAF: true,
+          status: true,
+          destinationType: true,
+          recipientName: true,
+          createdAt: true,
+          disbursedAt: true,
+          cooperative: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
             },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 25,
-          select: {
-            id: true,
-            amountXAF: true,
-            platformFeeXAF: true,
-            status: true,
-            destinationType: true,
-            recipientName: true,
-            createdAt: true,
-            disbursedAt: true,
-            cooperative: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
+        },
+      }),
+      this.prisma.vendorSubscriptionRecord.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          billingCycle: true,
+          priceXAF: true,
+          status: true,
+          campayReference: true,
+          createdAt: true,
+          startedAt: true,
+          expiresAt: true,
+          vendor: {
+            select: {
+              id: true,
+              businessName: true,
+              slug: true,
             },
           },
-        }),
-        this.prisma.vendorSubscriptionRecord.findMany({
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 25,
-          select: {
-            id: true,
-            billingCycle: true,
-            priceXAF: true,
-            status: true,
-            campayReference: true,
-            createdAt: true,
-            startedAt: true,
-            expiresAt: true,
-            vendor: {
-              select: {
-                id: true,
-                businessName: true,
-                slug: true,
-              },
-            },
-          },
-        }),
-        this.prisma.vendorSubscriptionRecord.count({
-          where: {
-            status: VendorSubscriptionStatus.ACTIVE,
-          },
-        }),
-      ]);
+        },
+      }),
+      this.prisma.vendorSubscriptionRecord.count({
+        where: {
+          status: VendorSubscriptionStatus.ACTIVE,
+        },
+      }),
+    ]);
 
     const vendorPaymentsCollectedXAF = vendorItems.reduce(
       (sum, item) => sum + item.priceXAF,
@@ -626,7 +629,8 @@ export class AdminService {
       overview: {
         withdrawalFeesDisbursedXAF,
         vendorPaymentsCollectedXAF,
-        totalRevenueXAF: withdrawalFeesDisbursedXAF + vendorPaymentsCollectedXAF,
+        totalRevenueXAF:
+          withdrawalFeesDisbursedXAF + vendorPaymentsCollectedXAF,
         activeVendorSubscriptions,
       },
       withdrawalFees: withdrawalItems,

@@ -41,20 +41,25 @@ export class LedgerService {
       skip: options.offset ?? 0,
     });
 
-    // Collect all wallet addresses to resolve performer names in one query
-    const walletAddresses = events
+    const actorIdentifiers = events
       .map((e) => extractWalletAddress(e.payload as EventPayload, e.type))
-      .filter((addr): addr is string => !!addr);
+      .filter((identifier): identifier is string => !!identifier);
 
-    const walletToName = new Map<string, string>();
-    if (walletAddresses.length > 0) {
+    const actorToName = new Map<string, string>();
+    if (actorIdentifiers.length > 0) {
       const users = await this.prisma.user.findMany({
-        where: { celoAddress: { in: walletAddresses } },
-        select: { celoAddress: true, name: true },
+        where: {
+          OR: [
+            { celoAddress: { in: actorIdentifiers } },
+            { id: { in: actorIdentifiers } },
+          ],
+        },
+        select: { id: true, celoAddress: true, name: true },
       });
       for (const user of users) {
+        actorToName.set(user.id, user.name);
         if (user.celoAddress) {
-          walletToName.set(user.celoAddress.toLowerCase(), user.name);
+          actorToName.set(user.celoAddress.toLowerCase(), user.name);
         }
       }
     }
@@ -62,9 +67,18 @@ export class LedgerService {
     return events.map((event) => {
       const payload = event.payload as EventPayload;
       const walletAddr = extractWalletAddress(payload, event.type);
-      const performerName = walletAddr
-        ? (walletToName.get(walletAddr.toLowerCase()) ?? null)
-        : null;
+      const performerNameFromPayload =
+        typeof payload.performerName === "string" &&
+        payload.performerName.trim()
+          ? payload.performerName.trim()
+          : null;
+      const performerName =
+        performerNameFromPayload ??
+        (walletAddr
+          ? (actorToName.get(walletAddr) ??
+            actorToName.get(walletAddr.toLowerCase()) ??
+            null)
+          : null);
 
       return {
         ...event,

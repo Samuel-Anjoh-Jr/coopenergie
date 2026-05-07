@@ -47,7 +47,7 @@ export default function VendorDashboardOverviewPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">(
-    "MONTHLY",
+    "YEARLY",
   );
   const [paying, setPaying] = useState(false);
   const [fees, setFees] = useState({
@@ -75,6 +75,7 @@ export default function VendorDashboardOverviewPage() {
       setStats(statsData);
       setRecentReviews(reviewsData.slice(0, 4));
       setBusinessName(profile.businessName);
+      setPhoneNumber((current) => current || profile.whatsappNumber || "");
       setFees({
         oneTime: Number(monetisation.vendorOneTimeFeeXAF || 0),
         monthly: Number(monetisation.vendorMonthlyFeeXAF || 0),
@@ -121,6 +122,13 @@ export default function VendorDashboardOverviewPage() {
         ? fees.yearly
         : fees.monthly;
 
+  const openPaymentDialog = () => {
+    if (paymentModel === "SUBSCRIPTION") {
+      setBillingCycle("YEARLY");
+    }
+    setShowPaymentDialog(true);
+  };
+
   const handlePayment = async () => {
     if (!phoneNumber.trim()) {
       toast.error(t("vendorDashboard.feedback.phoneRequired"));
@@ -142,7 +150,6 @@ export default function VendorDashboardOverviewPage() {
 
       toast.success(t("vendorDashboard.feedback.paymentStarted"));
       setShowPaymentDialog(false);
-      setPhoneNumber("");
       setTimeout(() => {
         void loadData();
       }, 1500);
@@ -228,7 +235,7 @@ export default function VendorDashboardOverviewPage() {
                   {t("vendorDashboard.overview.amountLabel")}:{" "}
                   {formatXaf(paymentAmount, locale)}
                 </span>
-                <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
+                <Button size="sm" onClick={openPaymentDialog}>
                   {t("vendorDashboard.overview.payNow")}
                 </Button>
               </div>
@@ -313,6 +320,27 @@ export default function VendorDashboardOverviewPage() {
           </DialogHeader>
 
           <div className="space-y-3">
+            {paymentModel === "SUBSCRIPTION" ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={billingCycle === "MONTHLY" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setBillingCycle("MONTHLY")}
+                >
+                  {t("vendorDashboard.subscription.monthly")}
+                </Button>
+                <Button
+                  type="button"
+                  variant={billingCycle === "YEARLY" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setBillingCycle("YEARLY")}
+                >
+                  {t("vendorDashboard.subscription.yearly")}
+                </Button>
+              </div>
+            ) : null}
+
             <div className="rounded-md bg-muted p-3 text-sm">
               {t("vendorDashboard.overview.amountLabel")}:{" "}
               {formatXaf(paymentAmount, locale)}

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   fetchVendorMonetisationSnapshot,
+  fetchVendorProfile,
   fetchVendorSubscriptionHistory,
   formatDate,
   formatXaf,
@@ -30,7 +31,7 @@ export default function VendorSubscriptionPage() {
   const [fees, setFees] = useState({ monthly: 0, yearly: 0, oneTime: 0 });
   const [phoneNumber, setPhoneNumber] = useState("");
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">(
-    "MONTHLY",
+    "YEARLY",
   );
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -42,6 +43,12 @@ export default function VendorSubscriptionPage() {
         fetchVendorSubscriptionHistory(),
         fetchVendorMonetisationSnapshot(),
       ]);
+      const vendorId = session?.user?.vendor?.id;
+      if (vendorId) {
+        const profile = await fetchVendorProfile(vendorId);
+        setPhoneNumber((current) => current || profile.whatsappNumber || "");
+      }
+
       setHistory(historyData);
       setFees({
         monthly: Number(monetisation.vendorMonthlyFeeXAF || 0),
@@ -57,7 +64,7 @@ export default function VendorSubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [session?.user?.vendor?.id, t]);
 
   useEffect(() => {
     void load();
@@ -114,7 +121,6 @@ export default function VendorSubscriptionPage() {
       }
 
       toast.success(t("vendorDashboard.feedback.paymentStarted"));
-      setPhoneNumber("");
       await load();
     } catch (error) {
       toast.error(

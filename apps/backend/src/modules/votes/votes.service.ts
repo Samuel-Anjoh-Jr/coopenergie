@@ -352,6 +352,7 @@ export class VotesService {
             type: LedgerEventType.VOTE,
             payload: {
               voter: user.celoAddress ?? userId,
+              performerName: user.name,
               choice,
               proposalId,
             },
@@ -362,6 +363,7 @@ export class VotesService {
             type: LedgerEventType.VOTE,
             payload: {
               voter: user.celoAddress ?? userId,
+              performerName: user.name,
               choice,
               proposalId,
             },

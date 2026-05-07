@@ -78,6 +78,57 @@ export type VendorProfile = {
   totalReviews: number;
 };
 
+export class VendorMultipartRequestError extends Error {
+  status: number;
+  details?: string;
+
+  constructor(message: string, status: number, details?: string) {
+    super(message);
+    this.name = "VendorMultipartRequestError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+const VENDOR_MULTIPART_TIMEOUT_MS = 8000;
+
+function normalizeErrorMessage(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    const first = value.find(
+      (entry): entry is string =>
+        typeof entry === "string" && entry.trim().length > 0,
+    );
+
+    return first ? first.trim() : null;
+  }
+
+  return null;
+}
+
+function getFriendlyMessage(status: number, fallback?: string) {
+  if (status === 401) {
+    return "Session expired. Please log in again.";
+  }
+
+  if (status === 403) {
+    return "Access denied. Please verify your vendor permissions and try again.";
+  }
+
+  if (status === 413) {
+    return "Image is too large. Please upload a smaller file.";
+  }
+
+  if (status >= 500) {
+    return "Server error while saving product. Please try again.";
+  }
+
+  return fallback || "Request failed";
+}
+
 const VENDOR_MONETISATION_SNAPSHOT = gql`
   query VendorMonetisationSnapshot {
     monetisationSettings {
@@ -132,21 +183,51 @@ export async function multipartVendorRequest<T>(
 ): Promise<T> {
   const token = await getCachedClientToken();
 
-  const response = await fetch(`${API_URL}/api/v1${path}`, {
-    method,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, VENDOR_MULTIPART_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/api/v1${path}`, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new VendorMultipartRequestError(
+        "Request timeout. Please try again.",
+        408,
+      );
+    }
+
+    throw error;
+  }
+
+  clearTimeout(timeoutId);
 
   const data = (await response.json().catch(() => ({}))) as {
-    message?: string;
+    message?: string | string[];
+    error?: string;
     [key: string]: unknown;
   };
 
   if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    const message = normalizeErrorMessage(data.message);
+
+    throw new VendorMultipartRequestError(
+      getFriendlyMessage(response.status, message || undefined),
+      response.status,
+      typeof data.error === "string" ? data.error : (message ?? undefined),
+    );
   }
 
   return data as T;

@@ -169,6 +169,7 @@ export class ContributionsService {
         payload: {
           amountXAF,
           member: user.celoAddress ?? userId,
+          performerName: user.name,
           contributionId: finalizedContribution.id,
         },
         blockNumber: finalizedContribution.blockNumber ?? 0,
@@ -179,6 +180,7 @@ export class ContributionsService {
         payload: {
           amountXAF,
           member: user.celoAddress ?? userId,
+          performerName: user.name,
           contributionId: finalizedContribution.id,
         },
         txHash:

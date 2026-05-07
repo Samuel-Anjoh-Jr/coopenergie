@@ -160,29 +160,40 @@ export class CooperativeResolver {
       take: 10,
     });
 
-    const walletAddresses = events
+    const actorIdentifiers = events
       .map((event) =>
         extractWalletAddress(event.payload as EventPayload, event.type),
       )
       .filter((address): address is string => Boolean(address));
 
-    const walletToName = new Map<string, string>();
-    if (walletAddresses.length > 0) {
+    const actorToName = new Map<string, string>();
+    if (actorIdentifiers.length > 0) {
       const users = await this.prisma.user.findMany({
         where: {
-          celoAddress: {
-            in: walletAddresses,
-          },
+          OR: [
+            {
+              celoAddress: {
+                in: actorIdentifiers,
+              },
+            },
+            {
+              id: {
+                in: actorIdentifiers,
+              },
+            },
+          ],
         },
         select: {
+          id: true,
           celoAddress: true,
           name: true,
         },
       });
 
       for (const user of users) {
+        actorToName.set(user.id, user.name);
         if (user.celoAddress) {
-          walletToName.set(user.celoAddress.toLowerCase(), user.name);
+          actorToName.set(user.celoAddress.toLowerCase(), user.name);
         }
       }
     }
@@ -192,14 +203,23 @@ export class CooperativeResolver {
       payload: {
         ...(event.payload as EventPayload),
         performerName: (() => {
-          const walletAddress = extractWalletAddress(
-            event.payload as EventPayload,
-            event.type,
-          );
+          const payload = event.payload as EventPayload;
+          if (
+            typeof payload.performerName === "string" &&
+            payload.performerName.trim()
+          ) {
+            return payload.performerName.trim();
+          }
+
+          const walletAddress = extractWalletAddress(payload, event.type);
           if (!walletAddress) {
             return null;
           }
-          return walletToName.get(walletAddress.toLowerCase()) ?? null;
+          return (
+            actorToName.get(walletAddress) ??
+            actorToName.get(walletAddress.toLowerCase()) ??
+            null
+          );
         })(),
       },
       celoScanUrl: buildCeloScanTxUrl(event.txHash),

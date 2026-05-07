@@ -150,6 +150,7 @@ export class VendorPaymentsService {
     }
 
     if (
+      vendor.status !== VendorAccountStatus.PENDING_PAYMENT &&
       vendor.status !== VendorAccountStatus.ACTIVE &&
       vendor.status !== VendorAccountStatus.SUBSCRIPTION_EXPIRED
     ) {

@@ -18,6 +18,8 @@
     "brand:assets": "node scripts/generate-brand-assets.mjs",
     "mobile:apk": "node scripts/sync-env.mjs .env.production apps/mobile && cd apps/mobile && bunx eas build --profile staging --platform android",
     "mobile:aab": "node scripts/sync-env.mjs .env.production apps/mobile && cd apps/mobile && bunx eas build --profile production --platform android",
+    "mobile:ios": "node scripts/sync-env.mjs .env.production apps/mobile && cd apps/mobile && bunx eas build --profile production --platform ios",
+    "mobile:build:all": "node scripts/sync-env.mjs .env.production apps/mobile && cd apps/mobile && bunx eas build --profile production --platform all",
     "mobile:submit": "cd apps/mobile && bunx eas submit --profile production --platform android --latest && bunx eas submit --profile production --platform ios --latest",
     "vault:replace:flow": "node scripts/replace-cooperative-vault.mjs",
     "db:up": "docker compose up -d postgres redis",

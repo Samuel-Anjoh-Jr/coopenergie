@@ -23,7 +23,7 @@ import {
 } from "@/lib/invitations";
 import { Locale, useTranslations } from "@/lib/translations";
 import { toast } from "sonner";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle, Eye } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPasswordPreview, setShowPasswordPreview] = useState(false);
   const [error, setError] = useState("");
   const t = useTranslations(locale as Locale);
 
@@ -211,13 +212,38 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPasswordPreview ? "text" : "password"}
                     placeholder={t("auth.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-input border-border text-foreground"
+                    className="pl-10 pr-10 bg-input border-border text-foreground"
                     required
                   />
+                  <button
+                    type="button"
+                    aria-label="Hold to preview password"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onMouseDown={() => setShowPasswordPreview(true)}
+                    onMouseUp={() => setShowPasswordPreview(false)}
+                    onMouseLeave={() => setShowPasswordPreview(false)}
+                    onTouchStart={() => setShowPasswordPreview(true)}
+                    onTouchEnd={() => setShowPasswordPreview(false)}
+                    onTouchCancel={() => setShowPasswordPreview(false)}
+                    onKeyDown={(event) => {
+                      if (event.key === " " || event.key === "Enter") {
+                        event.preventDefault();
+                        setShowPasswordPreview(true);
+                      }
+                    }}
+                    onKeyUp={(event) => {
+                      if (event.key === " " || event.key === "Enter") {
+                        setShowPasswordPreview(false);
+                      }
+                    }}
+                    onBlur={() => setShowPasswordPreview(false)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 

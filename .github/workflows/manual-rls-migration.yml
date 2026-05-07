@@ -1,0 +1,124 @@
+name: Manual RLS Migration (Supabase)
+
+# Applies or rolls back RLS SQL against Supabase Postgres.
+# Required repo secrets (Actions -> Secrets and variables -> Actions):
+# - DIRECT_DATABASE_URL (preferred) or DIRECT_URL
+#   Use Supabase direct connection URI (port 5432), not the pooler.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose SQL action"
+        required: true
+        type: choice
+        options:
+          - apply
+          - rollback
+        default: apply
+      confirmation:
+        description: "Type APPLY_RLS to continue"
+        required: true
+        type: string
+
+jobs:
+  run-rls-sql:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirmation == 'APPLY_RLS'
+    env:
+      DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DIRECT_URL }}
+      APPLY_SQL_FILE: apps/backend/prisma/sql/rls/001_enable_rls_and_policies.sql
+      ROLLBACK_SQL_FILE: apps/backend/prisma/sql/rls/001_enable_rls_and_policies.rollback.sql
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate database secret
+        shell: bash
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "Missing DIRECT_DATABASE_URL or DIRECT_URL secret."
+            exit 1
+          fi
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Resolve SQL file
+        id: resolve
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.action }}" = "rollback" ]; then
+            echo "sql_file=${ROLLBACK_SQL_FILE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sql_file=${APPLY_SQL_FILE}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Precheck and audit snapshot
+        shell: bash
+        run: |
+          SQL_FILE="${{ steps.resolve.outputs.sql_file }}"
+
+          if [ ! -f "${SQL_FILE}" ]; then
+            echo "SQL file not found: ${SQL_FILE}"
+            exit 1
+          fi
+
+          SQL_SHA256=$(sha256sum "${SQL_FILE}" | awk '{print $1}')
+
+          echo "--- RLS migration precheck ---"
+          echo "Action: ${{ github.event.inputs.action }}"
+          echo "SQL file: ${SQL_FILE}"
+          echo "SQL SHA256: ${SQL_SHA256}"
+          echo "Git ref: ${GITHUB_REF}"
+          echo "Git SHA: ${GITHUB_SHA}"
+          echo "Repository: ${GITHUB_REPOSITORY}"
+
+          psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 <<'EOSQL'
+          \pset tuples_only on
+          \pset format unaligned
+          \echo --- connection ---
+          select current_database();
+          select current_user;
+          select session_user;
+          select inet_server_addr()::text || ':' || inet_server_port()::text;
+
+          \echo --- policy counts ---
+          select count(*) from pg_policies where schemaname = 'public';
+
+          \echo --- target table policy counts ---
+          select tablename || '=' || count(*)
+          from pg_policies
+          where schemaname = 'public'
+            and tablename in (
+              'User','Cooperative','Membership','Invitation','Contribution','Proposal','Vote',
+              'LedgerEvent','Payment','WithdrawalRequest','PlatformSettings','CooperativeSettings',
+              'Plan','Subscription','AuditLog','DeviceToken','Vendor','VendorProduct',
+              'VendorProductImage','ProposalVendorLink','VendorReview','VendorSubscriptionRecord','Faq'
+            )
+          group by tablename
+          order by tablename;
+
+          \echo --- rls flags ---
+          select relname || ':rls=' || relrowsecurity::text || ',force=' || relforcerowsecurity::text
+          from pg_class
+          where relnamespace = 'public'::regnamespace
+            and relname in (
+              'User','Cooperative','Membership','Invitation','Contribution','Proposal','Vote',
+              'LedgerEvent','Payment','WithdrawalRequest','PlatformSettings','CooperativeSettings',
+              'Plan','Subscription','AuditLog','DeviceToken','Vendor','VendorProduct',
+              'VendorProductImage','ProposalVendorLink','VendorReview','VendorSubscriptionRecord','Faq'
+            )
+          order by relname;
+          EOSQL
+
+      - name: Run SQL migration
+        shell: bash
+        run: |
+          SQL_FILE="${{ steps.resolve.outputs.sql_file }}"
+          echo "Running ${SQL_FILE}"
+          psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f "${SQL_FILE}"
