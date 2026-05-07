@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
@@ -58,7 +58,7 @@ export default function VendorSignupPage() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
 
-  const [loadingFee, setLoadingFee] = useState(false);
+  const [loadingFee, setLoadingFee] = useState(true);
   const [feeXaf, setFeeXaf] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authToken, setAuthToken] = useState("");
@@ -81,6 +81,10 @@ export default function VendorSignupPage() {
       setLoadingFee(false);
     }
   };
+
+  useEffect(() => {
+    void loadFee();
+  }, []);
 
   const pollVendorActivation = async (token: string) => {
     const deadline = Date.now() + 5 * 60 * 1000;
