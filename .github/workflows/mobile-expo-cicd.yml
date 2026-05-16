@@ -8,7 +8,6 @@ on:
 jobs:
   mobile-main-build:
     name: Main Push Mobile Build (Android APK + iOS Internal)
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -56,11 +55,11 @@ jobs:
           {
             echo "## Main Branch Mobile Build"
             if [ "${{ steps.token_check.outputs.present }}" = "true" ]; then
-              echo "- Trigger: main push"
+              echo "- Trigger: tag push"
               echo "- Android: staging APK build started on EAS"
               echo "- iOS: staging internal build started on EAS"
             else
-              echo "- Trigger: main push"
+              echo "- Trigger: tag push"
               echo "- Skipped: EXPO_TOKEN is not configured in repository secrets"
               echo "- Add EXPO_TOKEN and rerun to start EAS builds"
             fi
