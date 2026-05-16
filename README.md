@@ -1,5 +1,243 @@
 # CoopEnergie
 
+CoopEnergie est un monorepo pour une plateforme de financement d'énergie coopérative centrée sur le Cameroun. Il comprend une expérience web publique, des tableaux de bord pour membres et fournisseurs, une application mobile, un backend NestJS, l'accès aux données avec Prisma/PostgreSQL, et des contrats intelligents pour les flux de fonds coopératifs.
+
+## Contexte du Hackathon (MIABE 2026)
+
+Ce projet est développé pour le **MIABE Hackathon 2026** (D10 : Énergies renouvelables & Microgrids), dans le cadre du défi :
+
+- **Code projet** : CM-02
+- **Nom du projet** : CoopEnergie
+- **Principaux ODD** : ODD 7 (Énergie propre), ODD 1 (Pas de pauvreté), ODD 11 (Villes durables)
+
+Le défi se concentre sur un problème pratique au Cameroun : de nombreux ménages ne peuvent pas acheter individuellement un kit solaire, mais peuvent le faire grâce à l'épargne coopérative et à l'achat groupé. CoopEnergie utilise la transparence basée sur la blockchain pour réduire les conflits dans la gestion collective des fonds en rendant les cotisations, les décisions de vote et les traces financières auditable.
+
+### Énoncé du problème
+
+Les groupes souhaitent acheter du matériel solaire collectivement, mais manquent d'outils de confiance pour gérer les fonds communs de manière transparente. Sans traçabilité sur qui a cotisé, le solde actuel et les décisions d'achat, les coopératives échouent souvent avant d'atteindre leur objectif.
+
+### Ce que la solution apporte
+
+- Création de coopératives pour l'achat groupé de panneaux solaires
+- Suivi transparent et immuable des cotisations
+- Vote de type gouvernance on-chain pour les décisions d'achat
+- Rapports automatiques sur les fonds collectés, les décisions et la planification des achats
+
+### Utilisateurs finaux visés
+
+- Groupes de citoyens au Cameroun achetant du matériel solaire collectivement
+- Associations de quartier et groupes communautaires dirigés par des femmes en zones périurbaines/rurales
+- Fournisseurs d'équipements solaires offrant des offres groupées
+- ONG et programmes d'électrification rurale soutenant les coopératives
+
+### Impact attendu
+
+En améliorant la confiance dans le financement collectif, CoopEnergie permet aux communautés d'acquérir des systèmes solaires que les membres individuels ne pourraient pas payer seuls, accélérant ainsi l'électrification locale sans attendre l'extension du réseau.
+
+> Source de référence : cadre de référence MIABE Hackathon 2026 partagé par Darollo Technologies Corporation (DTC).
+
+## Structure du dépôt
+
+- `apps/backend` — API NestJS, GraphQL, Prisma, paiements, notifications, services fournisseurs
+- `apps/web` — Application web Next.js pour le marketing, les tableaux de bord membres, fournisseurs et outils d'administration
+- `apps/mobile` — Application mobile Expo / React Native
+- `contracts` — Contrats intelligents Hardhat et scripts de déploiement
+- `packages` — Modules partagés de l'espace de travail
+- `infra` — Docker et outils d'infrastructure
+- `docs` — Documentation d'implémentation et de la plateforme
+- `.github/workflows` — CI/CD, déploiement, seed et flux de travail RLS
+
+## Stack technique principal
+
+- Runtime et gestionnaire de paquets : Bun
+- Web : Next.js 16, React 19, Apollo Client, NextAuth
+- Mobile : Expo 54, React Native 0.81, Expo Router
+- Backend : NestJS 11, GraphQL, Prisma 5, PostgreSQL
+- Stockage et notifications : AWS S3, Firebase, Expo notifications
+- Contrats intelligents : Hardhat, Ethers, Viem
+
+## Prérequis
+
+- Bun `1.3.x`
+- Node.js compatible avec la chaîne d'outils de l'espace de travail
+- Docker Desktop pour Postgres et Redis en local
+- Accès PostgreSQL pour les migrations Prisma
+- Compte Expo / EAS pour les builds mobiles si nécessaire
+
+## Pour commencer
+
+### 1. Installer les dépendances
+
+```bash
+bun install
+```
+
+### 2. Synchroniser les fichiers d'environnement
+
+```bash
+bun run env:sync
+```
+
+### 3. Démarrer les services de base de données locaux
+
+```bash
+bun run db:up
+```
+
+### 4. Appliquer les migrations Prisma et générer le client
+
+```bash
+bun run db:migrate:deploy
+bun run db:generate
+```
+
+### 5. Initialiser les données locales
+
+```bash
+bun run db:seed
+```
+
+### 6. Exécuter les applications
+
+```bash
+bun run dev:web
+bun run dev:api
+bun run dev:mobile
+```
+
+Ou exécutez la commande de développement orchestrée :
+
+```bash
+bun run dev
+```
+
+## Commandes utiles
+
+### Espace de travail racine
+
+```bash
+bun run dev
+bun run lint
+bun run typecheck
+bun run build
+bun run clean
+```
+
+### Base de données
+
+```bash
+bun run db:up
+bun run db:down
+bun run db:generate
+bun run db:migrate
+bun run db:migrate:deploy
+bun run db:migrate:reset
+bun run db:seed
+bun run db:studio
+```
+
+### Spécifiques aux applications
+
+```bash
+bun run --cwd apps/backend dev
+bun run --cwd apps/backend build
+bun run --cwd apps/backend lint
+
+bun run --cwd apps/web dev
+bun run --cwd apps/web build
+bun run --cwd apps/web lint
+
+bun run --cwd apps/mobile start
+bun run --cwd apps/mobile android
+bun run --cwd apps/mobile ios
+```
+
+### Aides pour la version mobile
+
+```bash
+bun run mobile:apk
+bun run mobile:aab
+bun run mobile:ios
+bun run mobile:build:all
+bun run mobile:submit
+```
+
+## Comptes de démonstration pré-initialisés
+
+Le script de seed du backend crée des utilisateurs de démonstration réalistes pour l'administrateur de la plateforme, les administrateurs de coopératives, les membres et les fournisseurs.
+
+Commande de seed :
+
+```bash
+bun run db:seed
+```
+
+La liste complète des identifiants pré-initialisés est affichée par le script de seed à la fin de son exécution dans `apps/backend/src/prisma/seed.ts`.
+
+## Flux de travail GitHub
+
+Ce dépôt inclut des flux de travail manuels et automatisés dans `.github/workflows`.
+
+Flux de travail notables :
+
+- `pr-validation.yml` — Validation des demandes de tirage (pull requests)
+- `deploy-staging.yml` — Flux de déploiement vers l'environnement de préproduction (staging)
+- `deploy-production.yml` — Flux de déploiement vers l'environnement de production
+- `mobile-expo-cicd.yml` — CI/CD pour l'application mobile Expo
+- `manual-seed.yml` — Initialisation manuelle d'une base de données distante
+- `manual-rls-migration.yml` — Application ou annulation manuelle des scripts SQL RLS Supabase
+- `prisma-migrate.yml` — Flux de travail de migration Prisma
+
+## Opérations manuelles sur la base de données de production
+
+### Initialisation manuelle (seed)
+
+Utilisez `.github/workflows/manual-seed.yml` pour exécuter manuellement l'initialisation de la base de données de production avec `workflow_dispatch`.
+
+Secret requis :
+
+- `DIRECT_DATABASE_URL` ou `DIRECT_URL`
+
+### Migration RLS Supabase manuelle
+
+Utilisez `.github/workflows/manual-rls-migration.yml` pour appliquer ou annuler manuellement le script SQL RLS sur Supabase.
+
+Fichiers SQL :
+
+- `apps/backend/prisma/sql/rls/001_enable_rls_and_policies.sql`
+- `apps/backend/prisma/sql/rls/001_enable_rls_and_policies.rollback.sql`
+
+Le flux de travail inclut une étape de pré-vérification qui enregistre :
+
+- l'action sélectionnée
+- le fichier SQL et son empreinte SHA256
+- la base de données et l'utilisateur actuels
+- le nombre de politiques existantes
+- les indicateurs RLS actuels par table cible
+
+Secret requis :
+
+- `DIRECT_DATABASE_URL` ou `DIRECT_URL`
+
+## Notes pour les contributeurs
+
+- Utilisez les commandes Bun depuis la racine du dépôt, sauf s'il existe une raison spécifique au niveau de l'application de ne pas le faire.
+- Privilégiez les modifications ciblées. Les applications web, backend, mobile et les contrats vivent dans le même espace de travail mais sont déployées différemment.
+- Le schéma Prisma se trouve dans `apps/backend/prisma/schema.prisma`.
+- La documentation des contrats intelligents se trouve dans `contracts/README.md` et les outils de déploiement dans `contracts/scripts`.
+
+## Points d'attention actuels
+
+- Certains avertissements de lint existent déjà dans l'application web concernant les tableaux de dépendances des hooks React ; ils ne bloquent pas actuellement la commande de lint racine.
+- Les flux de travail sur la base de données de production sont intentionnellement manuels et nécessitent une confirmation.
+
+## Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE`.
+
+
+# CoopEnergie
+
 CoopEnergie is a monorepo for a cooperative energy financing platform focused on Cameroon. It includes a public web experience, member and vendor dashboards, a mobile app, a NestJS backend, Prisma/PostgreSQL data access, and smart contracts for cooperative fund workflows.
 
 ## Hackathon Context (MIABE 2026)
