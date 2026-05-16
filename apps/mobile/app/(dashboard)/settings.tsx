@@ -59,9 +59,8 @@ export default function SettingsScreen() {
         }
 
         if (isPlatformAdmin) {
-          const platform = await api.get<PlatformSettingsResponse>(
-            "/admin/settings",
-          );
+          const platform =
+            await api.get<PlatformSettingsResponse>("/admin/settings");
           setPlatformDefault(String(platform.withdrawalThresholdDefault ?? ""));
           setPlatformMin(String(platform.withdrawalThresholdMin ?? ""));
           setPlatformMax(String(platform.withdrawalThresholdMax ?? ""));
@@ -138,10 +137,16 @@ export default function SettingsScreen() {
     <ScreenReveal className="bg-[#F5F8F5] p-4">
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View className="rounded-2xl border border-[#DDEBDD] bg-white p-4">
-          <Text className="text-[#1B5E20] text-xl font-bold">{t("settings.title")}</Text>
-          <Text className="text-slate-600 mt-1 mb-4">{t("settings.subtitle")}</Text>
+          <Text className="text-[#1B5E20] text-xl font-bold">
+            {t("settings.title")}
+          </Text>
+          <Text className="text-slate-600 mt-1 mb-4">
+            {t("settings.subtitle")}
+          </Text>
 
-          <Text className="text-[#1B5E20] font-semibold mb-2">{t("settings.activeCooperative")}</Text>
+          <Text className="text-[#1B5E20] font-semibold mb-2">
+            {t("settings.activeCooperative")}
+          </Text>
           <View className="gap-2 mb-4">
             {cooperatives.map((coop) => {
               const selected = coop.id === activeCooperativeId;
@@ -158,7 +163,9 @@ export default function SettingsScreen() {
                     router.replace("/(dashboard)/dashboard");
                   }}
                 >
-                  <Text className={`font-semibold ${selected ? "text-[#1B5E20]" : "text-slate-700"}`}>
+                  <Text
+                    className={`font-semibold ${selected ? "text-[#1B5E20]" : "text-slate-700"}`}
+                  >
                     {coop.name}
                   </Text>
                 </PressableScale>
@@ -166,7 +173,9 @@ export default function SettingsScreen() {
             })}
           </View>
 
-          <Text className="text-[#1B5E20] font-semibold mb-2">{t("settings.language")}</Text>
+          <Text className="text-[#1B5E20] font-semibold mb-2">
+            {t("settings.language")}
+          </Text>
           <View className="flex-row gap-2 mb-5">
             <PressableScale
               className={`flex-1 rounded-xl border px-4 py-3 items-center ${
@@ -178,7 +187,9 @@ export default function SettingsScreen() {
                 void setLocale("en");
               }}
             >
-              <Text className={`font-semibold ${locale === "en" ? "text-white" : "text-[#1B5E20]"}`}>
+              <Text
+                className={`font-semibold ${locale === "en" ? "text-white" : "text-[#1B5E20]"}`}
+              >
                 {t("settings.english")}
               </Text>
             </PressableScale>
@@ -192,7 +203,9 @@ export default function SettingsScreen() {
                 void setLocale("fr");
               }}
             >
-              <Text className={`font-semibold ${locale === "fr" ? "text-white" : "text-[#1B5E20]"}`}>
+              <Text
+                className={`font-semibold ${locale === "fr" ? "text-white" : "text-[#1B5E20]"}`}
+              >
                 {t("settings.french")}
               </Text>
             </PressableScale>
@@ -219,7 +232,9 @@ export default function SettingsScreen() {
                 }}
                 disabled={savingCoop || loadingThresholds}
               >
-                <Text className="text-white font-semibold">{t("settings.saveCoop")}</Text>
+                <Text className="text-white font-semibold">
+                  {t("settings.saveCoop")}
+                </Text>
               </PressableScale>
             </View>
           )}
@@ -230,7 +245,9 @@ export default function SettingsScreen() {
                 {t("settings.platformThresholds")}
               </Text>
 
-              <Text className="text-[#1B5E20] text-xs mb-1">{t("settings.thresholdMin")}</Text>
+              <Text className="text-[#1B5E20] text-xs mb-1">
+                {t("settings.thresholdMin")}
+              </Text>
               <TextInput
                 value={platformMin}
                 onChangeText={setPlatformMin}
@@ -239,7 +256,9 @@ export default function SettingsScreen() {
                 className="bg-white border border-[#CFE3CF] rounded-xl px-4 py-3 mb-2"
               />
 
-              <Text className="text-[#1B5E20] text-xs mb-1">{t("settings.thresholdDefault")}</Text>
+              <Text className="text-[#1B5E20] text-xs mb-1">
+                {t("settings.thresholdDefault")}
+              </Text>
               <TextInput
                 value={platformDefault}
                 onChangeText={setPlatformDefault}
@@ -248,7 +267,9 @@ export default function SettingsScreen() {
                 className="bg-white border border-[#CFE3CF] rounded-xl px-4 py-3 mb-2"
               />
 
-              <Text className="text-[#1B5E20] text-xs mb-1">{t("settings.thresholdMax")}</Text>
+              <Text className="text-[#1B5E20] text-xs mb-1">
+                {t("settings.thresholdMax")}
+              </Text>
               <TextInput
                 value={platformMax}
                 onChangeText={setPlatformMax}
@@ -305,7 +326,9 @@ export default function SettingsScreen() {
               void onLogout();
             }}
           >
-            <Text className="text-[#B42318] font-semibold">{t("settings.logoutAction")}</Text>
+            <Text className="text-[#B42318] font-semibold">
+              {t("settings.logoutAction")}
+            </Text>
           </PressableScale>
         </View>
       </ScrollView>

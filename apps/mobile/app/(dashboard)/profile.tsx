@@ -18,7 +18,11 @@ type MeResponse = {
   withdrawalBankAccount?: string | null;
 };
 
-const METHODS: WithdrawalMethod[] = ["MTN_MOMO", "ORANGE_MONEY", "BANK_TRANSFER"];
+const METHODS: WithdrawalMethod[] = [
+  "MTN_MOMO",
+  "ORANGE_MONEY",
+  "BANK_TRANSFER",
+];
 
 export default function ProfileScreen() {
   const { t } = useMobileTranslations();
@@ -27,7 +31,8 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [withdrawalMethod, setWithdrawalMethod] = useState<WithdrawalMethod>("MTN_MOMO");
+  const [withdrawalMethod, setWithdrawalMethod] =
+    useState<WithdrawalMethod>("MTN_MOMO");
   const [withdrawalPhone, setWithdrawalPhone] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -71,7 +76,10 @@ export default function ProfileScreen() {
       return;
     }
 
-    if (withdrawalMethod === "BANK_TRANSFER" && (!bankName.trim() || !bankAccount.trim())) {
+    if (
+      withdrawalMethod === "BANK_TRANSFER" &&
+      (!bankName.trim() || !bankAccount.trim())
+    ) {
       Alert.alert(t("errors.error"), t("errors.withdrawalRecipientRequired"));
       return;
     }
@@ -82,8 +90,11 @@ export default function ProfileScreen() {
         name: name.trim(),
         preferredWithdrawalMethod: withdrawalMethod,
         withdrawalPhone:
-          withdrawalMethod === "BANK_TRANSFER" ? undefined : detected?.normalizedPhone,
-        withdrawalBankName: withdrawalMethod === "BANK_TRANSFER" ? bankName.trim() : undefined,
+          withdrawalMethod === "BANK_TRANSFER"
+            ? undefined
+            : detected?.normalizedPhone,
+        withdrawalBankName:
+          withdrawalMethod === "BANK_TRANSFER" ? bankName.trim() : undefined,
         withdrawalBankAccount:
           withdrawalMethod === "BANK_TRANSFER" ? bankAccount.trim() : undefined,
       });
@@ -103,10 +114,16 @@ export default function ProfileScreen() {
     <ScreenReveal className="bg-[#F5F8F5] p-4">
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View className="rounded-2xl border border-[#DDEBDD] bg-white p-4">
-          <Text className="text-[#1B5E20] text-xl font-bold">{t("profile.title")}</Text>
-          <Text className="text-slate-600 mt-1 mb-4">{t("profile.subtitle")}</Text>
+          <Text className="text-[#1B5E20] text-xl font-bold">
+            {t("profile.title")}
+          </Text>
+          <Text className="text-slate-600 mt-1 mb-4">
+            {t("profile.subtitle")}
+          </Text>
 
-          <Text className="text-[#1B5E20] font-semibold mb-1">{t("profile.nameLabel")}</Text>
+          <Text className="text-[#1B5E20] font-semibold mb-1">
+            {t("profile.nameLabel")}
+          </Text>
           <TextInput
             value={name}
             onChangeText={setName}
@@ -114,14 +131,18 @@ export default function ProfileScreen() {
             className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
           />
 
-          <Text className="text-[#1B5E20] font-semibold mb-1">{t("profile.emailLabel")}</Text>
+          <Text className="text-[#1B5E20] font-semibold mb-1">
+            {t("profile.emailLabel")}
+          </Text>
           <TextInput
             value={email}
             editable={false}
             className="bg-[#EDF4ED] border border-[#DAE9DA] rounded-xl px-4 py-3 mb-3 text-slate-500"
           />
 
-          <Text className="text-[#1B5E20] font-semibold mb-2">{t("profile.withdrawalMethod")}</Text>
+          <Text className="text-[#1B5E20] font-semibold mb-2">
+            {t("profile.withdrawalMethod")}
+          </Text>
           <View className="flex-row flex-wrap gap-2 mb-3">
             {METHODS.map((method) => {
               const selected = withdrawalMethod === method;
@@ -142,7 +163,9 @@ export default function ProfileScreen() {
                   }`}
                   onPress={() => setWithdrawalMethod(method)}
                 >
-                  <Text className={`text-xs font-semibold ${selected ? "text-white" : "text-[#1B5E20]"}`}>
+                  <Text
+                    className={`text-xs font-semibold ${selected ? "text-white" : "text-[#1B5E20]"}`}
+                  >
                     {label}
                   </Text>
                 </PressableScale>
@@ -152,14 +175,18 @@ export default function ProfileScreen() {
 
           {withdrawalMethod === "BANK_TRANSFER" ? (
             <>
-              <Text className="text-[#1B5E20] font-semibold mb-1">{t("profile.bankName")}</Text>
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("profile.bankName")}
+              </Text>
               <TextInput
                 value={bankName}
                 onChangeText={setBankName}
                 className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
               />
 
-              <Text className="text-[#1B5E20] font-semibold mb-1">{t("profile.bankAccount")}</Text>
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("profile.bankAccount")}
+              </Text>
               <TextInput
                 value={bankAccount}
                 onChangeText={setBankAccount}
@@ -168,7 +195,9 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <Text className="text-[#1B5E20] font-semibold mb-1">{t("profile.withdrawalPhone")}</Text>
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("profile.withdrawalPhone")}
+              </Text>
               <TextInput
                 value={withdrawalPhone}
                 onChangeText={setWithdrawalPhone}
@@ -186,7 +215,9 @@ export default function ProfileScreen() {
             }}
             disabled={saving || loading}
           >
-            <Text className="text-white font-semibold">{t("profile.save")}</Text>
+            <Text className="text-white font-semibold">
+              {t("profile.save")}
+            </Text>
           </PressableScale>
         </View>
       </ScrollView>

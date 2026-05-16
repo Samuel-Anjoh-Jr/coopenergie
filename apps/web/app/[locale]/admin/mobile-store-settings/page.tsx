@@ -146,7 +146,9 @@ export default function MobileStoreSettingsPage() {
             </h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="rounded-lg border border-gray-200 p-4">
-                <p className="font-semibold text-gray-800 mb-3">Apple App Store</p>
+                <p className="font-semibold text-gray-800 mb-3">
+                  Apple App Store
+                </p>
                 <img
                   src={appPreview}
                   alt="QR App Store"
@@ -155,12 +157,16 @@ export default function MobileStoreSettingsPage() {
                   className="rounded border border-gray-200"
                 />
                 {!appStoreUrl.trim() ? (
-                  <p className="text-xs text-amber-700 mt-2">Placeholder affiche tant que non configure</p>
+                  <p className="text-xs text-amber-700 mt-2">
+                    Placeholder affiche tant que non configure
+                  </p>
                 ) : null}
               </div>
 
               <div className="rounded-lg border border-gray-200 p-4">
-                <p className="font-semibold text-gray-800 mb-3">Google Play Store</p>
+                <p className="font-semibold text-gray-800 mb-3">
+                  Google Play Store
+                </p>
                 <img
                   src={playPreview}
                   alt="QR Play Store"
@@ -169,7 +175,9 @@ export default function MobileStoreSettingsPage() {
                   className="rounded border border-gray-200"
                 />
                 {!playStoreUrl.trim() ? (
-                  <p className="text-xs text-amber-700 mt-2">Placeholder affiche tant que non configure</p>
+                  <p className="text-xs text-amber-700 mt-2">
+                    Placeholder affiche tant que non configure
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -188,20 +196,24 @@ export default function MobileStoreSettingsPage() {
 
         <div className="mt-8 space-y-4">
           <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-            <h3 className="font-semibold text-blue-900 mb-2">📋 Recommandations</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">
+              📋 Recommandations
+            </h3>
             <ul className="text-sm text-blue-900 space-y-1">
               <li>✅ Les URL doivent être complètes (https://...)</li>
               <li>✅ Les codes QR doivent être en PNG ou JPEG</li>
               <li>✅ Taille recommandée des QR: 200x200px minimum</li>
-              <li>✅ Les QR codes seront affichés sur la landing page principale</li>
+              <li>
+                ✅ Les QR codes seront affichés sur la landing page principale
+              </li>
             </ul>
           </div>
 
           <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded">
             <h3 className="font-semibold text-amber-900 mb-2">🔒 Accès</h3>
             <p className="text-sm text-amber-900">
-              Cette page est accessible uniquement aux administrateurs plateforme 
-              (PLATFORM_ADMIN)
+              Cette page est accessible uniquement aux administrateurs
+              plateforme (PLATFORM_ADMIN)
             </p>
           </div>
         </div>

@@ -49,8 +49,12 @@ export default function InvitationsScreen() {
 
     try {
       const [invites, memberList] = await Promise.all([
-        api.get<Invitation[]>(`/invitations/cooperative/${activeCooperativeId}`),
-        api.get<Membership[]>(`/memberships/cooperative/${activeCooperativeId}`),
+        api.get<Invitation[]>(
+          `/invitations/cooperative/${activeCooperativeId}`,
+        ),
+        api.get<Membership[]>(
+          `/memberships/cooperative/${activeCooperativeId}`,
+        ),
       ]);
 
       setPending(invites || []);
@@ -75,11 +79,14 @@ export default function InvitationsScreen() {
 
     try {
       setLoading(true);
-      const response = await api.post<{ joinUrl?: string }>("/invitations/email", {
-        cooperativeId: activeCooperativeId,
-        email: email.trim(),
-        locale,
-      });
+      const response = await api.post<{ joinUrl?: string }>(
+        "/invitations/email",
+        {
+          cooperativeId: activeCooperativeId,
+          email: email.trim(),
+          locale,
+        },
+      );
       setLatestJoinUrl(response.joinUrl || "");
       setEmail("");
       Alert.alert(t("common.submit"), t("invitations.invitationSent"));
@@ -102,10 +109,13 @@ export default function InvitationsScreen() {
 
     try {
       setLoading(true);
-      const response = await api.post<{ joinUrl?: string }>("/invitations/link", {
-        cooperativeId: activeCooperativeId,
-        locale,
-      });
+      const response = await api.post<{ joinUrl?: string }>(
+        "/invitations/link",
+        {
+          cooperativeId: activeCooperativeId,
+          locale,
+        },
+      );
       setLatestJoinUrl(response.joinUrl || "");
       Alert.alert(t("common.submit"), t("invitations.linkGenerated"));
       await loadPending();
@@ -191,7 +201,9 @@ export default function InvitationsScreen() {
     }
 
     try {
-      await api.delete(`/memberships/cooperative/${activeCooperativeId}/user/${userId}`);
+      await api.delete(
+        `/memberships/cooperative/${activeCooperativeId}/user/${userId}`,
+      );
       Alert.alert(t("common.submit"), t("invitations.memberRemoved"));
       await loadPending();
     } catch (error) {
@@ -206,8 +218,12 @@ export default function InvitationsScreen() {
     return (
       <ScreenReveal className="bg-[#F5F8F5] p-4">
         <View className="rounded-2xl border border-[#F8D7DA] bg-[#FFF5F6] p-4">
-          <Text className="text-[#B42318] font-semibold">{t("invitations.adminOnlyTitle")}</Text>
-          <Text className="text-slate-700 mt-1">{t("invitations.adminOnlyDescription")}</Text>
+          <Text className="text-[#B42318] font-semibold">
+            {t("invitations.adminOnlyTitle")}
+          </Text>
+          <Text className="text-slate-700 mt-1">
+            {t("invitations.adminOnlyDescription")}
+          </Text>
         </View>
       </ScreenReveal>
     );
@@ -216,10 +232,16 @@ export default function InvitationsScreen() {
   return (
     <ScreenReveal className="bg-[#F5F8F5] p-4">
       <View className="rounded-2xl border border-[#DDEBDD] bg-white p-4 mb-3">
-        <Text className="text-[#1B5E20] text-xl font-bold">{t("invitations.title")}</Text>
-        <Text className="text-slate-600 text-sm mt-1">{t("invitations.description")}</Text>
+        <Text className="text-[#1B5E20] text-xl font-bold">
+          {t("invitations.title")}
+        </Text>
+        <Text className="text-slate-600 text-sm mt-1">
+          {t("invitations.description")}
+        </Text>
 
-        <Text className="mt-4 text-[#1B5E20] font-semibold">{t("invitations.emailInviteTitle")}</Text>
+        <Text className="mt-4 text-[#1B5E20] font-semibold">
+          {t("invitations.emailInviteTitle")}
+        </Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -237,7 +259,9 @@ export default function InvitationsScreen() {
             }}
             disabled={loading}
           >
-            <Text className="text-white font-semibold">{t("invitations.sendInvite")}</Text>
+            <Text className="text-white font-semibold">
+              {t("invitations.sendInvite")}
+            </Text>
           </PressableScale>
 
           <PressableScale
@@ -247,13 +271,17 @@ export default function InvitationsScreen() {
             }}
             disabled={loading}
           >
-            <Text className="text-[#1B5E20] font-semibold">{t("invitations.generateLink")}</Text>
+            <Text className="text-[#1B5E20] font-semibold">
+              {t("invitations.generateLink")}
+            </Text>
           </PressableScale>
         </View>
 
         {latestJoinUrl ? (
           <View className="mt-4 rounded-xl border border-[#DDEBDD] bg-[#F8FCF8] p-3">
-            <Text className="text-[#1B5E20] font-semibold text-xs">{t("invitations.latestLink")}</Text>
+            <Text className="text-[#1B5E20] font-semibold text-xs">
+              {t("invitations.latestLink")}
+            </Text>
             <Text className="text-slate-700 mt-1 text-xs">{latestJoinUrl}</Text>
             <PressableScale
               className="mt-2 rounded-lg border border-[#1B5E20] px-3 py-2 items-center"
@@ -261,7 +289,9 @@ export default function InvitationsScreen() {
                 void copyLatestLink();
               }}
             >
-              <Text className="text-[#1B5E20] font-semibold text-xs">{t("common.copy")}</Text>
+              <Text className="text-[#1B5E20] font-semibold text-xs">
+                {t("common.copy")}
+              </Text>
             </PressableScale>
           </View>
         ) : null}
@@ -278,14 +308,19 @@ export default function InvitationsScreen() {
             </Text>
 
             {members.length === 0 ? (
-              <Text className="text-slate-600 text-sm">{t("invitations.noMembers")}</Text>
+              <Text className="text-slate-600 text-sm">
+                {t("invitations.noMembers")}
+              </Text>
             ) : (
               members.map((member) => {
                 const isMember = member.role === "MEMBER";
                 const isCoopAdmin = member.role === "COOP_ADMIN";
                 const isPlatformRole = member.role === "PLATFORM_ADMIN";
                 const isCurrentUser = member.user.id === user?.id;
-                const canDemote = isCoopAdmin && Boolean(user?.isPlatformAdmin) && !isCurrentUser;
+                const canDemote =
+                  isCoopAdmin &&
+                  Boolean(user?.isPlatformAdmin) &&
+                  !isCurrentUser;
                 const canRemove = !isCurrentUser && !isPlatformRole;
 
                 return (
@@ -296,7 +331,9 @@ export default function InvitationsScreen() {
                     <Text className="text-[#1B5E20] font-semibold">
                       {member.user.name || member.user.email || member.user.id}
                     </Text>
-                    <Text className="text-slate-600 text-xs mt-0.5">{member.user.email || "-"}</Text>
+                    <Text className="text-slate-600 text-xs mt-0.5">
+                      {member.user.email || "-"}
+                    </Text>
 
                     {isMember ? (
                       <PressableScale
@@ -371,9 +408,12 @@ export default function InvitationsScreen() {
         renderItem={({ item }) => (
           <View className="rounded-xl border border-[#DDEBDD] bg-white p-4">
             <Text className="text-[#1B5E20] font-semibold">{item.type}</Text>
-            <Text className="text-slate-700 text-sm mt-1">{item.email || item.token}</Text>
+            <Text className="text-slate-700 text-sm mt-1">
+              {item.email || item.token}
+            </Text>
             <Text className="text-slate-500 text-xs mt-1">
-              {t("invitations.expiresAt")}: {new Date(item.expiresAt).toLocaleString()}
+              {t("invitations.expiresAt")}:{" "}
+              {new Date(item.expiresAt).toLocaleString()}
             </Text>
             <PressableScale
               className="mt-3 rounded-lg border border-[#B42318] px-3 py-2 items-center"
@@ -381,7 +421,9 @@ export default function InvitationsScreen() {
                 void revoke(item.id);
               }}
             >
-              <Text className="text-[#B42318] font-semibold text-xs">{t("invitations.revoke")}</Text>
+              <Text className="text-[#B42318] font-semibold text-xs">
+                {t("invitations.revoke")}
+              </Text>
             </PressableScale>
           </View>
         )}

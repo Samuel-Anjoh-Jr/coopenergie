@@ -240,7 +240,8 @@ export default function DashboardScreen() {
     ? cooperative.recentActivity
     : cachedActivity;
   const withdrawalFeePercent =
-    Number(monetisationData?.monetisationSettings?.withdrawalFeePercent ?? 0) || 0;
+    Number(monetisationData?.monetisationSettings?.withdrawalFeePercent ?? 0) ||
+    0;
 
   const inputTargetAmount = Number.parseInt(coopTarget, 10) || 0;
   const inputTargetWithFee =
@@ -255,20 +256,23 @@ export default function DashboardScreen() {
   const feeAmount = Math.max(0, targetAmount - baseTargetAmount);
   const feeRatio = targetAmount > 0 ? Math.min(1, feeAmount / targetAmount) : 0;
   const collectedWithinTarget =
-    targetAmount > 0
-      ? Math.min(Math.max(totalCollected, 0), targetAmount)
-      : 0;
+    targetAmount > 0 ? Math.min(Math.max(totalCollected, 0), targetAmount) : 0;
   const collectedRatio =
     targetAmount > 0 ? collectedWithinTarget / targetAmount : 0;
   const coopFillPercent = collectedRatio * (1 - feeRatio) * 100;
   const feeFillPercent = collectedRatio * feeRatio * 100;
   const surplusAmount = Math.max(0, totalCollected - targetAmount);
-  const surplusPercent = targetAmount > 0 ? (surplusAmount / targetAmount) * 100 : 0;
+  const surplusPercent =
+    targetAmount > 0 ? (surplusAmount / targetAmount) * 100 : 0;
 
   async function createCooperative() {
     const normalizedTarget = Number.parseInt(coopTarget, 10);
 
-    if (!coopName.trim() || Number.isNaN(normalizedTarget) || normalizedTarget <= 0) {
+    if (
+      !coopName.trim() ||
+      Number.isNaN(normalizedTarget) ||
+      normalizedTarget <= 0
+    ) {
       Alert.alert(t("errors.error"), t("errors.invalidAmount"));
       return;
     }
@@ -308,184 +312,193 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {loading && !cooperative && cachedActivity.length === 0 && activeCooperativeId ? (
+        {loading &&
+        !cooperative &&
+        cachedActivity.length === 0 &&
+        activeCooperativeId ? (
           <Text className="text-[#1B5E20]">{t("status.loadingDashboard")}</Text>
         ) : !activeCooperativeId ? (
           <SectionReveal direction="up" delay={0} distance={15}>
             <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-            <Text className="text-[#1B5E20] text-xl font-bold">
-              {t("dashboard.createCooperativeTitle")}
-            </Text>
-            <Text className="text-slate-600 mt-2 mb-4">
-              {t("dashboard.createCooperativeDescription")}
-            </Text>
-
-            <Text className="text-[#1B5E20] font-semibold mb-1">
-              {t("dashboard.createCooperativeNameLabel")}
-            </Text>
-            <TextInput
-              value={coopName}
-              onChangeText={setCoopName}
-              placeholder={t("dashboard.createCooperativeNamePlaceholder")}
-              className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
-            />
-
-            <Text className="text-[#1B5E20] font-semibold mb-1">
-              {t("dashboard.createCooperativeTargetLabel")}
-            </Text>
-            <TextInput
-              value={coopTarget}
-              onChangeText={setCoopTarget}
-              placeholder={t("dashboard.createCooperativeTargetPlaceholder")}
-              keyboardType="numeric"
-              className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3"
-            />
-
-            {withdrawalFeePercent <= 0 ? (
-              <Text className="text-emerald-700 text-xs mt-2">
-                {t("dashboard.noFeeHelper")}
+              <Text className="text-[#1B5E20] text-xl font-bold">
+                {t("dashboard.createCooperativeTitle")}
               </Text>
-            ) : (
-              <>
-                <Text className="text-[#1B5E20] font-semibold text-sm mt-3 mb-1">
-                  {t("dashboard.targetWithFeeLabel")}
-                </Text>
-                <Text className="text-[#1B5E20] font-semibold">
-                  {inputTargetWithFee.toLocaleString()} FCFA
-                </Text>
-                <Text className="text-slate-500 text-xs mt-2">
-                  {t("dashboard.feeExplanation")
-                    .replace("{percent}", withdrawalFeePercent.toString())
-                    .replace("{entered}", inputTargetAmount.toLocaleString())
-                    .replace("{total}", inputTargetWithFee.toLocaleString())}
-                </Text>
-              </>
-            )}
-
-            <PressableScale
-              className={`rounded-xl px-4 py-3 mt-4 ${
-                isCreatingCoop ? "bg-slate-300" : "bg-[#1B5E20]"
-              }`}
-              onPress={() => {
-                void createCooperative();
-              }}
-              disabled={isCreatingCoop}
-            >
-              <Text className="text-white text-center font-semibold">
-                {isCreatingCoop
-                  ? t("dashboard.createCooperativeSubmitting")
-                  : t("dashboard.createCooperativeSubmit")}
+              <Text className="text-slate-600 mt-2 mb-4">
+                {t("dashboard.createCooperativeDescription")}
               </Text>
-            </PressableScale>
+
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("dashboard.createCooperativeNameLabel")}
+              </Text>
+              <TextInput
+                value={coopName}
+                onChangeText={setCoopName}
+                placeholder={t("dashboard.createCooperativeNamePlaceholder")}
+                className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3 mb-3"
+              />
+
+              <Text className="text-[#1B5E20] font-semibold mb-1">
+                {t("dashboard.createCooperativeTargetLabel")}
+              </Text>
+              <TextInput
+                value={coopTarget}
+                onChangeText={setCoopTarget}
+                placeholder={t("dashboard.createCooperativeTargetPlaceholder")}
+                keyboardType="numeric"
+                className="bg-[#F1F7F1] border border-[#CFE3CF] rounded-xl px-4 py-3"
+              />
+
+              {withdrawalFeePercent <= 0 ? (
+                <Text className="text-emerald-700 text-xs mt-2">
+                  {t("dashboard.noFeeHelper")}
+                </Text>
+              ) : (
+                <>
+                  <Text className="text-[#1B5E20] font-semibold text-sm mt-3 mb-1">
+                    {t("dashboard.targetWithFeeLabel")}
+                  </Text>
+                  <Text className="text-[#1B5E20] font-semibold">
+                    {inputTargetWithFee.toLocaleString()} FCFA
+                  </Text>
+                  <Text className="text-slate-500 text-xs mt-2">
+                    {t("dashboard.feeExplanation")
+                      .replace("{percent}", withdrawalFeePercent.toString())
+                      .replace("{entered}", inputTargetAmount.toLocaleString())
+                      .replace("{total}", inputTargetWithFee.toLocaleString())}
+                  </Text>
+                </>
+              )}
+
+              <PressableScale
+                className={`rounded-xl px-4 py-3 mt-4 ${
+                  isCreatingCoop ? "bg-slate-300" : "bg-[#1B5E20]"
+                }`}
+                onPress={() => {
+                  void createCooperative();
+                }}
+                disabled={isCreatingCoop}
+              >
+                <Text className="text-white text-center font-semibold">
+                  {isCreatingCoop
+                    ? t("dashboard.createCooperativeSubmitting")
+                    : t("dashboard.createCooperativeSubmit")}
+                </Text>
+              </PressableScale>
             </View>
           </SectionReveal>
         ) : (
           <>
             <SectionReveal direction="up" delay={0} distance={15}>
               <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-[#1B5E20] text-2xl font-bold">
-                {cooperative?.name || t("common.cooperative")}
-              </Text>
-              <Text className="text-slate-600 mt-2">
-                {t("dashboard.target")}: {cooperative?.targetAmountXAF || 0} XAF
-              </Text>
-              <Text className="text-slate-700 font-semibold mt-1">
-                {t("dashboard.collected")}: {totalCollected} XAF
-              </Text>
-
-              <View className="mt-3 relative overflow-visible">
-                <View className="h-3 rounded-full bg-[#E6EFE6] overflow-hidden border border-[#DCE8DC]">
-                  <View className="h-3 flex-row">
-                    <View
-                      className="h-3 bg-[#1B5E20]"
-                      style={{ width: `${coopFillPercent}%` }}
-                    />
-                    <View
-                      className="h-3 bg-[#D97706]"
-                      style={{ width: `${feeFillPercent}%` }}
-                    />
-                  </View>
-                </View>
-                {surplusAmount > 0 ? (
-                  <View
-                    className="absolute h-3 top-0 bg-[#86EFAC] rounded-r-full"
-                    style={{ left: "100%", width: `${Math.min(surplusPercent, 120)}%` }}
-                  />
-                ) : null}
-              </View>
-              <Text className="text-[#1B5E20] font-semibold mt-2">
-                {progress.toFixed(2)}%
-              </Text>
-              {surplusAmount > 0 ? (
-                <Text className="text-emerald-700 text-xs mt-1 font-semibold">
-                  {t("dashboard.surplusLabel").replace(
-                    "{amount}",
-                    surplusAmount.toLocaleString(),
-                  )}
+                <Text className="text-[#1B5E20] text-2xl font-bold">
+                  {cooperative?.name || t("common.cooperative")}
                 </Text>
-              ) : null}
-              {withdrawalFeePercent > 0 ? (
-                <View className="mt-2">
-                  <Text className="text-slate-500 text-xs">{t("dashboard.legendCoop")}</Text>
-                  <Text className="text-slate-500 text-xs">
-                    {t("dashboard.legendFee").replace(
-                      "{percent}",
-                      withdrawalFeePercent.toString(),
+                <Text className="text-slate-600 mt-2">
+                  {t("dashboard.target")}: {cooperative?.targetAmountXAF || 0}{" "}
+                  XAF
+                </Text>
+                <Text className="text-slate-700 font-semibold mt-1">
+                  {t("dashboard.collected")}: {totalCollected} XAF
+                </Text>
+
+                <View className="mt-3 relative overflow-visible">
+                  <View className="h-3 rounded-full bg-[#E6EFE6] overflow-hidden border border-[#DCE8DC]">
+                    <View className="h-3 flex-row">
+                      <View
+                        className="h-3 bg-[#1B5E20]"
+                        style={{ width: `${coopFillPercent}%` }}
+                      />
+                      <View
+                        className="h-3 bg-[#D97706]"
+                        style={{ width: `${feeFillPercent}%` }}
+                      />
+                    </View>
+                  </View>
+                  {surplusAmount > 0 ? (
+                    <View
+                      className="absolute h-3 top-0 bg-[#86EFAC] rounded-r-full"
+                      style={{
+                        left: "100%",
+                        width: `${Math.min(surplusPercent, 120)}%`,
+                      }}
+                    />
+                  ) : null}
+                </View>
+                <Text className="text-[#1B5E20] font-semibold mt-2">
+                  {progress.toFixed(2)}%
+                </Text>
+                {surplusAmount > 0 ? (
+                  <Text className="text-emerald-700 text-xs mt-1 font-semibold">
+                    {t("dashboard.surplusLabel").replace(
+                      "{amount}",
+                      surplusAmount.toLocaleString(),
                     )}
                   </Text>
-                </View>
-              ) : null}
+                ) : null}
+                {withdrawalFeePercent > 0 ? (
+                  <View className="mt-2">
+                    <Text className="text-slate-500 text-xs">
+                      {t("dashboard.legendCoop")}
+                    </Text>
+                    <Text className="text-slate-500 text-xs">
+                      {t("dashboard.legendFee").replace(
+                        "{percent}",
+                        withdrawalFeePercent.toString(),
+                      )}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             </SectionReveal>
 
             <SectionReveal direction="up" delay={80} distance={15}>
               <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-[#1B5E20] font-bold">
-                {t("common.walletAddress")}
-              </Text>
-              <Text className="text-slate-600 mt-1">
-                {cooperative?.vaultAddress || "-"}
-              </Text>
+                <Text className="text-[#1B5E20] font-bold">
+                  {t("common.walletAddress")}
+                </Text>
+                <Text className="text-slate-600 mt-1">
+                  {cooperative?.vaultAddress || "-"}
+                </Text>
 
-              <View className="flex-row gap-3 mt-3">
-                <PressableScale
-                  className="flex-1 rounded-xl border border-[#1B5E20] py-2"
-                  onPress={() => {
-                    if (vaultAddress) {
-                      void Clipboard.setStringAsync(vaultAddress);
-                    }
-                  }}
-                >
-                  <Text className="text-center text-[#1B5E20] font-semibold">
-                    {t("common.copy")}
-                  </Text>
-                </PressableScale>
-                <PressableScale
-                  className="flex-1 rounded-xl bg-[#1B5E20] py-2"
-                  onPress={() => {
-                    if (vaultAddress) {
-                      void Linking.openURL(
-                        `${CELOSCAN_BASE}/address/${vaultAddress}`,
-                      );
-                    }
-                  }}
-                >
-                  <Text className="text-center text-white font-semibold">
-                    {t("blockchain.viewOnCeloScan")}
-                  </Text>
-                </PressableScale>
-              </View>
+                <View className="flex-row gap-3 mt-3">
+                  <PressableScale
+                    className="flex-1 rounded-xl border border-[#1B5E20] py-2"
+                    onPress={() => {
+                      if (vaultAddress) {
+                        void Clipboard.setStringAsync(vaultAddress);
+                      }
+                    }}
+                  >
+                    <Text className="text-center text-[#1B5E20] font-semibold">
+                      {t("common.copy")}
+                    </Text>
+                  </PressableScale>
+                  <PressableScale
+                    className="flex-1 rounded-xl bg-[#1B5E20] py-2"
+                    onPress={() => {
+                      if (vaultAddress) {
+                        void Linking.openURL(
+                          `${CELOSCAN_BASE}/address/${vaultAddress}`,
+                        );
+                      }
+                    }}
+                  >
+                    <Text className="text-center text-white font-semibold">
+                      {t("blockchain.viewOnCeloScan")}
+                    </Text>
+                  </PressableScale>
+                </View>
               </View>
             </SectionReveal>
 
             <SectionReveal direction="up" delay={160} distance={15}>
               <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-[#1B5E20] font-bold">
-                {t("common.members")}
-              </Text>
-              <Text className="text-2xl text-[#1B5E20] font-bold mt-1">
-                {cooperative?.memberCount || 0}
-              </Text>
+                <Text className="text-[#1B5E20] font-bold">
+                  {t("common.members")}
+                </Text>
+                <Text className="text-2xl text-[#1B5E20] font-bold mt-1">
+                  {cooperative?.memberCount || 0}
+                </Text>
               </View>
             </SectionReveal>
 
@@ -531,37 +544,38 @@ export default function DashboardScreen() {
 
             <SectionReveal direction="up" delay={240} distance={15}>
               <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
-              <Text className="text-[#1B5E20] font-bold mb-2">
-                {t("common.recentActivity")}
-              </Text>
-              {activity.length === 0 ? (
-                <Text className="text-slate-500">
-                  {t("dashboard.noRecentActivity")}
+                <Text className="text-[#1B5E20] font-bold mb-2">
+                  {t("common.recentActivity")}
                 </Text>
-              ) : (
-                activity.slice(0, 6).map((item) => (
-                  <View
-                    key={item.id}
-                    className="py-2 border-b border-[#EFF4EF]"
-                  >
-                    <Text className="text-[#1B5E20] font-semibold">
-                      {item.type}
-                    </Text>
-                    <Text className="text-slate-600">
-                      {t("dashboard.activityActor")}: {getActorLabel(item)}
-                    </Text>
-                    <Text className="text-slate-600">
-                      {t("dashboard.activityLedger")}: {item.blockNumber ?? "-"}
-                    </Text>
-                    <Text className="text-slate-600">
-                      {t("blockchain.txPrefix")} {truncateHash(item.txHash)}
-                    </Text>
-                    <Text className="text-slate-500">
-                      {new Date(item.createdAt).toLocaleString()}
-                    </Text>
-                  </View>
-                ))
-              )}
+                {activity.length === 0 ? (
+                  <Text className="text-slate-500">
+                    {t("dashboard.noRecentActivity")}
+                  </Text>
+                ) : (
+                  activity.slice(0, 6).map((item) => (
+                    <View
+                      key={item.id}
+                      className="py-2 border-b border-[#EFF4EF]"
+                    >
+                      <Text className="text-[#1B5E20] font-semibold">
+                        {item.type}
+                      </Text>
+                      <Text className="text-slate-600">
+                        {t("dashboard.activityActor")}: {getActorLabel(item)}
+                      </Text>
+                      <Text className="text-slate-600">
+                        {t("dashboard.activityLedger")}:{" "}
+                        {item.blockNumber ?? "-"}
+                      </Text>
+                      <Text className="text-slate-600">
+                        {t("blockchain.txPrefix")} {truncateHash(item.txHash)}
+                      </Text>
+                      <Text className="text-slate-500">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </Text>
+                    </View>
+                  ))
+                )}
               </View>
             </SectionReveal>
           </>
