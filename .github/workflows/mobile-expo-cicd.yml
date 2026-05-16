@@ -2,8 +2,6 @@ name: Mobile Expo CI/CD
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*.*.*"
 
