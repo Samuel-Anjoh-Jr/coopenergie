@@ -25,7 +25,9 @@ import { ScreenReveal } from "@/components/screen-reveal";
 type RecentActivity = {
   id: string;
   type: string;
+  payload?: Record<string, unknown>;
   txHash: string;
+  blockNumber?: number;
   createdAt: string;
 };
 
@@ -55,7 +57,9 @@ const COOPERATIVE_QUERY = gql`
       recentActivity {
         id
         type
+        payload
         txHash
+        blockNumber
         createdAt
       }
     }
@@ -98,6 +102,47 @@ function truncateHash(hash?: string | null) {
   }
 
   return `${hash.slice(0, 8)}...${hash.slice(-6)}`;
+}
+
+function getActorAddress(
+  type: string,
+  payload?: Record<string, unknown>,
+): string | null {
+  if (!payload) {
+    return null;
+  }
+
+  const eventType = type.toUpperCase();
+
+  if (eventType === "PROPOSAL") {
+    return (payload.creator as string) || null;
+  }
+  if (eventType === "CONTRIBUTION") {
+    return (payload.member as string) || null;
+  }
+  if (eventType === "VOTE") {
+    return (payload.voter as string) || null;
+  }
+  if (eventType === "PAYMENT") {
+    return (payload.recipient as string) || null;
+  }
+
+  return null;
+}
+
+function getActorLabel(activity: RecentActivity): string {
+  const payload = activity.payload;
+
+  if (!payload) {
+    return "-";
+  }
+
+  const performerName =
+    typeof payload.performerName === "string" && payload.performerName.trim()
+      ? payload.performerName.trim()
+      : null;
+
+  return performerName ?? getActorAddress(activity.type, payload) ?? "-";
 }
 
 export default function DashboardScreen() {
@@ -444,6 +489,46 @@ export default function DashboardScreen() {
               </View>
             </SectionReveal>
 
+            <SectionReveal direction="up" delay={200} distance={15}>
+              <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
+                <Text className="text-[#1B5E20] font-bold mb-2">
+                  {t("dashboard.quickActionsTitle")}
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  <PressableScale
+                    className="rounded-xl border border-[#1B5E20] px-3 py-2"
+                    onPress={() => {
+                      router.push("/(dashboard)/profile");
+                    }}
+                  >
+                    <Text className="text-[#1B5E20] font-semibold text-xs">
+                      {t("dashboard.quickProfile")}
+                    </Text>
+                  </PressableScale>
+                  <PressableScale
+                    className="rounded-xl border border-[#1B5E20] px-3 py-2"
+                    onPress={() => {
+                      router.push("/(dashboard)/invitations");
+                    }}
+                  >
+                    <Text className="text-[#1B5E20] font-semibold text-xs">
+                      {t("dashboard.quickInvitations")}
+                    </Text>
+                  </PressableScale>
+                  <PressableScale
+                    className="rounded-xl border border-[#1B5E20] px-3 py-2"
+                    onPress={() => {
+                      router.push("/(dashboard)/settings");
+                    }}
+                  >
+                    <Text className="text-[#1B5E20] font-semibold text-xs">
+                      {t("dashboard.quickSettings")}
+                    </Text>
+                  </PressableScale>
+                </View>
+              </View>
+            </SectionReveal>
+
             <SectionReveal direction="up" delay={240} distance={15}>
               <View className="bg-white rounded-2xl border border-[#DDEBDD] p-4">
               <Text className="text-[#1B5E20] font-bold mb-2">
@@ -461,6 +546,12 @@ export default function DashboardScreen() {
                   >
                     <Text className="text-[#1B5E20] font-semibold">
                       {item.type}
+                    </Text>
+                    <Text className="text-slate-600">
+                      {t("dashboard.activityActor")}: {getActorLabel(item)}
+                    </Text>
+                    <Text className="text-slate-600">
+                      {t("dashboard.activityLedger")}: {item.blockNumber ?? "-"}
                     </Text>
                     <Text className="text-slate-600">
                       {t("blockchain.txPrefix")} {truncateHash(item.txHash)}

@@ -46,6 +46,8 @@ export default function LoginScreen() {
 
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
+      <View className="absolute -top-10 -left-16 h-40 w-40 rounded-full bg-[#DFF0DF]" />
+      <View className="absolute -bottom-16 -right-10 h-44 w-44 rounded-full bg-[#E6F3FB]" />
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
         <BackendPreflightBanner />
 
@@ -117,6 +119,27 @@ export default function LoginScreen() {
             </Text>
           </PressableScale>
         </Link>
+
+        <Text className="mt-4 text-center text-xs text-slate-500 leading-5">
+          {t("auth.legalConsentPrefix")}
+        </Text>
+        <View className="mt-1 flex-row items-center justify-center gap-1">
+          <Link href="/(auth)/terms" asChild>
+            <Pressable>
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.termsTitle")}
+              </Text>
+            </Pressable>
+          </Link>
+          <Text className="text-xs text-slate-500">{t("auth.legalAnd")}</Text>
+          <Link href="/(auth)/privacy" asChild>
+            <Pressable>
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.privacyTitle")}
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
       </View>
     </ScreenReveal>
   );

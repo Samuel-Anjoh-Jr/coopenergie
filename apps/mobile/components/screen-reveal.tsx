@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from "react";
-import { Animated, Platform, StyleProp, View, ViewStyle } from "react-native";
+import { Animated, StyleProp, View, ViewStyle } from "react-native";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 type Direction = "up" | "down" | "left" | "right";
@@ -36,7 +36,6 @@ export function ScreenReveal({
   distance = 12,
 }: ScreenRevealProps) {
   const reducedMotionEnabled = useReducedMotion();
-  const canUseNativeDriver = Platform.OS !== "web";
   const { translateX: initialX, translateY: initialY } = getInitialTransform(
     direction,
     distance,
@@ -63,19 +62,19 @@ export function ScreenReveal({
         toValue: 1,
         duration: 280,
         delay,
-        useNativeDriver: canUseNativeDriver,
+        useNativeDriver: true,
       }),
       Animated.timing(translateX, {
         toValue: 0,
         duration: 320,
         delay,
-        useNativeDriver: canUseNativeDriver,
+        useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
         duration: 320,
         delay,
-        useNativeDriver: canUseNativeDriver,
+        useNativeDriver: true,
       }),
     ]).start();
   }, [

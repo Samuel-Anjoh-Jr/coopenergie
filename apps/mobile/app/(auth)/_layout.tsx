@@ -35,6 +35,11 @@ export default function AuthLayout() {
         options={{ title: t("auth.vendorRegisterTitle") }}
       />
       <Stack.Screen name="join" options={{ title: t("auth.invitationTitle") }} />
+      <Stack.Screen name="terms" options={{ title: t("auth.termsTitle") }} />
+      <Stack.Screen
+        name="privacy"
+        options={{ title: t("auth.privacyTitle") }}
+      />
     </Stack>
   );
 }

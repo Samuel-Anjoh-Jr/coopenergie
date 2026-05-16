@@ -229,6 +229,23 @@ export default function VendorRegisterScreen() {
             [{acceptTerms ? "x" : " "}] {t("vendorSignup.acceptTerms")}
           </Text>
         </PressableScale>
+        <View className="mb-3 flex-row items-center justify-center gap-1">
+          <Link href="/(auth)/terms" asChild>
+            <PressableScale className="rounded-md px-1 py-1">
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.termsTitle")}
+              </Text>
+            </PressableScale>
+          </Link>
+          <Text className="text-xs text-slate-500">{t("auth.legalAnd")}</Text>
+          <Link href="/(auth)/privacy" asChild>
+            <PressableScale className="rounded-md px-1 py-1">
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.privacyTitle")}
+              </Text>
+            </PressableScale>
+          </Link>
+        </View>
 
         <PressableScale
           onPress={onSubmit}

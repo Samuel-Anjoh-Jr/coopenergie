@@ -59,6 +59,8 @@ export default function RegisterScreen() {
 
   return (
     <ScreenReveal className="bg-[#F5F8F5] px-6 py-10 justify-center">
+      <View className="absolute -top-8 -right-14 h-36 w-36 rounded-full bg-[#E4F2E4]" />
+      <View className="absolute -bottom-16 -left-14 h-44 w-44 rounded-full bg-[#EBF6FF]" />
       <View className="rounded-3xl bg-white border border-[#DDEBDD] p-6">
         <BackendPreflightBanner />
 
@@ -140,6 +142,27 @@ export default function RegisterScreen() {
             </Text>
           </PressableScale>
         </Link>
+
+        <Text className="mt-4 text-center text-xs text-slate-500 leading-5">
+          {t("auth.legalConsentPrefix")}
+        </Text>
+        <View className="mt-1 flex-row items-center justify-center gap-1">
+          <Link href="/(auth)/terms" asChild>
+            <Pressable>
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.termsTitle")}
+              </Text>
+            </Pressable>
+          </Link>
+          <Text className="text-xs text-slate-500">{t("auth.legalAnd")}</Text>
+          <Link href="/(auth)/privacy" asChild>
+            <Pressable>
+              <Text className="text-xs font-semibold text-[#1B5E20]">
+                {t("auth.privacyTitle")}
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
       </View>
     </ScreenReveal>
   );

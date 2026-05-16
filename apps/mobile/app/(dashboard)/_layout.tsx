@@ -175,6 +175,27 @@ export default function DashboardLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null,
+          title: t("profile.title"),
+        }}
+      />
+      <Tabs.Screen
+        name="invitations"
+        options={{
+          href: null,
+          title: t("invitations.title"),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          href: null,
+          title: t("settings.title"),
+        }}
+      />
     </Tabs>
   );
 }
