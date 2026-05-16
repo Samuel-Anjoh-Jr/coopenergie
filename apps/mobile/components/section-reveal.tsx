@@ -87,7 +87,9 @@ export function SectionReveal({
   ]);
 
   return (
-    <Animated.View style={[{ opacity, transform: [{ translateX }, { translateY }] }, style]}>
+    <Animated.View
+      style={[{ opacity, transform: [{ translateX }, { translateY }] }, style]}
+    >
       {children}
     </Animated.View>
   );

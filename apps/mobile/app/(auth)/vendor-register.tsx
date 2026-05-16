@@ -67,12 +67,18 @@ export default function VendorRegisterScreen() {
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
-    Alert.alert(t("vendorSignup.paymentPendingTitle"), t("vendorSignup.paymentPendingMessage"));
+    Alert.alert(
+      t("vendorSignup.paymentPendingTitle"),
+      t("vendorSignup.paymentPendingMessage"),
+    );
   }
 
   async function onSubmit() {
     if (!acceptTerms) {
-      Alert.alert(t("vendorSignup.termsTitle"), t("vendorSignup.termsRequiredMessage"));
+      Alert.alert(
+        t("vendorSignup.termsTitle"),
+        t("vendorSignup.termsRequiredMessage"),
+      );
       return;
     }
 
@@ -97,7 +103,9 @@ export default function VendorRegisterScreen() {
       const loginResult = await login(email.trim(), password);
       setAuthToken(loginResult.token);
 
-      const fee = Number(registration.platformSettings?.vendorOneTimeFeeXAF ?? 0);
+      const fee = Number(
+        registration.platformSettings?.vendorOneTimeFeeXAF ?? 0,
+      );
       const needsPayment = Boolean(registration.paymentRequired) && fee > 0;
 
       if (!needsPayment) {
@@ -107,7 +115,10 @@ export default function VendorRegisterScreen() {
 
       setFeeXaf(fee);
       setShowPayment(true);
-      Alert.alert(t("vendorSignup.accountCreatedTitle"), t("vendorSignup.completePaymentMessage"));
+      Alert.alert(
+        t("vendorSignup.accountCreatedTitle"),
+        t("vendorSignup.completePaymentMessage"),
+      );
     } catch (error) {
       Alert.alert(
         t("vendorSignup.registrationFailedTitle"),
@@ -120,26 +131,32 @@ export default function VendorRegisterScreen() {
 
   async function onPay() {
     if (!authToken) {
-      Alert.alert(t("vendorSignup.sessionTitle"), t("vendorSignup.reconnectMessage"));
+      Alert.alert(
+        t("vendorSignup.sessionTitle"),
+        t("vendorSignup.reconnectMessage"),
+      );
       return;
     }
 
     if (!paymentPhone.trim()) {
-      Alert.alert(t("vendorSignup.paymentTitle"), t("vendorSignup.paymentPhoneRequired"));
+      Alert.alert(
+        t("vendorSignup.paymentTitle"),
+        t("vendorSignup.paymentPhoneRequired"),
+      );
       return;
     }
 
     try {
       setIsPaying(true);
-      await api.post(
-        "/vendors/payment/register",
-        {
-          phoneNumber: paymentPhone.trim(),
-        },
-      );
+      await api.post("/vendors/payment/register", {
+        phoneNumber: paymentPhone.trim(),
+      });
 
       setShowPayment(false);
-      Alert.alert(t("vendorSignup.paymentStartedTitle"), t("vendorSignup.paymentStartedMessage"));
+      Alert.alert(
+        t("vendorSignup.paymentStartedTitle"),
+        t("vendorSignup.paymentStartedMessage"),
+      );
       await pollActivation(authToken);
     } catch (error) {
       Alert.alert(
@@ -263,13 +280,17 @@ export default function VendorRegisterScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text className="text-white font-semibold">{t("vendorSignup.submit")}</Text>
+            <Text className="text-white font-semibold">
+              {t("vendorSignup.submit")}
+            </Text>
           )}
         </PressableScale>
 
         <Link href="/(auth)/register" asChild>
           <PressableScale className="mt-4 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
-            <Text className="text-[#1B5E20] font-medium">{t("vendorSignup.switchToCoopSignup")}</Text>
+            <Text className="text-[#1B5E20] font-medium">
+              {t("vendorSignup.switchToCoopSignup")}
+            </Text>
           </PressableScale>
         </Link>
       </View>
@@ -277,8 +298,12 @@ export default function VendorRegisterScreen() {
       {showPayment ? (
         <View className="absolute inset-0 items-center justify-center bg-black/40 px-6">
           <View className="w-full rounded-2xl bg-white p-5 border border-[#DDEBDD]">
-            <Text className="text-lg font-semibold text-[#1B5E20]">{t("vendorSignup.paymentRequired")}</Text>
-            <Text className="mt-2 text-slate-600">{t("vendorSignup.amount")} {feeXaf.toLocaleString("fr-CM")} XAF</Text>
+            <Text className="text-lg font-semibold text-[#1B5E20]">
+              {t("vendorSignup.paymentRequired")}
+            </Text>
+            <Text className="mt-2 text-slate-600">
+              {t("vendorSignup.amount")} {feeXaf.toLocaleString("fr-CM")} XAF
+            </Text>
             <TextInput
               value={paymentPhone}
               onChangeText={setPaymentPhone}
@@ -292,7 +317,9 @@ export default function VendorRegisterScreen() {
                 onPress={() => setShowPayment(false)}
                 disabled={isPaying}
               >
-                <Text className="text-[#1B5E20]">{t("vendorSignup.later")}</Text>
+                <Text className="text-[#1B5E20]">
+                  {t("vendorSignup.later")}
+                </Text>
               </PressableScale>
 
               <PressableScale
@@ -303,7 +330,9 @@ export default function VendorRegisterScreen() {
                 {isPaying ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-semibold">{t("vendorSignup.pay")}</Text>
+                  <Text className="text-white font-semibold">
+                    {t("vendorSignup.pay")}
+                  </Text>
                 )}
               </PressableScale>
             </View>

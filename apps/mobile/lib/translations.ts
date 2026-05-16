@@ -187,8 +187,6 @@ const translations = {
       thresholdMin: "Minimum threshold",
       thresholdDefault: "Default threshold",
       thresholdMax: "Maximum threshold",
-      appStoreUrl: "App Store URL",
-      playStoreUrl: "Play Store URL",
       savePlatform: "Save platform thresholds",
       logoutAction: "Log out",
       loadFailed: "Unable to load settings.",
@@ -542,8 +540,6 @@ const translations = {
       thresholdMin: "Seuil minimum",
       thresholdDefault: "Seuil par defaut",
       thresholdMax: "Seuil maximum",
-      appStoreUrl: "URL App Store",
-      playStoreUrl: "URL Play Store",
       savePlatform: "Enregistrer les seuils plateforme",
       logoutAction: "Deconnexion",
       loadFailed: "Impossible de charger les parametres.",
@@ -687,7 +683,8 @@ const translations = {
       submit: "Creer le compte fournisseur",
       switchToCoopSignup: "S'inscrire comme membre de cooperative",
       termsTitle: "Conditions requises",
-      termsRequiredMessage: "Vous devez accepter les conditions pour continuer.",
+      termsRequiredMessage:
+        "Vous devez accepter les conditions pour continuer.",
       accountCreatedTitle: "Compte cree",
       completePaymentMessage:
         "Finalisez le paiement fournisseur pour activer votre compte.",
@@ -794,7 +791,9 @@ export function translate(locale: MobileLocale, key: TranslationKey): string {
 
   let fallbackValue: unknown = translations.en;
   for (const segment of keys) {
-    fallbackValue = (fallbackValue as Record<string, unknown> | undefined)?.[segment];
+    fallbackValue = (fallbackValue as Record<string, unknown> | undefined)?.[
+      segment
+    ];
   }
 
   if (typeof fallbackValue === "string") {
@@ -844,7 +843,7 @@ export function useMobileTranslations(localeOverride?: MobileLocale) {
 
     void syncProfileLocaleOnce().then((nextLocale) => {
       if (!active || !nextLocale) {
-          return;
+        return;
       }
 
       broadcastLocale(nextLocale);

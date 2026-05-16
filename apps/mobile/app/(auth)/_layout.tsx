@@ -29,12 +29,18 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="login" options={{ title: t("auth.loginTitle") }} />
-      <Stack.Screen name="register" options={{ title: t("auth.registerTitle") }} />
+      <Stack.Screen
+        name="register"
+        options={{ title: t("auth.registerTitle") }}
+      />
       <Stack.Screen
         name="vendor-register"
         options={{ title: t("auth.vendorRegisterTitle") }}
       />
-      <Stack.Screen name="join" options={{ title: t("auth.invitationTitle") }} />
+      <Stack.Screen
+        name="join"
+        options={{ title: t("auth.invitationTitle") }}
+      />
       <Stack.Screen name="terms" options={{ title: t("auth.termsTitle") }} />
       <Stack.Screen
         name="privacy"

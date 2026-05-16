@@ -35,10 +35,7 @@ export default function LoginScreen() {
       const message =
         error instanceof Error ? error.message : t("errors.unknownError");
       setSubmitError(message);
-      Alert.alert(
-        t("errors.loginFailed"),
-        message,
-      );
+      Alert.alert(t("errors.loginFailed"), message);
     } finally {
       setIsSubmitting(false);
     }

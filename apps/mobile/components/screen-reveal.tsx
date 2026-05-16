@@ -89,7 +89,10 @@ export function ScreenReveal({
 
   return (
     <Animated.View
-      style={[{ flex: 1, opacity, transform: [{ translateX }, { translateY }] }, style]}
+      style={[
+        { flex: 1, opacity, transform: [{ translateX }, { translateY }] },
+        style,
+      ]}
     >
       <View className={className} style={{ flex: 1 }}>
         {children}

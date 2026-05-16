@@ -23,7 +23,9 @@ export default function PrivacyScreen() {
 
     async function loadLegal() {
       try {
-        const data = await api.get<LegalPayload>(`/public/legal?locale=${locale}`);
+        const data = await api.get<LegalPayload>(
+          `/public/legal?locale=${locale}`,
+        );
         if (mounted) {
           setLegal(data);
         }
@@ -58,7 +60,9 @@ export default function PrivacyScreen() {
 
           <Link href="/(auth)/terms" asChild>
             <PressableScale className="mt-5 rounded-xl border border-[#1B5E20] px-4 py-3 items-center">
-              <Text className="text-[#1B5E20] font-semibold">{t("auth.termsTitle")}</Text>
+              <Text className="text-[#1B5E20] font-semibold">
+                {t("auth.termsTitle")}
+              </Text>
             </PressableScale>
           </Link>
         </View>
