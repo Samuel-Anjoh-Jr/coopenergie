@@ -49,7 +49,8 @@ type ActivityItem = {
   action: string;
   description?: string;
   amount?: string;
-  user: string;
+  actor: string;
+  ledger: string;
   timestamp: string;
   href: string;
 };
@@ -229,6 +230,8 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     id: string;
     type: string;
     payload?: string | Record<string, unknown>;
+    txHash?: string | null;
+    blockNumber?: number | null;
     createdAt: string;
   }): ActivityItem => {
     const payload = parsePayload(event.payload);
@@ -249,7 +252,12 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         action: t("dashboard.contribution"),
         description: amount > 0 ? formatXaf(amount) : undefined,
         amount: amount > 0 ? formatXaf(amount) : undefined,
-        user: contributor,
+        actor: contributor,
+        ledger: event.blockNumber
+          ? `${t("dashboard.activityLedger")} #${event.blockNumber}`
+          : t("dashboard.activityLedger") +
+            ": " +
+            (event.txHash ? event.txHash.slice(0, 10) + "..." : "-"),
         timestamp: new Date(event.createdAt).toLocaleString(),
         href: activityHref,
       };
@@ -267,7 +275,12 @@ export default function DashboardPage({ params }: DashboardPageProps) {
         description: payload.proposalId
           ? String(payload.proposalId)
           : undefined,
-        user: voter,
+        actor: voter,
+        ledger: event.blockNumber
+          ? `${t("dashboard.activityLedger")} #${event.blockNumber}`
+          : t("dashboard.activityLedger") +
+            ": " +
+            (event.txHash ? event.txHash.slice(0, 10) + "..." : "-"),
         timestamp: new Date(event.createdAt).toLocaleString(),
         href: activityHref,
       };
@@ -278,7 +291,12 @@ export default function DashboardPage({ params }: DashboardPageProps) {
       icon: "proposal",
       action: t("dashboard.proposalCreated"),
       description: payload.title ? String(payload.title) : undefined,
-      user: String(payload.performerName ?? payload.creator ?? fallbackUser),
+      actor: String(payload.performerName ?? payload.creator ?? fallbackUser),
+      ledger: event.blockNumber
+        ? `${t("dashboard.activityLedger")} #${event.blockNumber}`
+        : t("dashboard.activityLedger") +
+          ": " +
+          (event.txHash ? event.txHash.slice(0, 10) + "..." : "-"),
       timestamp: new Date(event.createdAt).toLocaleString(),
       href: activityHref,
     };
@@ -691,11 +709,14 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm md:text-base truncate group-hover:text-primary transition-colors duration-200">
-                          {activity.user}
+                          {t("dashboard.activityActor")}: {activity.actor}
                         </p>
                         <p className="text-xs md:text-sm text-muted-foreground truncate">
                           {activity.action}
                           {activity.description && ` - ${activity.description}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {activity.ledger}
                         </p>
                       </div>
                     </div>

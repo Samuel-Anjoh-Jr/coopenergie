@@ -297,6 +297,8 @@ model PlatformSettings {
   withdrawalQuorumMinVotes   Int                @default(3)
   maintenanceMode            Boolean            @default(false)
   platformName               String             @default("CoopEnergie")
+  appStoreUrl                String?
+  playStoreUrl               String?
   updatedAt                  DateTime           @updatedAt
   updatedById                String?
   withdrawalFeePercent       Float              @default(0)

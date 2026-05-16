@@ -23,6 +23,7 @@ import { restClient } from "@/lib/rest-client";
 import { useScrollRevealGroup } from "@/lib/hooks/use-scroll-reveal-group";
 import { Locale, useTranslations } from "@/lib/translations";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
+import { MobileStoreSection } from "@/components/mobile-store-section";
 
 type MonetisationSettings = {
   monetisationSettings: {
@@ -381,6 +382,8 @@ export default function VendorsLandingPage() {
           </ScrollReveal>
         </div>
       </section>
+
+      <MobileStoreSection />
 
       <footer className="border-t border-border/50 py-9 lg:py-10 min-[72rem]:py-11 xl:py-12">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">

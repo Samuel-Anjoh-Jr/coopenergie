@@ -50,6 +50,7 @@ import {
   Store,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
+import { MobileStoreSection } from "@/components/mobile-store-section";
 import { useScrollRevealGroup } from "@/lib/hooks/use-scroll-reveal-group";
 
 type CooperativeQueryResult = {
@@ -801,6 +802,8 @@ export default function Homepage() {
           </div>
         </ScrollReveal>
       </section>
+
+      <MobileStoreSection />
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-9 lg:py-10 min-[72rem]:py-11 xl:py-12">

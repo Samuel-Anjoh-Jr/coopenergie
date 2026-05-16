@@ -73,6 +73,8 @@ export class PlatformSettingsService {
             withdrawalThresholdMin: dto.withdrawalThresholdMin,
             withdrawalThresholdMax: dto.withdrawalThresholdMax,
             maintenanceMode: dto.maintenanceMode,
+            appStoreUrl: dto.appStoreUrl,
+            playStoreUrl: dto.playStoreUrl,
           },
         },
       });
@@ -221,6 +223,15 @@ export class PlatformSettingsService {
       vendorOneTimeFeeXAF: settings.vendorOneTimeFeeXAF,
       vendorMonthlyFeeXAF: settings.vendorMonthlyFeeXAF,
       vendorYearlyFeeXAF: settings.vendorYearlyFeeXAF,
+    };
+  }
+
+  async getPublicMobileStoreSettings() {
+    const settings = await this.getSettings();
+
+    return {
+      appStoreUrl: settings.appStoreUrl,
+      playStoreUrl: settings.playStoreUrl,
     };
   }
 

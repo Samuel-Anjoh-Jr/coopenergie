@@ -1,5 +1,13 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  Min,
+} from "class-validator";
 
 export class UpdatePlatformSettingsDto {
   @IsOptional()
@@ -27,4 +35,14 @@ export class UpdatePlatformSettingsDto {
   @Type(() => Boolean)
   @IsBoolean()
   maintenanceMode?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  appStoreUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  playStoreUrl?: string;
 }
