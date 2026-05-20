@@ -1,0 +1,91 @@
+name: Mobile Release Build
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release-build:
+    name: Production Build (${{ github.ref_name }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check EXPO_TOKEN
+        id: token_check
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::EXPO_TOKEN not set — build steps will be skipped."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate tag >= v1.0.0
+        id: version_gate
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          LOWEST="1.0.0"
+          FIRST="$(printf '%s\n' "$LOWEST" "$VERSION" | sort -V | head -n1)"
+          if [ "$FIRST" != "$LOWEST" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Tag $TAG is below v1.0.0 — release build skipped."
+          else
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Android AAB (production)
+        if: steps.token_check.outputs.present == 'true' && steps.version_gate.outputs.eligible == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: bunx eas-cli build --platform android --profile production --non-interactive
+
+      - name: Build iOS (production)
+        if: steps.token_check.outputs.present == 'true' && steps.version_gate.outputs.eligible == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [ -z "$APPLE_ID" ]; then
+            echo "::warning::APPLE_ID not set — iOS build skipped."
+          else
+            bunx eas-cli build --platform ios --profile production --non-interactive
+          fi
+
+      - name: Get latest build URLs
+        if: steps.token_check.outputs.present == 'true' && steps.version_gate.outputs.eligible == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "### Build artifacts" >> "$GITHUB_STEP_SUMMARY"
+          bunx eas-cli build:list --limit 2 --json 2>/dev/null | \
+            jq -r '.[] | "- [\(.platform) \(.status)] \(.artifacts.buildUrl // "pending — check EAS dashboard")"' \
+            >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Summary
+        run: |
+          {
+            echo "## Release Build — ${{ github.ref_name }}"
+            if [ "${{ steps.version_gate.outputs.eligible }}" != "true" ]; then
+              echo "- Skipped: tag below v1.0.0"
+            elif [ "${{ steps.token_check.outputs.present }}" != "true" ]; then
+              echo "- Skipped: EXPO_TOKEN not configured"
+            else
+              echo "- Android: production AAB submitted to EAS"
+              echo "- iOS: built if APPLE_ID secret is configured"
+              echo "- Store submission: run \`mobile-store-submit\` workflow manually to publish"
+              echo "- EAS dashboard: https://expo.dev/accounts/samuelanjohjr/projects/coopenergie/builds"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

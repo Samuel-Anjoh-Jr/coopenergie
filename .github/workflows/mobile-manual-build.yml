@@ -1,0 +1,103 @@
+name: Mobile Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - development
+          - staging
+      platform:
+        description: "Target platform"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+
+jobs:
+  build:
+    name: Manual Build (${{ inputs.profile }} / ${{ inputs.platform }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check EXPO_TOKEN
+        id: token_check
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::EXPO_TOKEN not set — build steps will be skipped."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check iOS credentials (if needed)
+        id: ios_check
+        if: steps.token_check.outputs.present == 'true' && (inputs.platform == 'ios' || inputs.platform == 'all')
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [ -z "$APPLE_ID" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::APPLE_ID not set — iOS build will be skipped."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Android
+        if: >
+          steps.token_check.outputs.present == 'true' &&
+          (inputs.platform == 'android' || inputs.platform == 'all')
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: bunx eas-cli build --platform android --profile ${{ inputs.profile }} --non-interactive
+
+      - name: Build iOS
+        if: >
+          steps.token_check.outputs.present == 'true' &&
+          (inputs.platform == 'ios' || inputs.platform == 'all') &&
+          steps.ios_check.outputs.available == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: bunx eas-cli build --platform ios --profile ${{ inputs.profile }} --non-interactive
+
+      - name: Get latest build URL
+        if: steps.token_check.outputs.present == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "### Recent builds" >> "$GITHUB_STEP_SUMMARY"
+          bunx eas-cli build:list --limit 2 --json 2>/dev/null | \
+            jq -r '.[] | "- [\(.platform) \(.status)] \(.artifacts.buildUrl // "pending")"' \
+            >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Summary
+        run: |
+          {
+            echo "## Manual Build — ${{ inputs.profile }} / ${{ inputs.platform }}"
+            if [ "${{ steps.token_check.outputs.present }}" != "true" ]; then
+              echo "- Skipped: EXPO_TOKEN not configured"
+            else
+              echo "- Profile: ${{ inputs.profile }}"
+              echo "- Platform: ${{ inputs.platform }}"
+              echo "- Staging APK → internal distribution (shareable via Expo)"
+              echo "- EAS dashboard: https://expo.dev/accounts/samuelanjohjr/projects/coopenergie/builds"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

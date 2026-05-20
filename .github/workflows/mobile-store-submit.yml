@@ -1,0 +1,88 @@
+name: Mobile Store Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Store target"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+
+jobs:
+  submit:
+    name: Store Submit (${{ inputs.platform }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check credentials
+        id: creds
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "expo=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::EXPO_TOKEN not set — submission skipped."
+          else
+            echo "expo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -n "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "android=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GOOGLE_SERVICE_ACCOUNT_JSON not set — Android submission will be skipped."
+          fi
+
+          if [ -n "$APPLE_ID" ]; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::APPLE_ID not set — iOS submission will be skipped."
+          fi
+
+      - name: Submit to Google Play
+        if: >
+          steps.creds.outputs.expo == 'true' &&
+          steps.creds.outputs.android == 'true' &&
+          (inputs.platform == 'android' || inputs.platform == 'all')
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: bunx eas-cli submit --platform android --profile production --non-interactive --latest
+
+      - name: Submit to App Store
+        if: >
+          steps.creds.outputs.expo == 'true' &&
+          steps.creds.outputs.ios == 'true' &&
+          (inputs.platform == 'ios' || inputs.platform == 'all')
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: bunx eas-cli submit --platform ios --profile production --non-interactive --latest
+
+      - name: Summary
+        run: |
+          {
+            echo "## Store Submission — ${{ inputs.platform }}"
+            echo "| Store | Credentials | Submitted |"
+            echo "|-------|-------------|-----------|"
+            echo "| Google Play | ${{ steps.creds.outputs.android == 'true' && '✅' || '❌ missing GOOGLE_SERVICE_ACCOUNT_JSON' }} | ${{ steps.creds.outputs.android == 'true' && (inputs.platform == 'android' || inputs.platform == 'all') && '✅' || '—' }} |"
+            echo "| App Store   | ${{ steps.creds.outputs.ios == 'true' && '✅' || '❌ missing APPLE_ID' }} | ${{ steps.creds.outputs.ios == 'true' && (inputs.platform == 'ios' || inputs.platform == 'all') && '✅' || '—' }} |"
+            echo ""
+            echo "- EAS dashboard: https://expo.dev/accounts/samuelanjohjr/projects/coopenergie/builds"
+          } >> "$GITHUB_STEP_SUMMARY"
